@@ -1,0 +1,951 @@
+{
+ "title": "Gemini 4 Neon vs Hydrogen · Sonnet 5.5 · GPT-6.2 Sol — WebGL2 5라운드 재대결",
+ "episode": "누구나쉽게",
+ "date": "2026-11-19",
+ "video_url": "",
+ "models": {
+  "neon": {
+   "name": "Gemini 4 Neon",
+   "short": "Neon",
+   "color": "#FF4FD8",
+   "tool": "agy (Antigravity CLI)",
+   "model_id": "gemini-4-neon-high",
+   "price": {
+    "input": 3.0,
+    "cached_input": 0.15,
+    "output": 15.0
+   },
+   "run_date": "2026-11-19",
+   "reused": false
+  },
+  "hydrogen": {
+   "name": "Gemini 4 Hydrogen",
+   "short": "Hydrogen",
+   "color": "#4C8DFF",
+   "tool": "agy (Antigravity CLI)",
+   "model_id": "gemini-4-hydrogen-high",
+   "price": {
+    "input": 1.5,
+    "cached_input": null,
+    "output": 7.5
+   },
+   "run_date": "2026-11-13",
+   "reused": true
+  },
+  "sonnet": {
+   "name": "Claude Sonnet 5.5",
+   "short": "Sonnet",
+   "color": "#D9A05B",
+   "tool": "Claude Code (Write/Edit/Read만)",
+   "model_id": "claude-sonnet-5-5",
+   "price": null,
+   "run_date": "2026-11-13",
+   "reused": true
+  },
+  "sol": {
+   "name": "GPT-6.2 Sol",
+   "short": "Sol",
+   "color": "#3FB68B",
+   "tool": "Codex CLI (reasoning high)",
+   "model_id": "gpt-6.2-sol",
+   "price": {
+    "input": 2.0,
+    "cached_input": 0.1,
+    "output": 10.0
+   },
+   "run_date": "2026-11-19",
+   "reused": false
+  }
+ },
+ "order": [
+  "neon",
+  "hydrogen",
+  "sonnet",
+  "sol"
+ ],
+ "h2h": {
+  "a": "neon",
+  "b": "hydrogen",
+  "label": "새 Gemini vs 이전 Gemini"
+ },
+ "common_tail": "Save the result as one self-contained file named index.html in the current directory. Use raw WebGL2 only, no external libraries or network requests. Do it in one go, do not ask questions.",
+ "facts": {
+  "price_per_million": {
+   "neon": {
+    "input": 3.0,
+    "cached_input": 0.15,
+    "output": 15.0
+   },
+   "hydrogen": {
+    "input": 1.5,
+    "cached_input": null,
+    "output": 7.5
+   },
+   "sonnet": null,
+   "sol": {
+    "input": 2.0,
+    "cached_input": 0.1,
+    "output": 10.0
+   }
+  },
+  "sources": [
+   "Gemini API 가격 페이지 (ai.google.dev/gemini-api/docs/pricing, 2026-11-19 확인) — Neon",
+   "Google 블로그 (2026-11-12) — Hydrogen 단가 (11편과 같음)",
+   "OpenAI 가격 페이지 — GPT-6.2 Sol",
+   "Claude Code가 보고한 total_cost_usd — Sonnet"
+  ],
+  "note": "Neon은 gemini-4-neon-high, Hydrogen은 gemini-4-hydrogen-high, Sol은 reasoning effort high로 돌렸습니다."
+ },
+ "rounds": [
+  {
+   "id": "water",
+   "name": "물과 유리",
+   "prompt": "Create a real-time WebGL2 water and glass visualizer built from pure math and signed distance functions: a glass object half-submerged in moving water, with refraction, reflection, chromatic dispersion and light absorption. Let the user orbit the camera with the mouse.\n\nSave the result as one self-contained file named index.html in the current directory. Use raw WebGL2 only, no external libraries or network requests. Do it in one go, do not ask questions.",
+   "runs": {
+    "neon": {
+     "seconds": 522,
+     "bytes": 54757,
+     "page": "runs/water/neon/index.html",
+     "video": "video/water-neon.mp4",
+     "poster": "poster/water-neon.jpg",
+     "tokens": {
+      "input": 107718,
+      "cached": 1046921,
+      "output": 72795
+     },
+     "cost_usd": 1.572,
+     "cost_kind": "estimate",
+     "run_date": "2026-11-19",
+     "reused": false,
+     "rec_fps": 4.8
+    },
+    "hydrogen": {
+     "seconds": 484,
+     "bytes": 48658,
+     "page": "runs/water/hydrogen/index.html",
+     "video": "video/water-hydrogen.mp4",
+     "poster": "poster/water-hydrogen.jpg",
+     "tokens": {
+      "input": 138398,
+      "cached": 2236436,
+      "output": 89783
+     },
+     "cost_usd": 0.881,
+     "cost_kind": "estimate",
+     "run_date": "2026-11-13",
+     "reused": true,
+     "rec_fps": 3.1
+    },
+    "sonnet": {
+     "seconds": 341,
+     "bytes": 21272,
+     "page": "runs/water/sonnet/index.html",
+     "video": "video/water-sonnet.mp4",
+     "poster": "poster/water-sonnet.jpg",
+     "tokens": {
+      "input": 50843,
+      "cached": 323680,
+      "output": 44373
+     },
+     "cost_usd": 0.679,
+     "cost_kind": "reported",
+     "run_date": "2026-11-13",
+     "reused": true,
+     "rec_fps": 15.3
+    },
+    "sol": {
+     "seconds": 310,
+     "bytes": 25698,
+     "page": "runs/water/sol/index.html",
+     "video": "video/water-sol.mp4",
+     "poster": "poster/water-sol.jpg",
+     "tokens": {
+      "input": 73899,
+      "cached": 1315456,
+      "output": 18207,
+      "helpers": 0,
+      "helper_usd": 0.0
+     },
+     "cost_usd": 0.461,
+     "cost_kind": "estimate",
+     "run_date": "2026-11-19",
+     "reused": false,
+     "rec_fps": 19.0
+    }
+   },
+   "points": {
+    "neon": 11,
+    "hydrogen": 14,
+    "sonnet": 11,
+    "sol": 4
+   },
+   "ballots": [
+    {
+     "judge": "neon",
+     "ranking": [
+      "hydrogen",
+      "sonnet",
+      "neon",
+      "sol"
+     ],
+     "reasons": {
+      "hydrogen": "유리 결정의 굴절·반사·색분산과 역동적인 물결·수중 커스틱스, 깔끔한 UI까지 모든 요구사항을 가장 사실적이고 완성도 높게 구현했다.",
+      "sol": "유리 모서리와 수면 경계에 검은 렌더링 아티팩트가 보이고 배경 깨짐과 탁한 색감 탓에 색분산과 시각적 완성도가 가장 떨어진다.",
+      "sonnet": "움직이는 파도와 수중 커스틱스, 빛 흡수 표현이 매우 자연스럽고 오류가 없으나 유리 물체가 작아 색분산 디테일이 덜 두드러진다.",
+      "neon": "유리 물체가 크고 굴절·반사와 조작 패널이 깔끔하지만 물결이 다소 단조롭고 흐린 배경과 상단 텍스트 대비 부족이 아쉽다."
+     }
+    },
+    {
+     "judge": "hydrogen",
+     "ranking": [
+      "hydrogen",
+      "sonnet",
+      "neon",
+      "sol"
+     ],
+     "reasons": {
+      "hydrogen": "반잠수된 유리 프리즘과 역동적인 물결, 굴절·반사·색분산·빛 흡수와 커스틱이 선명하게 구현되었고 전체적인 완성도와 안정성이 가장 뛰어납니다.",
+      "sol": "유리 상자 경계의 검은 외곽선 아티팩트와 중간 프레임 배경의 흰 사각형 결함이 두드러지며 굴절·색분산 표현도 탁하고 부자연스럽습니다.",
+      "sonnet": "역동적인 물결·반사·커스틱과 카메라 오르빗이 매우 자연스럽고 결함이 없으나, 유리 오브젝트가 작아 내부 굴절과 색분산 디테일이 덜 돋보입니다.",
+      "neon": "큼직한 유리 결정과 깔끔한 UI를 갖췄지만 물결 표현이 밋밋하고 탁하며 초반 프레임 상단에 수평 경계선 아티팩트가 나타납니다."
+     }
+    },
+    {
+     "judge": "sonnet",
+     "ranking": [
+      "hydrogen",
+      "neon",
+      "sonnet",
+      "sol"
+     ],
+     "reasons": {
+      "hydrogen": "유리 결정체가 물에 반쯤 잠긴 모습이 선명하고 굴절·분산·물결 반사가 풍부하며 UI 패널도 정돈되어 있고 큰 결함이 없다.",
+      "neon": "유리와 물 반사가 아름답고 수면 아래 굴절도 좋지만 패널이 크고 화면이 약간 밋밋하며 타이틀이 흐릿하다.",
+      "sonnet": "바다 장면은 사실적이지만 유리 객체가 너무 작고 마지막 프레임은 수중 시점이라 객체가 거의 보이지 않으며 UI도 거의 없다.",
+      "sol": "전체가 어둡고 탁해서 유리와 물의 구분이 어렵고, 객체가 기울어져 화면을 가득 채워 흡수·분산 표현이 부족해 보인다."
+     }
+    },
+    {
+     "judge": "sol",
+     "ranking": [
+      "neon",
+      "sonnet",
+      "hydrogen",
+      "sol"
+     ],
+     "reasons": {
+      "hydrogen": "유리의 굴절과 수면의 빛무늬가 선명하지만 몇몇 프레임에서 유리 가장자리가 조각처럼 끊겨 보인다.",
+      "sol": "유리를 통과한 물결이 잘 보이지만 화면이 어둡고 수면 반사가 지나치게 도식적이다.",
+      "sonnet": "시점이 크게 바뀌어도 물결과 잠긴 유리가 자연스럽지만 유리가 작아 굴절과 색 분산을 읽기 어렵다.",
+      "neon": "반쯤 잠긴 유리의 굴절과 색 변화, 물결에 흔들리는 반사가 여러 시점에서 선명하고 안정적이다."
+     }
+    }
+   ],
+   "judges_done": 4,
+   "judge_sheet": "judge/water/sheet.jpg"
+  },
+  {
+   "id": "globe",
+   "name": "번개 지구본 + 소리",
+   "prompt": "Build an interactive 3D Earth globe in WebGL2 where simulated lightning strikes appear around the world as glowing ripples, and each strike drives a Web Audio ambient music engine so the music reacts to the storm. Include a start button for audio and let the user drag to rotate the globe.\n\nSave the result as one self-contained file named index.html in the current directory. Use raw WebGL2 only, no external libraries or network requests. Do it in one go, do not ask questions.",
+   "runs": {
+    "neon": {
+     "seconds": 466,
+     "bytes": 98816,
+     "page": "runs/globe/neon/index.html",
+     "video": "video/globe-neon.mp4",
+     "poster": "poster/globe-neon.jpg",
+     "tokens": {
+      "input": 87198,
+      "cached": 314307,
+      "output": 65365
+     },
+     "cost_usd": 1.289,
+     "cost_kind": "estimate",
+     "run_date": "2026-11-19",
+     "reused": false,
+     "rec_fps": 20.1
+    },
+    "hydrogen": {
+     "seconds": 456,
+     "bytes": 85997,
+     "page": "runs/globe/hydrogen/index.html",
+     "video": "video/globe-hydrogen.mp4",
+     "poster": "poster/globe-hydrogen.jpg",
+     "tokens": {
+      "input": 145553,
+      "cached": 1971796,
+      "output": 88408
+     },
+     "cost_usd": 0.881,
+     "cost_kind": "estimate",
+     "run_date": "2026-11-13",
+     "reused": true,
+     "rec_fps": 17.7
+    },
+    "sonnet": {
+     "seconds": 726,
+     "bytes": 59080,
+     "page": "runs/globe/sonnet/index.html",
+     "video": "video/globe-sonnet.mp4",
+     "poster": "poster/globe-sonnet.jpg",
+     "tokens": {
+      "input": 94531,
+      "cached": 782491,
+      "output": 86626
+     },
+     "cost_usd": 1.323,
+     "cost_kind": "reported",
+     "run_date": "2026-11-13",
+     "reused": true,
+     "rec_fps": 16.5
+    },
+    "sol": {
+     "seconds": 1330,
+     "bytes": 45731,
+     "page": "runs/globe/sol/index.html",
+     "video": "video/globe-sol.mp4",
+     "poster": "poster/globe-sol.jpg",
+     "tokens": {
+      "input": 83887,
+      "cached": 1655296,
+      "output": 25451,
+      "helpers": 0,
+      "helper_usd": 0.0
+     },
+     "cost_usd": 0.588,
+     "cost_kind": "estimate",
+     "run_date": "2026-11-19",
+     "reused": false,
+     "rec_fps": 19.6
+    }
+   },
+   "points": {
+    "neon": 10,
+    "hydrogen": 4,
+    "sonnet": 15,
+    "sol": 11
+   },
+   "ballots": [
+    {
+     "judge": "neon",
+     "ranking": [
+      "sol",
+      "sonnet",
+      "neon",
+      "hydrogen"
+     ],
+     "reasons": {
+      "neon": "구름과 파문 표현 및 텔레메트리 UI는 준수하지만 지구본 상하단이 잘리고 하단 바가 겹치며 아프리카의 직선 경계선과 북극 왜곡이 두드러집니다.",
+      "sonnet": "사실적인 지구본과 야간 불빛, 오디오 시작 화면 및 스펙트럼 HUD가 프롬프트를 충실히 구현했지만 4번째 프레임의 사각형 렌더링 결함과 지구 밖으로 삐져나온 번개 선이 아쉽습니다.",
+      "sol": "정밀한 대륙 지형과 세련된 레이아웃 위에 모든 프레임에서 선명하게 빛나는 번개 파문과 오디오 제어 UI가 시각적 결함 없이 가장 높은 완성도로 구현되었습니다.",
+      "hydrogen": "대륙과 구름의 질감이 조악하고 북극이 거대한 흰 덩어리로 덮여 있으며 파문이 흐릿하고 하단 컨트롤 바가 지구본과 겹칩니다."
+     }
+    },
+    {
+     "judge": "hydrogen",
+     "ranking": [
+      "sonnet",
+      "sol",
+      "neon",
+      "hydrogen"
+     ],
+     "reasons": {
+      "neon": "대기광과 깔끔한 UI, 선명한 파문 효과가 돋보이지만 마지막 프레임 극지방에 UV 텍스처 왜곡이 나타납니다.",
+      "sonnet": "초기 오디오 시작 화면과 실시간 화음·스펙트럼 HUD가 완성도 높고, 왜곡 없는 사실적 지구본 위에 번개와 발광 파문이 가장 자연스럽게 표현되었습니다.",
+      "sol": "세련된 분할 레이아웃과 결함 없는 3D 지구본·파문 표현이 깔끔하지만, 단색 와이어프레임 스타일이라 폭풍과 파문이 다소 절제되어 있습니다.",
+      "hydrogen": "지표 텍스처가 흐리고 두껍게 번진 동심원 파문이 지구본을 과하게 가리며, 마지막 프레임의 극지방이 지나치게 하얗고 밋밋합니다."
+     }
+    },
+    {
+     "judge": "sonnet",
+     "ranking": [
+      "sonnet",
+      "neon",
+      "sol",
+      "hydrogen"
+     ],
+     "reasons": {
+      "sonnet": "시작 화면과 시작 버튼이 있고 지구가 사실적이며 번개 파문이 선명하지만, 마지막 프레임에서 극지방 구름이 과하게 커진다.",
+      "neon": "지구가 사실적이고 파문이 깔끔하며 UI도 잘 정돈되어 있지만, 시작 버튼이 눈에 띄지 않고 후반부에 극지방 구름 왜곡이 보인다.",
+      "sol": "보라색 스타일의 와이어프레임 지구와 세련된 레이아웃, 오디오 패널이 돋보이지만 지구가 작고 어두우며 번개 효과가 약하다.",
+      "hydrogen": "파문 자체는 보이지만 지구 텍스처가 거칠고 극지방이 거대한 흰 구름으로 덮이며, 구름 때문에 지구가 알아보기 어렵다."
+     }
+    },
+    {
+     "judge": "sol",
+     "ranking": [
+      "sonnet",
+      "neon",
+      "sol",
+      "hydrogen"
+     ],
+     "reasons": {
+      "neon": "발광 파문이 선명하고 조작부가 정돈됐지만 지구본이 화면 가장자리에 바짝 붙습니다.",
+      "sonnet": "오디오 시작 버튼이 명확하고 입체적인 지구본과 번개 효과가 균형 있게 배치됩니다.",
+      "sol": "보라색 지도와 오디오 패널이 조화를 이루지만 번개 파문이 작고 흐립니다.",
+      "hydrogen": "번개 파문은 뚜렷하지만 뭉친 구름과 하얗게 덮인 극지방이 지표를 가립니다."
+     }
+    }
+   ],
+   "judges_done": 4,
+   "judge_sheet": "judge/globe/sheet.jpg"
+  },
+  {
+   "id": "store",
+   "name": "쇼핑몰 첫 화면",
+   "prompt": "Design a one-page product launch storefront for a premium mechanical keyboard: a WebGL2 topographic shader hero, a pinned four-stage scrollytelling section, a before/after split slider, a 3D wireframe spec card, and a live color configurator. Make it look like a top design agency built it.\n\nSave the result as one self-contained file named index.html in the current directory. Use raw WebGL2 only, no external libraries or network requests. Do it in one go, do not ask questions.",
+   "runs": {
+    "neon": {
+     "seconds": 605,
+     "bytes": 144415,
+     "page": "runs/store/neon/index.html",
+     "video": "video/store-neon.mp4",
+     "poster": "poster/store-neon.jpg",
+     "tokens": {
+      "input": 112793,
+      "cached": 797851,
+      "output": 83102
+     },
+     "cost_usd": 1.705,
+     "cost_kind": "estimate",
+     "run_date": "2026-11-19",
+     "reused": false,
+     "rec_fps": 4.3
+    },
+    "hydrogen": {
+     "seconds": 316,
+     "bytes": 126173,
+     "page": "runs/store/hydrogen/index.html",
+     "video": "video/store-hydrogen.mp4",
+     "poster": "poster/store-hydrogen.jpg",
+     "tokens": {
+      "input": 114660,
+      "cached": 1227766,
+      "output": 68894
+     },
+     "cost_usd": 0.689,
+     "cost_kind": "estimate",
+     "run_date": "2026-11-13",
+     "reused": true,
+     "rec_fps": 7.5
+    },
+    "sonnet": {
+     "seconds": 1501,
+     "bytes": 84987,
+     "page": "runs/store/sonnet/index.html",
+     "video": "video/store-sonnet.mp4",
+     "poster": "poster/store-sonnet.jpg",
+     "tokens": {
+      "input": 195636,
+      "cached": 4166315,
+      "output": 241883
+     },
+     "cost_usd": 3.618,
+     "cost_kind": "reported",
+     "run_date": "2026-11-13",
+     "reused": true,
+     "rec_fps": 10.2
+    },
+    "sol": {
+     "seconds": 521,
+     "bytes": 54864,
+     "page": "runs/store/sol/index.html",
+     "video": "video/store-sol.mp4",
+     "poster": "poster/store-sol.jpg",
+     "tokens": {
+      "input": 84251,
+      "cached": 2113408,
+      "output": 31732,
+      "helpers": 0,
+      "helper_usd": 0.0
+     },
+     "cost_usd": 0.697,
+     "cost_kind": "estimate",
+     "run_date": "2026-11-19",
+     "reused": false,
+     "rec_fps": 23.4
+    }
+   },
+   "points": {
+    "neon": 5,
+    "hydrogen": 13,
+    "sonnet": 11,
+    "sol": 11
+   },
+   "ballots": [
+    {
+     "judge": "neon",
+     "ranking": [
+      "hydrogen",
+      "sol",
+      "sonnet",
+      "neon"
+     ],
+     "reasons": {
+      "hydrogen": "히어로 상단 제목이 약간 잘리지만 3D 와이어프레임 스펙 카드와 실시간 3D 컨피규레이터 등 프롬프트의 모든 핵심 요소를 완성도 높게 구현했습니다.",
+      "sol": "톱 에이전시 수준의 깔끔한 타이포그래피와 무결점 레이아웃이 돋보이지만 3D 와이어프레임 스펙 카드가 화면에 보이지 않고 컨피규레이터가 단순합니다.",
+      "sonnet": "감각적인 지형 셰이더와 비주얼 완성도는 인상적이나 3D 키보드가 제목을 가리고 2단계 텍스트 가독성 저하 및 내부 렌더링 깨짐 버그가 뚜렷합니다.",
+      "neon": "분해 스크롤 섹션이 지나치게 길어 비교 슬라이더·와이어프레임·컨피규레이터가 보이지 않으며 4단계에서 3단계 탭이 활성화되는 상태 불일치 버그가 있습니다."
+     }
+    },
+    {
+     "judge": "hydrogen",
+     "ranking": [
+      "hydrogen",
+      "sonnet",
+      "sol",
+      "neon"
+     ],
+     "reasons": {
+      "hydrogen": "WebGL2 지형 히어로, 4단계 분해 스크롤, 전후 비교 슬라이더, 3D 와이어프레임 스펙 카드, 실시간 컨피규레이터를 모두 높은 완성도로 구현했으며 첫 프레임이 약간 스크롤된 점 외에는 뚜렷한 결함이 없습니다.",
+      "sonnet": "최상급 타이포그래피와 지형 히어로·음향 스펙트로그램 비교가 돋보이나, 2단계 텍스트 가독성 저하, 4단계 문구와 키보드 겹침, 와이어프레임 카드 미표시 및 컨피규레이터 프리뷰 공백이 보입니다.",
+      "sol": "정돈된 에디토리얼 레이아웃으로 히어로, 4단계 섹션, 비교 슬라이더, 컨피규레이터를 안정적으로 배치했으나 3D 와이어프레임 스펙 카드가 보이지 않고 분해 연출과 시각적 깊이감이 다소 단순합니다.",
+      "neon": "지형 히어로와 4단계 분해 CAD 뷰는 깔끔하지만 핀 고정 구간이 2~6프레임을 모두 차지해 비교 슬라이더·3D 와이어프레임·컨피규레이터를 볼 수 없고 마지막 프레임의 활성 단계 표시도 어긋납니다."
+     }
+    },
+    {
+     "judge": "sonnet",
+     "ranking": [
+      "sonnet",
+      "sol",
+      "neon",
+      "hydrogen"
+     ],
+     "reasons": {
+      "hydrogen": "지형 셰이더 히어로 텍스트가 상단에서 잘려 보이고 전체적으로 어둡고 밀집되어 있으며 키보드 비주얼이 거칠고 가독성이 낮다.",
+      "sol": "깔끔한 베이지/다크 대비와 정교한 키보드 렌더링, 명확한 비교 슬라이더와 컨피규레이터로 완성도가 높지만 히어로의 지형 셰이더 느낌이 약하다.",
+      "sonnet": "선명한 오렌지 지형선 히어로, 분해되는 3D 키보드, 와이어프레임 카드와 컬러 컨피규레이터까지 에이전시급의 극적인 연출과 완성도를 보인다.",
+      "neon": "지형 히어로와 핀 고정 단계 섹션, 분해 3D 모델은 좋지만 히어로 제목이 겹쳐 보이고 하단이 비어 있으며 후반부 변화가 적다."
+     }
+    },
+    {
+     "judge": "sol",
+     "ranking": [
+      "hydrogen",
+      "sol",
+      "sonnet",
+      "neon"
+     ],
+     "reasons": {
+      "hydrogen": "등고선 히어로, 4단계 전개, 분할 비교, 와이어프레임 사양 카드, 색상 구성기가 모두 화면에 드러난다.",
+      "sol": "선명한 제품 렌더와 정돈된 비교·구성 화면이 돋보이지만 와이어프레임 사양 카드는 확인하기 어렵다.",
+      "sonnet": "등고선과 3D 분해 연출은 인상적이지만 작은 본문의 대비가 낮고 구성기 미리보기는 일부만 보인다.",
+      "neon": "단계별 분해도는 정교하지만 분할 비교와 색상 구성기는 제시된 프레임에서 확인하기 어렵다."
+     }
+    }
+   ],
+   "judges_done": 4,
+   "judge_sheet": "judge/store/sheet.jpg"
+  },
+  {
+   "id": "city",
+   "name": "미래 도시 비행",
+   "prompt": "Make a futuristic night city I can actually fly through in first person in WebGL2: procedurally generated towers, neon signs, rain, and moving traffic. WASD to move, mouse to look.\n\nSave the result as one self-contained file named index.html in the current directory. Use raw WebGL2 only, no external libraries or network requests. Do it in one go, do not ask questions.",
+   "runs": {
+    "neon": {
+     "seconds": 824,
+     "bytes": 111216,
+     "page": "runs/city/neon/index.html",
+     "video": "video/city-neon.mp4",
+     "poster": "poster/city-neon.jpg",
+     "tokens": {
+      "input": 237347,
+      "cached": 1969958,
+      "output": 99988
+     },
+     "cost_usd": 2.507,
+     "cost_kind": "estimate",
+     "run_date": "2026-11-19",
+     "reused": false,
+     "rec_fps": 19.8
+    },
+    "hydrogen": {
+     "seconds": 439,
+     "bytes": 97519,
+     "page": "runs/city/hydrogen/index.html",
+     "video": "video/city-hydrogen.mp4",
+     "poster": "poster/city-hydrogen.jpg",
+     "tokens": {
+      "input": 138222,
+      "cached": 2104819,
+      "output": 84278
+     },
+     "cost_usd": 0.839,
+     "cost_kind": "estimate",
+     "run_date": "2026-11-13",
+     "reused": true,
+     "rec_fps": 20.0
+    },
+    "sonnet": {
+     "seconds": 757,
+     "bytes": 55318,
+     "page": "runs/city/sonnet/index.html",
+     "video": "video/city-sonnet.mp4",
+     "poster": "poster/city-sonnet.jpg",
+     "tokens": {
+      "input": 114175,
+      "cached": 755458,
+      "output": 107379
+     },
+     "cost_usd": 1.606,
+     "cost_kind": "reported",
+     "run_date": "2026-11-13",
+     "reused": true,
+     "rec_fps": 21.4
+    },
+    "sol": {
+     "seconds": 465,
+     "bytes": 47060,
+     "page": "runs/city/sol/index.html",
+     "video": "video/city-sol.mp4",
+     "poster": "poster/city-sol.jpg",
+     "tokens": {
+      "input": 89226,
+      "cached": 2191744,
+      "output": 28145,
+      "helpers": 0,
+      "helper_usd": 0.0
+     },
+     "cost_usd": 0.679,
+     "cost_kind": "estimate",
+     "run_date": "2026-11-19",
+     "reused": false,
+     "rec_fps": 18.4
+    }
+   },
+   "points": {
+    "neon": 7,
+    "hydrogen": 9,
+    "sonnet": 11,
+    "sol": 13
+   },
+   "ballots": [
+    {
+     "judge": "neon",
+     "ranking": [
+      "sol",
+      "sonnet",
+      "neon",
+      "hydrogen"
+     ],
+     "reasons": {
+      "sol": "어두운 야경과 젖은 도로 반사, 네온사인, 비, 교통 흐름을 가장 완성도 높게 구현했고 벽 관통 없이 안정적으로 비행합니다.",
+      "neon": "타워·네온·비·교통 요소를 모두 갖췄으나 화면이 지나치게 밝아 야경 느낌이 약하고 4번째 프레임에서 벽에 완전히 막히며 후반부가 단조롭습니다.",
+      "sonnet": "비와 공중·도로 교통, 밀도 높은 야경 도시를 잘 표현했으나 블룸이 과하고 3번째 프레임에서 건물 벽을 관통하는 클리핑이 발생합니다.",
+      "hydrogen": "초반 구도와 네온 디자인은 깔끔하지만 비 표현이 보이지 않고 4번째 프레임의 벽 클리핑 이후 후반부에는 도시 밖 빈 평지로 벗어나 버립니다."
+     }
+    },
+    {
+     "judge": "hydrogen",
+     "ranking": [
+      "sol",
+      "sonnet",
+      "hydrogen",
+      "neon"
+     ],
+     "reasons": {
+      "sol": "어두운 야경 분위기와 가독성 높은 네온사인, 젖은 도로 반사, 지상·공중 교통이 전 구간에서 가장 완성도 높게 유지됩니다.",
+      "neon": "초반 홀로그램 링은 화려하지만 4번 프레임의 심한 벽 클리핑과 5~6번 프레임의 도시 이탈, 단조로운 박스형 건물이 아쉽습니다.",
+      "sonnet": "3번 프레임에서 벽 클리핑이 발생하지만 전 구간에서 도시 밀도와 빗줄기, 노면 반사, 이동 차량 궤적을 안정적으로 구현했습니다.",
+      "hydrogen": "초반 건물 다양성과 네온사인은 우수하나 4번 프레임의 부분 클리핑 이후 5~6번 프레임에서 도시 밖 빈 평지로 벗어나 버립니다."
+     }
+    },
+    {
+     "judge": "sonnet",
+     "ranking": [
+      "hydrogen",
+      "neon",
+      "sonnet",
+      "sol"
+     ],
+     "reasons": {
+      "sol": "어둡고 밋밋하며 네온과 비가 약하고, 후반부에 건물 면과 빈 도로만 보여 몰입감이 떨어진다.",
+      "neon": "네온과 거리 구성이 화려하고 HUD도 있지만, 건물에 파묻혀 화면이 하얗게 가려지는 클리핑 장면이 있다.",
+      "sonnet": "비와 네온 연출이 강하고 교통 차량도 보이지만, 벽에 막혀 화면이 흐려지는 구간이 있고 전체적으로 어수선하다.",
+      "hydrogen": "네온 간판, 달과 스카이라인, 이동 차량, 깔끔한 HUD까지 가장 완성도가 높고 시각적으로 일관되다. 건물에 가까워지는 장면이 하나 있지만 가장 낫다."
+     }
+    },
+    {
+     "judge": "sol",
+     "ranking": [
+      "sol",
+      "sonnet",
+      "hydrogen",
+      "neon"
+     ],
+     "reasons": {
+      "sol": "절제된 네온과 젖은 도로의 반사, 움직이는 차량이 완성도 높은 야간 비행 장면을 만든다.",
+      "neon": "과도한 발광으로 거리 디테일이 흐려지고 건물 벽이 한 장면의 시야를 거의 가린다.",
+      "sonnet": "빗줄기와 공중 교통이 속도감을 살리지만 중간에 건물 벽이 화면을 가득 채운다.",
+      "hydrogen": "네온과 차량은 선명하지만 비가 거의 보이지 않고 후반에는 텅 빈 도로가 화면을 채운다."
+     }
+    }
+   ],
+   "judges_done": 4,
+   "judge_sheet": "judge/city/sheet.jpg"
+  },
+  {
+   "id": "blackhole",
+   "name": "블랙홀 셰이더",
+   "prompt": "Write a WebGL2 fragment shader demo of a black hole with a glowing accretion disk and gravitational lensing that bends the starfield behind it. Add a slow cinematic camera orbit and a small control to change the disk temperature.\n\nSave the result as one self-contained file named index.html in the current directory. Use raw WebGL2 only, no external libraries or network requests. Do it in one go, do not ask questions.",
+   "runs": {
+    "neon": {
+     "seconds": 413,
+     "bytes": 38937,
+     "page": "runs/blackhole/neon/index.html",
+     "video": "video/blackhole-neon.mp4",
+     "poster": "poster/blackhole-neon.jpg",
+     "tokens": {
+      "input": 92507,
+      "cached": 393839,
+      "output": 64854
+     },
+     "cost_usd": 1.309,
+     "cost_kind": "estimate",
+     "run_date": "2026-11-19",
+     "reused": false,
+     "rec_fps": 2.1
+    },
+    "hydrogen": {
+     "seconds": 165,
+     "bytes": 37111,
+     "page": "runs/blackhole/hydrogen/index.html",
+     "video": "video/blackhole-hydrogen.mp4",
+     "poster": "poster/blackhole-hydrogen.jpg",
+     "tokens": {
+      "input": 53602,
+      "cached": 226174,
+      "output": 41048
+     },
+     "cost_usd": 0.388,
+     "cost_kind": "estimate",
+     "run_date": "2026-11-13",
+     "reused": true,
+     "rec_fps": 17.5
+    },
+    "sonnet": {
+     "seconds": 163,
+     "bytes": 13915,
+     "page": "runs/blackhole/sonnet/index.html",
+     "video": "video/blackhole-sonnet.mp4",
+     "poster": "poster/blackhole-sonnet.jpg",
+     "tokens": {
+      "input": 27142,
+      "cached": 175920,
+      "output": 20476
+     },
+     "cost_usd": 0.331,
+     "cost_kind": "reported",
+     "run_date": "2026-11-13",
+     "reused": true,
+     "rec_fps": 17.5
+    },
+    "sol": {
+     "seconds": 288,
+     "bytes": 27130,
+     "page": "runs/blackhole/sol/index.html",
+     "video": "video/blackhole-sol.mp4",
+     "poster": "poster/blackhole-sol.jpg",
+     "tokens": {
+      "input": 81152,
+      "cached": 1494400,
+      "output": 16798,
+      "helpers": 0,
+      "helper_usd": 0.0
+     },
+     "cost_usd": 0.48,
+     "cost_kind": "estimate",
+     "run_date": "2026-11-19",
+     "reused": false,
+     "rec_fps": 23.5
+    }
+   },
+   "points": {
+    "neon": 4,
+    "hydrogen": 9,
+    "sonnet": 12,
+    "sol": 15
+   },
+   "ballots": [
+    {
+     "judge": "neon",
+     "ranking": [
+      "sol",
+      "sonnet",
+      "hydrogen",
+      "neon"
+     ],
+     "reasons": {
+      "sol": "부드럽고 사실적인 강착원반 발광과 광자 고리, 절제된 카메라 공전 및 세련된 온도 조절 UI로 시각적 완성도가 가장 뛰어납니다.",
+      "sonnet": "별 배경의 중력렌즈 왜곡과 완만한 카메라 공전이 깔끔하게 구현되었으나, 강착원반의 동심원 줄무늬 패턴이 다소 부자연스럽습니다.",
+      "neon": "주변 배경 왜곡이 지나치게 거칠고 지저분하며, 블랙홀 그림자 하단이 주황색으로 채워져 보이는 등 렌더링 완성도가 가장 떨어집니다.",
+      "hydrogen": "입체적인 중력렌즈와 궤도 변화, 온도 제어는 잘 작동하지만 강착원반이 흰색으로 과노출되어 디테일이 뭉개지고 공전이 다소 급격합니다."
+     }
+    },
+    {
+     "judge": "hydrogen",
+     "ranking": [
+      "sol",
+      "sonnet",
+      "hydrogen",
+      "neon"
+     ],
+     "reasons": {
+      "sol": "유체처럼 부드러운 강착 원반과 중력 렌즈 효과, 완만한 카메라 궤도 및 깔끔한 온도 조절 UI까지 완성도가 가장 높다.",
+      "sonnet": "배경 별의 중력 렌즈 왜곡과 부드러운 카메라 공전을 잘 구현했으나, 강착 원반의 동심원 줄무늬가 A에 비해 다소 단조롭다.",
+      "hydrogen": "별빛의 중력 렌즈 효과와 온도 조절 UI는 잘 작동하지만, 강착 원반의 흰색 과노출과 급격한 탑다운 시점 변화가 아쉽다.",
+      "neon": "블랙홀 그림자 하단이 원반에 가려지는 렌더링 오류가 있고, 배경 별이 거칠게 뭉개지며 카메라 궤도 변화도 거의 보이지 않는다."
+     }
+    },
+    {
+     "judge": "sonnet",
+     "ranking": [
+      "sonnet",
+      "sol",
+      "hydrogen",
+      "neon"
+     ],
+     "reasons": {
+      "sol": "원반 질감과 UI는 정교하고 아름답지만 원반이 화면 가장자리까지 차올라 별밭과 렌징이 거의 안 보이고 카메라 변화도 미미하며 아래쪽에 원형 아티팩트가 보인다.",
+      "sonnet": "원반이 화면 안에 깔끔히 들어가고 별밭이 선명하며 온도 슬라이더도 작고 단정해서 요구사항을 균형 있게 충족한다.",
+      "neon": "별밭과 원반이 노이즈 섞인 소용돌이로 뒤엉켜 블랙홀 형태가 어색하고 지저분하며 가독성과 완성도가 가장 떨어진다.",
+      "hydrogen": "별밭과 카메라 궤도 변화, 렌징 효과는 뛰어나지만 원반이 하얗게 과노출되고 중간 프레임에 고리 모양 아티팩트가 눈에 띈다."
+     }
+    },
+    {
+     "judge": "sol",
+     "ranking": [
+      "sol",
+      "hydrogen",
+      "sonnet",
+      "neon"
+     ],
+     "reasons": {
+      "sol": "원반의 따뜻한 광채와 휘어진 별빛, 작은 온도 슬라이더가 안정적인 구도 안에서 조화를 이룬다.",
+      "sonnet": "원반의 결이 선명하고 화면이 깔끔하지만 프레임 사이 시점 변화가 미미하다.",
+      "neon": "별빛의 휘어짐은 뚜렷하지만 배경이 지나치게 밝아 원반과의 경계가 흐려진다.",
+      "hydrogen": "카메라 궤도와 별빛의 휘어짐은 뚜렷하지만 밝은 원반의 세부가 묻히고 마지막 프레임에서 하단이 잘린다."
+     }
+    }
+   ],
+   "judges_done": 4,
+   "judge_sheet": "judge/blackhole/sheet.jpg"
+  }
+ ],
+ "scoring": "AI 심사위원 4명(= 선수 넷)이 이름을 가린 A·B·C·D 캡처 시트(작품마다 6프레임)를 보고 1~4위를 매김. 1위 4점 … 4위 1점. 라운드당 최대 16점.",
+ "judging": {
+  "expected_ballots": 20,
+  "ballots": 20,
+  "complete": true,
+  "missing": []
+ },
+ "totals": {
+  "points": {
+   "neon": 37,
+   "hydrogen": 49,
+   "sonnet": 60,
+   "sol": 54
+  },
+  "points_excluding_self": {
+   "neon": 29,
+   "hydrogen": 36,
+   "sonnet": 44,
+   "sol": 40
+  },
+  "ballots": 20,
+  "self_first_votes": 7,
+  "first_votes": {
+   "neon": 1,
+   "hydrogen": 7,
+   "sonnet": 5,
+   "sol": 7
+  },
+  "seconds": {
+   "neon": 2830,
+   "hydrogen": 1860,
+   "sonnet": 3488,
+   "sol": 2914
+  },
+  "bytes": {
+   "neon": 448141,
+   "hydrogen": 395458,
+   "sonnet": 234572,
+   "sol": 200483
+  },
+  "cost_usd": {
+   "neon": 8.38,
+   "hydrogen": 3.68,
+   "sonnet": 7.56,
+   "sol": 2.9
+  },
+  "output_tokens": {
+   "neon": 386104,
+   "hydrogen": 372411,
+   "sonnet": 500737,
+   "sol": 120333
+  }
+ },
+ "failed_attempts": {
+  "neon": [
+   {
+    "id": "globe-try1",
+    "task": "globe",
+    "note": "번개 지구본 1차 시도: 1012초 뒤 네트워크 시간 초과(i/o timeout)로 중단",
+    "usd": 0.32,
+    "tokens": {
+     "input": 14965,
+     "cached": 10913,
+     "output": 18244
+    },
+    "seconds": 1012,
+    "rc": 3
+   },
+   {
+    "id": "store-try1",
+    "task": "store",
+    "note": "쇼핑몰 1차 시도: \"model not recognized\" 오류로 시작 못 함 (토큰 0)",
+    "usd": 0.0,
+    "tokens": {
+     "input": 0,
+     "cached": 0,
+     "output": 0
+    },
+    "seconds": 160,
+    "rc": 1
+   }
+  ],
+  "usd": 0.32
+ },
+ "limits": [
+  "Hydrogen과 Sonnet 결과물은 11편 실행(2026-11-13)을 그대로 다시 썼습니다. Neon과 Sol은 2026-11-19에 같은 프롬프트 5개로 새로 돌렸습니다.",
+  "도구 조건이 서로 다릅니다. Sol(Codex CLI)은 명령을 실행하고 자기 결과의 스크린샷을 볼 수 있었습니다(로그에서 과제마다 스크린샷 관련 언급 약 23~27회, 명령 약 26~30회). 또 ~/.codex/AGENTS.md 지침을 읽습니다. Sonnet은 파일 도구(Write/Edit/Read)만 썼고, Neon·Hydrogen은 agy 기본 에이전트 도구를 샌드박스 안에서 썼습니다.",
+  "Neon은 두 번 실패한 뒤 다시 돌려서 성공했습니다. 번개 지구본 1차 시도는 1012초 뒤 네트워크 시간 초과로 끊겼고(이 비용은 아래 실패 목록에 따로 셈), 쇼핑몰 1차 시도는 \"model not recognized\" 오류로 시작도 못 했습니다(토큰 0). 재시도는 둘 다 성공했습니다.",
+  "심사위원은 선수 넷 자신입니다. 이름을 가린 A~D 시트(작품마다 6프레임)만 보고 순위를 매겼고, 자기 작품에 준 표도 셌습니다. 자기 표를 뺀 합계도 함께 보여 줍니다. Hydrogen 심사는 Gemini API 프로젝트가 월 지출 한도에 걸려서 Neon과 똑같이 agy(Google 계정)로 했습니다.",
+  "비용은 토큰 수 × 공식 단가로 계산한 추정값입니다(Sonnet만 Claude Code가 보고한 금액). Neon은 캐시된 입력 단가를 넣어 계산했고, Hydrogen은 11편과 비교할 수 있게 11편 방식 그대로(캐시 단가 없음) 두었습니다.",
+  "무거운 페이지 몇 개는 녹화에서 초당 서로 다른 프레임이 적게 잡혔습니다(Neon 블랙홀·쇼핑몰·물과 유리, Hydrogen 물과 유리). 녹화기는 페이지가 실제로 그린 화면만 담습니다.",
+  "과제마다 한 번씩만 실행했습니다. 다시 하면 결과가 달라질 수 있습니다.",
+  "심사는 녹화 캡처(정지 화면)만 보고 했습니다. 소리와 조작감은 심사에 들어가지 않았습니다."
+ ],
+ "scripts": [
+  "run_one.sh",
+  "run_lane.sh",
+  "retry_neon.sh",
+  "rec_new.sh",
+  "judge_all_neon.sh",
+  "act-still.json",
+  "act-orbit.json",
+  "act-probe.json",
+  "act-globe.json",
+  "act-store.json",
+  "act-city.json",
+  "rec-all.sh",
+  "rec-ego.sh",
+  "record-ego.tpl.mjs",
+  "check-rec.sh",
+  "make_sheet_neon.py",
+  "judge_neon.sh",
+  "tally_neon.py",
+  "cost_neon.py"
+ ]
+}

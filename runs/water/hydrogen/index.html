@@ -1,0 +1,1541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Water & Glass — Pure Math SDF Visualizer (WebGL2)</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #061018;
+    color: #e6f2f8;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    cursor: grab;
+    touch-action: none;
+  }
+  canvas:active { cursor: grabbing; }
+
+  .hud {
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    z-index: 10;
+    width: 286px;
+    max-width: calc(100vw - 32px);
+    background: rgba(8, 18, 28, 0.68);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(150, 215, 245, 0.18);
+    border-radius: 14px;
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.42);
+    overflow: hidden;
+    transition: width 0.2s ease, opacity 0.2s ease;
+  }
+  .hud.collapsed {
+    width: auto;
+  }
+  .hud-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 11px 14px;
+    border-bottom: 1px solid rgba(150, 215, 245, 0.12);
+  }
+  .hud.collapsed .hud-header {
+    border-bottom: none;
+  }
+  .title-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+  .title {
+    font-size: 13px;
+    font-weight: 650;
+    letter-spacing: 0.02em;
+    color: #f0f9ff;
+  }
+  .subtitle {
+    font-size: 10.5px;
+    color: rgba(186, 224, 242, 0.68);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .toggle-btn {
+    background: rgba(140, 210, 245, 0.12);
+    border: 1px solid rgba(140, 210, 245, 0.22);
+    color: #d6effc;
+    border-radius: 8px;
+    padding: 4px 9px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .toggle-btn:hover { background: rgba(140, 210, 245, 0.22); }
+
+  .hud-body {
+    padding: 12px 14px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+    max-height: calc(100vh - 96px);
+    overflow-y: auto;
+  }
+  .hud.collapsed .hud-body { display: none; }
+
+  .section-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(170, 215, 238, 0.62);
+    margin-bottom: 5px;
+    font-weight: 600;
+  }
+
+  .btn-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  .btn-row {
+    display: flex;
+    gap: 6px;
+  }
+  .pill {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(150, 215, 245, 0.15);
+    color: rgba(226, 242, 252, 0.85);
+    border-radius: 8px;
+    padding: 6px 8px;
+    font-size: 11.5px;
+    font-weight: 500;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s ease;
+  }
+  .pill:hover {
+    background: rgba(110, 200, 245, 0.14);
+    border-color: rgba(130, 215, 250, 0.35);
+  }
+  .pill.active {
+    background: rgba(70, 180, 235, 0.28);
+    border-color: rgba(125, 220, 255, 0.65);
+    color: #ffffff;
+    font-weight: 600;
+  }
+
+  .slider-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .slider-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11.5px;
+    color: rgba(224, 242, 252, 0.88);
+  }
+  .slider-val {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+    color: #8ad8f8;
+  }
+  input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 5px;
+    border-radius: 999px;
+    background: rgba(150, 215, 245, 0.18);
+    outline: none;
+    cursor: pointer;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #8ee0ff;
+    border: 2px solid #082030;
+    box-shadow: 0 0 8px rgba(100, 215, 255, 0.6);
+    cursor: pointer;
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #8ee0ff;
+    border: 2px solid #082030;
+    cursor: pointer;
+  }
+
+  .tint-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .swatches {
+    display: flex;
+    gap: 7px;
+  }
+  .swatch {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.25);
+    cursor: pointer;
+    transition: transform 0.15s, border-color 0.15s;
+  }
+  .swatch:hover { transform: scale(1.12); }
+  .swatch.active {
+    border-color: #ffffff;
+    transform: scale(1.12);
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+  }
+
+  .stats-bar {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    z-index: 10;
+    background: rgba(8, 18, 28, 0.58);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(150, 215, 245, 0.15);
+    border-radius: 10px;
+    padding: 6px 11px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+    color: rgba(205, 236, 250, 0.85);
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+  .hint {
+    position: fixed;
+    bottom: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    background: rgba(8, 18, 28, 0.55);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(150, 215, 245, 0.14);
+    border-radius: 999px;
+    padding: 6px 14px;
+    font-size: 11.5px;
+    color: rgba(210, 236, 250, 0.78);
+    pointer-events: none;
+    white-space: nowrap;
+  }
+  .error-box {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: #061018;
+    color: #ff9f9f;
+    padding: 24px;
+    font-family: ui-monospace, monospace;
+    white-space: pre-wrap;
+    z-index: 100;
+  }
+</style>
+</head>
+<body>
+<canvas id="glcanvas"></canvas>
+
+<div class="hud" id="hud">
+  <div class="hud-header">
+    <div class="title-wrap">
+      <div class="title">Water &amp; Glass SDF</div>
+      <div class="subtitle">Pure Math · WebGL2 Raymarch</div>
+    </div>
+    <button class="toggle-btn" id="toggleHud">Hide</button>
+  </div>
+  <div class="hud-body">
+    <div>
+      <div class="section-label">Glass SDF Geometry</div>
+      <div class="btn-grid" id="shapeBtns">
+        <button class="pill active" data-shape="0">Crystal Prism</button>
+        <button class="pill" data-shape="1">Twisted Torus</button>
+        <button class="pill" data-shape="2">Optical Orb</button>
+        <button class="pill" data-shape="3">Hourglass</button>
+      </div>
+    </div>
+
+    <div class="slider-group">
+      <div class="slider-head">
+        <span>Chromatic Dispersion</span>
+        <span class="slider-val" id="valDispersion">1.00×</span>
+      </div>
+      <input type="range" id="dispersion" min="0" max="2.2" step="0.05" value="1.0" />
+    </div>
+
+    <div class="slider-group">
+      <div class="slider-head">
+        <span>Glass Absorption</span>
+        <span class="slider-val" id="valGlassAbs">1.00×</span>
+      </div>
+      <input type="range" id="glassAbsorb" min="0" max="2.8" step="0.05" value="1.0" />
+    </div>
+
+    <div class="tint-row">
+      <span style="font-size:11.5px; color:rgba(224,242,252,0.88);">Glass Tint</span>
+      <div class="swatches" id="tintSwatches">
+        <div class="swatch active" data-tint="0" title="Aquamarine Optical" style="background: linear-gradient(135deg, #d8f8ff, #38b6c8);"></div>
+        <div class="swatch" data-tint="1" title="Pure Crown Clear" style="background: linear-gradient(135deg, #ffffff, #c8dce6);"></div>
+        <div class="swatch" data-tint="2" title="Emerald Sea Glass" style="background: linear-gradient(135deg, #a8ffd6, #169868);"></div>
+        <div class="swatch" data-tint="3" title="Amethyst Quartz" style="background: linear-gradient(135deg, #f2c8ff, #9b48d6);"></div>
+      </div>
+    </div>
+
+    <div class="slider-group">
+      <div class="slider-head">
+        <span>Water Absorption</span>
+        <span class="slider-val" id="valWaterAbs">1.00×</span>
+      </div>
+      <input type="range" id="waterAbsorb" min="0.1" max="2.5" step="0.05" value="1.0" />
+    </div>
+
+    <div class="slider-group">
+      <div class="slider-head">
+        <span>Wave Amplitude</span>
+        <span class="slider-val" id="valWaveAmp">1.00×</span>
+      </div>
+      <input type="range" id="waveAmp" min="0" max="2.0" step="0.05" value="1.0" />
+    </div>
+
+    <div class="slider-group">
+      <div class="slider-head">
+        <span>Sun Elevation</span>
+        <span class="slider-val" id="valSunElev">40°</span>
+      </div>
+      <input type="range" id="sunElev" min="10" max="82" step="1" value="40" />
+    </div>
+
+    <div>
+      <div class="section-label">Camera &amp; Simulation</div>
+      <div class="btn-row" style="margin-bottom:6px;">
+        <button class="pill" id="viewWaterline">Waterline</button>
+        <button class="pill" id="viewOverhead">Above</button>
+        <button class="pill" id="viewUnder">Underwater</button>
+      </div>
+      <div class="btn-row">
+        <button class="pill" id="btnPause">Pause Waves</button>
+        <button class="pill" id="btnQuality">Res: Balanced</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="stats-bar">
+  <span id="fpsLabel">-- fps</span>
+  <span style="opacity:0.35">|</span>
+  <span id="resLabel">--×--</span>
+</div>
+
+<div class="hint">Drag to orbit · Scroll to zoom · Dip camera below surface for Snell's window &amp; underwater view</div>
+<div class="error-box" id="errorBox"></div>
+
+<script>
+(() => {
+  'use strict';
+
+  const canvas = document.getElementById('glcanvas');
+  const errorBox = document.getElementById('errorBox');
+  const showError = (msg) => {
+    errorBox.style.display = 'flex';
+    errorBox.textContent = msg;
+  };
+
+  const gl = canvas.getContext('webgl2', {
+    antialias: false,
+    alpha: false,
+    powerPreference: 'high-performance'
+  });
+
+  if (!gl) {
+    showError('WebGL2 is required but not supported in this browser.');
+    return;
+  }
+
+  const vsSource = `#version 300 es
+precision highp float;
+out vec2 vUv;
+void main() {
+  // Fullscreen triangle via vertex ID
+  vec2 pos = vec2((gl_VertexID << 1) & 2, gl_VertexID & 2);
+  vUv = pos;
+  gl_Position = vec4(pos * 2.0 - 1.0, 0.0, 1.0);
+}`;
+
+  const fsSource = `#version 300 es
+precision highp float;
+precision highp int;
+
+in vec2 vUv;
+out vec4 fragColor;
+
+uniform vec2 uResolution;
+uniform float uTime;
+uniform vec3 uCamPos;
+uniform vec3 uCamTarget;
+uniform vec3 uSunDir;
+uniform int uShape;
+uniform float uDispersion;
+uniform float uGlassAbsorb;
+uniform float uWaterAbsorb;
+uniform vec3 uGlassSigma;
+uniform float uWaveAmp;
+
+const float PI = 3.14159265359;
+const float FLOOR_Y = -1.68;
+const float HIT_EPS = 0.0012;
+const float MAX_DIST = 48.0;
+
+// Smooth min / max for beveled SDFs
+float smin(float a, float b, float k) {
+  float h = clamp(0.5 + 0.5 * (b - a) / k, 0.0, 1.0);
+  return mix(b, a, h) - k * h * (1.0 - h);
+}
+
+float smax(float a, float b, float k) {
+  return -smin(-a, -b, k);
+}
+
+mat2 rot2(float a) {
+  float c = cos(a), s = sin(a);
+  return mat2(c, -s, s, c);
+}
+
+// ============================================================
+// Pure-Math Procedural Water Heightfield & Analytical Waves
+// ============================================================
+float waveOctave(vec2 p, vec2 dir, float freq, float speed, float time) {
+  float ph = dot(p, dir) * freq - time * speed;
+  // Slightly sharpened trochoidal wave profile
+  float s = sin(ph);
+  float c = cos(ph);
+  return s + 0.24 * (s * s - 0.5) + 0.10 * s * c;
+}
+
+float waterHeight(vec2 xz, float t) {
+  float amp = uWaveAmp;
+  if (amp <= 0.0001) return 0.0;
+
+  float r = length(xz);
+  // Smooth distance attenuation prevents distant horizon aliasing
+  float farAtten = 1.0 / (1.0 + 0.012 * r * r);
+  float hiAtten = 1.0 / (1.0 + 0.045 * r * r);
+
+  float h = 0.0;
+  h += 0.052 * waveOctave(xz, vec2( 0.89,  0.45), 1.45, 1.35, t) * farAtten;
+  h += 0.036 * waveOctave(xz, vec2(-0.52,  0.85), 2.15, 1.65, t) * farAtten;
+  h += 0.022 * waveOctave(xz, vec2( 0.28, -0.96), 3.30, 2.05, t) * farAtten;
+  h += 0.014 * waveOctave(xz, vec2(-0.94, -0.34), 4.90, 2.55, t) * hiAtten;
+  h += 0.008 * waveOctave(xz, vec2( 0.65,  0.76), 7.40, 3.15, t) * hiAtten;
+  h += 0.004 * waveOctave(xz, vec2(-0.78,  0.62), 11.2, 3.85, t) * hiAtten;
+
+  // Concentric capillary ripples radiating from the half-submerged glass object
+  float rippleEnv = exp(-max(r - 0.50, 0.0) * 0.72) * smoothstep(0.18, 0.55, r);
+  float ripple = sin(r * 13.5 - t * 4.4) * 0.017 * rippleEnv;
+  ripple += sin(r * 23.0 - t * 6.2) * 0.006 * rippleEnv;
+
+  return (h + ripple) * amp;
+}
+
+// Signed distance bound to water surface (negative = underwater)
+float sdWater(vec3 p) {
+  return (p.y - waterHeight(p.xz, uTime)) * 0.62;
+}
+
+// Outward normal of water surface (pointing up into air)
+vec3 waterNormal(vec3 p) {
+  float e = 0.006;
+  float hL = waterHeight(p.xz - vec2(e, 0.0), uTime);
+  float hR = waterHeight(p.xz + vec2(e, 0.0), uTime);
+  float hD = waterHeight(p.xz - vec2(0.0, e), uTime);
+  float hU = waterHeight(p.xz + vec2(0.0, e), uTime);
+  return normalize(vec3(hL - hR, 2.0 * e, hD - hU));
+}
+
+// ============================================================
+// Pure-Math Glass Object SDFs (Centered near y = 0.05)
+// ============================================================
+float sdCrystalPrism(vec3 p) {
+  // Subtle artistic tilt so facets break symmetry
+  p.xy *= rot2(0.18);
+  p.yz *= rot2(-0.14);
+  p.xz *= rot2(0.28);
+
+  vec3 a = abs(p);
+  // Octagonal / hexagonal faceted prism planes
+  float p1 = max(a.x * 0.866025 + a.z * 0.5, a.z) - 0.66;
+  float p2 = (a.x * 0.5 + a.z * 0.866025) - 0.68;
+  float prism = smax(p1, p2, 0.024);
+
+  // Pavilion & crown diagonal crystal facets
+  float f1 = (a.x * 0.62 + a.z * 0.36 + a.y * 0.696) - 0.78;
+  float f2 = (a.z * 0.62 + a.x * 0.36 + a.y * 0.696) - 0.78;
+  float facets = smax(f1, f2, 0.028);
+
+  // Top & bottom cut tables
+  float caps = a.y - 0.88;
+
+  float d = smax(prism, facets, 0.025);
+  d = smax(d, caps, 0.025);
+  return d * 0.82;
+}
+
+float sdTwistedTorus(vec3 p) {
+  // Stand upright half-submerged
+  p.xz *= rot2(0.32);
+  vec3 q = vec3(p.x, p.y - 0.04, p.z);
+  float majorR = 0.66;
+  float angle = atan(q.y, q.x);
+  vec2 cp = vec2(length(q.xy) - majorR, q.z);
+  // Twist cross-section 3 half-turns around the ring
+  cp *= rot2(angle * 1.5);
+  // Rounded triangular/square profile for dramatic prismatic edges
+  vec2 ac = abs(cp);
+  float box = max(ac.x, ac.y) - 0.21;
+  float diamond = (ac.x + ac.y) * 0.707107 - 0.23;
+  float d = smax(box, diamond, 0.045) - 0.025;
+  return d * 0.70;
+}
+
+float sdOpticalOrb(vec3 p) {
+  p.xy *= rot2(0.22);
+  // Central spherical lens
+  float core = length(p - vec3(0.0, 0.04, 0.0)) - 0.62;
+  // Equatorial beveled lens ring
+  vec3 q = p - vec3(0.0, 0.04, 0.0);
+  float ring = length(vec2(length(q.xz) - 0.66, q.y * 1.55)) - 0.16;
+  // Two smooth satellite orbs
+  float s1 = length(p - vec3(0.56, 0.42, 0.18)) - 0.25;
+  float s2 = length(p - vec3(-0.54, -0.34, -0.22)) - 0.27;
+  float d = smin(core, ring, 0.12);
+  d = smin(d, s1, 0.11);
+  d = smin(d, s2, 0.11);
+  return d * 0.88;
+}
+
+float sdHourglass(vec3 p) {
+  p.xy *= rot2(0.14);
+  vec3 q = p - vec3(0.0, 0.03, 0.0);
+  float r = length(q.xz);
+  float ang = atan(q.z, q.x);
+  // Concave hyperbolic waist + subtle optical flutes
+  float flute = 0.022 * cos(8.0 * ang);
+  float profile = 0.24 + 0.56 * q.y * q.y + flute;
+  float cyl = (r - profile) * 0.68;
+  float caps = abs(q.y) - 0.86;
+  // Soft rounded rim flares
+  return smax(cyl, caps, 0.06) * 0.82;
+}
+
+float sdGlass(vec3 p) {
+  // Fast bounding-sphere guard
+  vec3 c = p - vec3(0.0, 0.04, 0.0);
+  float bound = length(c) - 1.32;
+  if (bound > 0.15) return bound;
+
+  if (uShape == 0) return sdCrystalPrism(p);
+  if (uShape == 1) return sdTwistedTorus(p);
+  if (uShape == 2) return sdOpticalOrb(p);
+  return sdHourglass(p);
+}
+
+vec3 glassNormal(vec3 p) {
+  float e = 0.0012;
+  vec2 k = vec2(1.0, -1.0);
+  return normalize(
+    k.xyy * sdGlass(p + k.xyy * e) +
+    k.yyx * sdGlass(p + k.yyx * e) +
+    k.yxy * sdGlass(p + k.yxy * e) +
+    k.xxx * sdGlass(p + k.xxx * e)
+  );
+}
+
+// ============================================================
+// Seabed / Floor SDF & Normals
+// ============================================================
+float floorHeight(vec2 xz) {
+  float r = length(xz);
+  float ripple = 0.055 * sin(xz.x * 1.15 + 0.4 * sin(xz.y * 0.9)) * cos(xz.y * 1.05);
+  ripple += 0.025 * sin(xz.x * 2.8 - xz.y * 2.1);
+  // Subtle sunken basin rise at medium distance
+  float basin = 0.08 * smoothstep(2.0, 14.0, r);
+  return FLOOR_Y + ripple + basin;
+}
+
+float sdFloor(vec3 p) {
+  return (p.y - floorHeight(p.xz)) * 0.82;
+}
+
+vec3 floorNormal(vec3 p) {
+  float e = 0.02;
+  float hL = floorHeight(p.xz - vec2(e, 0.0));
+  float hR = floorHeight(p.xz + vec2(e, 0.0));
+  float hD = floorHeight(p.xz - vec2(0.0, e));
+  float hU = floorHeight(p.xz + vec2(0.0, e));
+  return normalize(vec3(hL - hR, 2.0 * e, hD - hU));
+}
+
+// ============================================================
+// Atmospheric Sky & Procedural Sun
+// ============================================================
+vec3 sampleSky(vec3 rd, bool includeSunDisc) {
+  float sunAmt = max(dot(rd, uSunDir), 0.0);
+  float elev = clamp(rd.y, -0.2, 1.0);
+
+  // Sky zenith to horizon gradient
+  vec3 zenith = vec3(0.11, 0.34, 0.68);
+  vec3 midSky = vec3(0.28, 0.56, 0.85);
+  vec3 horizon = vec3(0.70, 0.85, 0.95);
+  vec3 sky = mix(horizon, midSky, smoothstep(0.0, 0.32, max(elev, 0.0)));
+  sky = mix(sky, zenith, smoothstep(0.22, 0.90, max(elev, 0.0)));
+
+  // Warm solar scattering halo near sun
+  vec3 sunWarm = vec3(1.0, 0.84, 0.62);
+  sky += sunWarm * pow(sunAmt, 7.0) * 0.28;
+  sky += vec3(1.0, 0.95, 0.86) * pow(sunAmt, 42.0) * 0.45;
+
+  // Soft procedural high-altitude clouds
+  if (rd.y > 0.02) {
+    vec2 cuv = rd.xz / (rd.y + 0.16) * 0.55;
+    cuv += vec2(uTime * 0.008, uTime * 0.003);
+    float c1 = sin(cuv.x * 2.1 + cos(cuv.y * 1.7)) * cos(cuv.y * 2.3 - sin(cuv.x * 1.3));
+    float c2 = sin(cuv.x * 4.7 - cuv.y * 3.1) * cos(cuv.y * 4.2 + cuv.x * 2.8);
+    float cloud = smoothstep(0.22, 0.88, 0.5 + 0.35 * c1 + 0.18 * c2);
+    float fade = smoothstep(0.02, 0.22, rd.y);
+    vec3 cloudCol = mix(vec3(0.92, 0.95, 0.99), vec3(1.0, 0.93, 0.84), pow(sunAmt, 3.0) * 0.6);
+    sky = mix(sky, cloudCol, cloud * fade * 0.38);
+  }
+
+  // Crisp solar disc for specular / sky views
+  if (includeSunDisc) {
+    float disc = smoothstep(0.9986, 0.99945, sunAmt);
+    sky += vec3(9.0, 8.2, 6.8) * disc;
+  }
+
+  return sky;
+}
+
+// ============================================================
+// Exact Optical Caustics & Seabed Shading
+// ============================================================
+vec2 refractedSunHitXZ(vec2 waterXZ, float depth) {
+  vec3 wn = waterNormal(vec3(waterXZ.x, 0.0, waterXZ.y));
+  vec3 refr = refract(-uSunDir, wn, 1.0 / 1.333);
+  if (length(refr) < 0.01) refr = -uSunDir;
+  return waterXZ + refr.xz * (depth / max(-refr.y, 0.18));
+}
+
+// Jacobian divergence of refracted sun rays -> exact wave caustics!
+float computeWaterCaustics(vec3 floorPos) {
+  float depth = max(0.05, -floorPos.y);
+  // Approximate entry point on water surface above floorPos
+  vec3 approxRefr = refract(-uSunDir, vec3(0.0, 1.0, 0.0), 1.0 / 1.333);
+  vec2 pw = floorPos.xz - approxRefr.xz * (depth / max(-approxRefr.y, 0.2));
+
+  float e = 0.055;
+  vec2 p0 = refractedSunHitXZ(pw, depth);
+  vec2 px = refractedSunHitXZ(pw + vec2(e, 0.0), depth);
+  vec2 pz = refractedSunHitXZ(pw + vec2(0.0, e), depth);
+
+  vec2 dx = (px - p0) / e;
+  vec2 dz = (pz - p0) / e;
+  float jacobian = abs(dx.x * dz.y - dx.y * dz.x);
+  float caust = 0.58 / (jacobian + 0.16) - 0.34;
+  return clamp(caust, 0.0, 2.8) * smoothstep(0.05, 0.35, uSunDir.y);
+}
+
+// Spectral glass caustic & refractive shadow on seabed (x = shadow, yzw = RGB caustic)
+vec4 computeGlassFloorLight(vec3 floorPos) {
+  vec3 ro = floorPos + vec3(0.0, 0.02, 0.0);
+  vec3 rd = uSunDir;
+  float t = 0.0;
+  float minD = 10.0;
+  vec3 closestP = ro;
+  for (int i = 0; i < 32; i++) {
+    vec3 p = ro + rd * t;
+    float d = sdGlass(p);
+    if (d < minD) {
+      minD = d;
+      closestP = p;
+    }
+    if (d < 0.004) break;
+    t += max(d * 0.85, 0.015);
+    if (t > 4.5) break;
+  }
+
+  // Smooth shadow cast by glass
+  float shadow = smoothstep(-0.10, 0.42, minD);
+  shadow = mix(0.32, 1.0, shadow);
+
+  // Smooth chromatic caustic glow focused around refracted glass boundary
+  vec3 gn = glassNormal(closestP);
+  float focus = exp(-pow(max(minD, 0.0) * 3.4, 2.0)) * (1.0 - smoothstep(-0.04, 0.16, minD) * 0.30);
+  float curveBoost = pow(clamp(1.0 - abs(dot(gn, uSunDir)), 0.0, 1.0), 1.4);
+  vec2 radialDir = normalize(floorPos.xz - vec2(0.0) + vec2(1e-4));
+  float shift = dot(floorPos.xz - closestP.xz, radialDir);
+  vec3 dispCaustic = vec3(
+    exp(-pow((shift - 0.12 * uDispersion) * 4.5, 2.0)),
+    exp(-pow((shift) * 5.0, 2.0)),
+    exp(-pow((shift + 0.12 * uDispersion) * 4.5, 2.0))
+  ) * focus * (0.42 + 1.10 * curveBoost);
+
+  // Attenuate caustic by glass absorption
+  vec3 glassPass = exp(-uGlassSigma * uGlassAbsorb * 0.65);
+  return vec4(shadow, dispCaustic * glassPass * 1.45);
+}
+
+vec3 shadeFloor(vec3 p) {
+  vec3 n = floorNormal(p);
+  float dist = length(p.xz);
+
+  // Procedural limestone / sand seabed pattern (pure math)
+  float grain = sin(p.x * 18.0 + sin(p.z * 11.0)) * cos(p.z * 17.0 - cos(p.x * 13.0));
+  float bands = 0.5 + 0.5 * sin(p.x * 2.6 + 0.7 * sin(p.z * 1.9));
+  vec3 sandA = vec3(0.66, 0.61, 0.50);
+  vec3 sandB = vec3(0.49, 0.46, 0.39);
+  vec3 albedo = mix(sandB, sandA, bands * 0.7 + 0.15 * grain);
+
+  // Subtle radial stone ring beneath the glass centerpiece
+  float ring = smoothstep(0.035, 0.0, abs(dist - 1.55)) * 0.12 + smoothstep(0.025, 0.0, abs(dist - 2.65)) * 0.08;
+  albedo = mix(albedo, vec3(0.32, 0.36, 0.38), ring);
+
+  // Refracted sun direction underwater
+  vec3 sunUnder = normalize(refract(-uSunDir, vec3(0.0, 1.0, 0.0), 1.0 / 1.333));
+  float ndl = max(dot(n, -sunUnder), 0.0);
+
+  // Water caustics + glass chromatic caustic + shadow
+  float wCaust = computeWaterCaustics(p);
+  vec4 gLight = computeGlassFloorLight(p);
+  float gShadow = gLight.x;
+  vec3 gCaustic = gLight.yzw;
+
+  // Sun attenuation through water column down to floor
+  float waterDepth = max(0.0, -p.y);
+  float sunPathWater = waterDepth / max(-sunUnder.y, 0.2);
+  vec3 waterSunTrans = exp(-vec3(0.46, 0.11, 0.04) * uWaterAbsorb * sunPathWater);
+
+  vec3 sunCol = vec3(1.15, 1.06, 0.92) * waterSunTrans;
+  vec3 skyAmbient = vec3(0.14, 0.30, 0.42) * (0.55 + 0.45 * n.y);
+
+  vec3 direct = sunCol * (ndl * gShadow + wCaust * 0.52 * gShadow + gCaustic);
+  vec3 col = albedo * (skyAmbient + direct);
+
+  // Distance fog into deep ocean blue-teal at far horizon
+  float fog = 1.0 - exp(-max(dist - 8.0, 0.0) * 0.055);
+  vec3 deepWater = vec3(0.02, 0.15, 0.25) * (0.4 + 0.6 * max(uSunDir.y, 0.1));
+  return mix(col, deepWater, fog);
+}
+
+// ============================================================
+// Exact Dielectric Fresnel & Spectral Wavelength Tables
+// ============================================================
+float fresnelDielectric(float cosI, float n1, float n2) {
+  cosI = clamp(cosI, 0.0, 1.0);
+  float eta = n1 / n2;
+  float sinT2 = eta * eta * (1.0 - cosI * cosI);
+  if (sinT2 >= 1.0) return 1.0;
+  float cosT = sqrt(1.0 - sinT2);
+  float rPar = (n2 * cosI - n1 * cosT) / (n2 * cosI + n1 * cosT);
+  float rPer = (n1 * cosI - n2 * cosT) / (n1 * cosI + n2 * cosT);
+  return 0.5 * (rPar * rPar + rPer * rPer);
+}
+
+vec3 safeRefract(vec3 I, vec3 N, float eta) {
+  float cosI = clamp(-dot(N, I), 0.0, 1.0);
+  float sinT2 = eta * eta * (1.0 - cosI * cosI);
+  if (sinT2 >= 1.0) return vec3(0.0);
+  float cosT = sqrt(1.0 - sinT2);
+  return normalize(eta * I + (eta * cosI - cosT) * N);
+}
+
+// 5 spectral wavelengths (micrometers) and CIE-balanced RGB weights summing strictly to (1,1,1)
+float getWavelength(int k) {
+  if (k == 0) return 0.650;
+  if (k == 1) return 0.585;
+  if (k == 2) return 0.535;
+  if (k == 3) return 0.485;
+  return 0.435;
+}
+
+vec3 getSpectralWeight(int k) {
+  if (k == 0) return vec3(0.50, 0.02, 0.00);
+  if (k == 1) return vec3(0.42, 0.28, 0.00);
+  if (k == 2) return vec3(0.08, 0.52, 0.08);
+  if (k == 3) return vec3(0.00, 0.18, 0.44);
+  return vec3(0.00, 0.00, 0.48);
+}
+
+// Cauchy dispersion equations
+float iorGlass(float lambdaUm) {
+  return 1.505 + uDispersion * (0.030 / (lambdaUm * lambdaUm));
+}
+
+float iorWater(float lambdaUm) {
+  return 1.329 + uDispersion * (0.0026 / (lambdaUm * lambdaUm));
+}
+
+// ============================================================
+// Water Beer-Lambert Absorption + Subtle In-Scattering
+// ============================================================
+const vec3 WATER_SIGMA = vec3(0.46, 0.11, 0.042);
+
+void applyMediumAbsorption(inout vec3 accum, inout vec3 throughput, int medium, float dist) {
+  if (dist <= 0.0) return;
+  if (medium == 1) {
+    vec3 sigma = WATER_SIGMA * uWaterAbsorb;
+    vec3 trans = exp(-sigma * dist);
+    // Volumetric sun-lit teal-blue in-scattering
+    vec3 scatterCol = vec3(0.025, 0.20, 0.32) * (0.35 + 0.65 * clamp(uSunDir.y * 1.4, 0.1, 1.0));
+    accum += throughput * scatterCol * (vec3(1.0) - trans) * 0.55;
+    throughput *= trans;
+  } else if (medium == 2) {
+    vec3 trans = exp(-uGlassSigma * uGlassAbsorb * dist);
+    throughput *= trans;
+  }
+}
+
+// ============================================================
+// Core SDF Raymarcher Across Media (0=Air, 1=Water, 2=Glass)
+// Returns hitType: 0=Sky, 1=Water, 2=Glass, 3=Floor
+// ============================================================
+int marchMedium(vec3 ro, vec3 rd, int medium, int maxSteps, float maxDist, out vec3 hitPos, out float hitDist) {
+  float t = 0.0;
+  for (int i = 0; i < 128; i++) {
+    if (i >= maxSteps) break;
+    vec3 p = ro + rd * t;
+
+    // Early sky escape when above everything and heading upward
+    if (medium == 0 && p.y > 2.2 && rd.y > 0.01) {
+      hitPos = p;
+      hitDist = t;
+      return 0;
+    }
+
+    float eps = HIT_EPS + t * 0.0005;
+    float d = 1e6;
+    if (medium == 0) {
+      float dG = sdGlass(p);
+      float dW = sdWater(p);
+      float dF = sdFloor(p);
+      d = min(dG, min(dW, dF));
+      if (d < eps && t > 0.002) {
+        hitPos = p;
+        hitDist = t;
+        if (dG <= dW && dG <= dF) return 2;
+        if (dW <= dF) return 1;
+        return 3;
+      }
+    } else if (medium == 1) {
+      float dG = sdGlass(p);
+      float dW = -sdWater(p);
+      float dF = sdFloor(p);
+      d = min(dG, min(dW, dF));
+      if (d < eps && t > 0.002) {
+        hitPos = p;
+        hitDist = t;
+        if (dG <= dW && dG <= dF) return 2;
+        if (dW <= dF) return 1;
+        return 3;
+      }
+    } else {
+      // Inside glass
+      d = -sdGlass(p);
+      if (d < eps && t > 0.003) {
+        hitPos = p;
+        hitDist = t;
+        return 2;
+      }
+    }
+
+    float minStep = (medium == 2) ? 0.0024 : (0.0018 + t * 0.0012);
+    t += max(d, minStep);
+    if (t > maxDist) break;
+  }
+
+  // Analytical far-plane fallbacks so grazing horizons & distant seabed never show holes
+  if (medium == 0 && rd.y < -0.003) {
+    float tW = max(t, -ro.y / rd.y);
+    hitPos = ro + rd * min(tW, maxDist);
+    hitDist = min(tW, maxDist);
+    return 1;
+  }
+  if (medium == 1) {
+    if (rd.y < -0.003) {
+      float tF = max(t, (FLOOR_Y - ro.y) / rd.y);
+      hitPos = ro + rd * min(tF, maxDist);
+      hitDist = min(tF, maxDist);
+      return 3;
+    } else if (rd.y > 0.003) {
+      float tW = max(t, -ro.y / rd.y);
+      hitPos = ro + rd * min(tW, maxDist);
+      hitDist = min(tW, maxDist);
+      return 1;
+    }
+  }
+  if (medium == 2) {
+    // Grazing chord exit fallback inside glass
+    hitPos = ro + rd * t;
+    hitDist = t;
+    return 2;
+  }
+
+  hitPos = ro + rd * t;
+  hitDist = t;
+  return 0;
+}
+
+// Fast single-path environment/scene tracer for reflection rays
+vec3 traceReflection(vec3 ro, vec3 rd, int medium) {
+  vec3 col = vec3(0.0);
+  vec3 tp = vec3(1.0);
+  vec3 hp;
+  float dist;
+
+  int hit = marchMedium(ro, rd, medium, 56, 36.0, hp, dist);
+  applyMediumAbsorption(col, tp, medium, dist);
+
+  if (hit == 0) {
+    return col + tp * sampleSky(rd, true);
+  }
+  if (hit == 3) {
+    return col + tp * shadeFloor(hp);
+  }
+  if (hit == 2) {
+    // Reflected ray hit glass: shade with Fresnel sky reflection + tinted core estimate
+    vec3 gn = glassNormal(hp);
+    vec3 N = dot(rd, gn) < 0.0 ? gn : -gn;
+    float n1 = (medium == 1) ? 1.333 : 1.0;
+    float n2 = 1.56;
+    float F = fresnelDielectric(-dot(rd, N), n1, n2);
+    vec3 rDir = reflect(rd, N);
+    vec3 skyR = sampleSky(rDir, true);
+    vec3 tDir = safeRefract(rd, N, n1 / n2);
+    vec3 innerCol = vec3(0.0);
+    if (length(tDir) > 0.01) {
+      // Quick glass chord estimate for reflected glass silhouette
+      vec3 exitP;
+      float gDist;
+      int gHit = marchMedium(hp - N * 0.005, tDir, 2, 32, 3.5, exitP, gDist);
+      vec3 gTp = exp(-uGlassSigma * uGlassAbsorb * gDist);
+      vec3 exitN = -glassNormal(exitP);
+      vec3 exitDir = safeRefract(tDir, exitN, n2 / n1);
+      if (length(exitDir) < 0.01) exitDir = reflect(tDir, exitN);
+      innerCol = gTp * (exitDir.y < -0.15 ? vec3(0.08, 0.25, 0.34) : sampleSky(exitDir, false));
+    }
+    // Sun specular on reflected glass
+    vec3 H = normalize(uSunDir - rd);
+    float spec = pow(max(dot(N, H), 0.0), 420.0) * 3.5;
+    return col + tp * (mix(innerCol, skyR, F) + vec3(1.0, 0.95, 0.85) * spec);
+  }
+
+  // Reflected ray hit water (e.g. underwater ray reflecting down, or glass reflection hitting water)
+  vec3 wn = waterNormal(hp);
+  vec3 N = dot(rd, wn) < 0.0 ? wn : -wn;
+  float n1 = (medium == 1) ? 1.333 : 1.0;
+  float n2 = (medium == 1) ? 1.0 : 1.333;
+  float F = fresnelDielectric(-dot(rd, N), n1, n2);
+  vec3 rDir = reflect(rd, N);
+  vec3 reflEnv = (rDir.y >= 0.0) ? sampleSky(rDir, true) : vec3(0.03, 0.16, 0.24);
+  vec3 tDir = safeRefract(rd, N, n1 / n2);
+  vec3 transEnv = vec3(0.04, 0.20, 0.30);
+  if (length(tDir) > 0.01) {
+    if (medium == 0) {
+      // Looking down into water: quick floor estimate
+      float dFloor = max(0.2, (hp.y - FLOOR_Y) / max(-tDir.y, 0.25));
+      vec3 fp = hp + tDir * dFloor;
+      transEnv = exp(-WATER_SIGMA * uWaterAbsorb * dFloor) * shadeFloor(fp);
+    } else {
+      transEnv = sampleSky(tDir, true);
+    }
+  }
+  vec3 H = normalize(uSunDir - rd);
+  float spec = pow(max(dot(N, H), 0.0), 300.0) * 3.0;
+  return col + tp * (mix(transEnv, reflEnv, F) + vec3(1.0, 0.94, 0.82) * spec * (1.0 - float(medium)));
+}
+
+// ============================================================
+// Full Multi-Bounce Spectral Ray Tracer (Dispersion + TIR + Absorption)
+// ============================================================
+vec3 traceSpectralBranch(vec3 ro, vec3 rd, int medium, float lambdaUm) {
+  float nG = iorGlass(lambdaUm);
+  float nW = iorWater(lambdaUm);
+
+  vec3 accum = vec3(0.0);
+  vec3 tp = vec3(1.0);
+
+  for (int bounce = 0; bounce < 7; bounce++) {
+    vec3 hp;
+    float dist;
+    int maxSteps = (medium == 2) ? 80 : 76;
+    int hit = marchMedium(ro, rd, medium, maxSteps, 38.0, hp, dist);
+
+    applyMediumAbsorption(accum, tp, medium, dist);
+
+    if (hit == 0) {
+      accum += tp * sampleSky(rd, true);
+      break;
+    }
+    if (hit == 3) {
+      accum += tp * shadeFloor(hp);
+      break;
+    }
+
+    if (hit == 1) {
+      // Water interface (Air <-> Water)
+      vec3 wn = waterNormal(hp);
+      bool enteringWater = (medium == 0);
+      vec3 N = enteringWater ? wn : -wn;
+      float n1 = enteringWater ? 1.0 : nW;
+      float n2 = enteringWater ? nW : 1.0;
+
+      float cosI = clamp(-dot(rd, N), 0.0, 1.0);
+      float F = fresnelDielectric(cosI, n1, n2);
+      vec3 rDir = reflect(rd, N);
+      vec3 tDir = safeRefract(rd, N, n1 / n2);
+
+      if (length(tDir) < 0.01) {
+        // Total internal reflection on underside of water (Snell's window!)
+        ro = hp + N * 0.005;
+        rd = rDir;
+        continue;
+      }
+
+      // Add reflection contribution
+      vec3 reflCol = (rDir.y > -0.05) ? sampleSky(rDir, true) : vec3(0.02, 0.14, 0.22);
+      if (enteringWater) {
+        vec3 H = normalize(uSunDir - rd);
+        float spec = pow(max(dot(N, H), 0.0), 340.0) * 4.0;
+        reflCol += vec3(1.0, 0.94, 0.82) * spec;
+      }
+      accum += tp * F * reflCol;
+
+      // Continue transmitted ray
+      tp *= (1.0 - F);
+      ro = hp - N * 0.005;
+      rd = tDir;
+      medium = enteringWater ? 1 : 0;
+    } else {
+      // Glass interface (Air <-> Glass OR Water <-> Glass)
+      vec3 gn = glassNormal(hp);
+      bool enteringGlass = (medium != 2);
+      vec3 N = enteringGlass ? gn : -gn;
+
+      float n1;
+      float n2;
+      int nextMedium;
+
+      if (enteringGlass) {
+        n1 = (medium == 1) ? nW : 1.0;
+        n2 = nG;
+        nextMedium = 2;
+      } else {
+        // Exiting glass: check whether exterior point is submerged in water or in air!
+        vec3 probe = hp + gn * 0.006;
+        bool inWater = (sdWater(probe) < 0.0);
+        n1 = nG;
+        n2 = inWater ? nW : 1.0;
+        nextMedium = inWater ? 1 : 0;
+      }
+
+      float cosI = clamp(-dot(rd, N), 0.0, 1.0);
+      float F = fresnelDielectric(cosI, n1, n2);
+      vec3 rDir = reflect(rd, N);
+      vec3 tDir = safeRefract(rd, N, n1 / n2);
+
+      if (length(tDir) < 0.01) {
+        // Total Internal Reflection inside glass!
+        ro = hp + N * 0.005;
+        rd = rDir;
+        continue;
+      }
+
+      // External or internal partial Fresnel reflection contribution
+      vec3 reflCol = sampleSky(rDir, true);
+      if (!enteringGlass && rDir.y < -0.05) {
+        reflCol = mix(vec3(0.04, 0.18, 0.28), reflCol, 0.25);
+      }
+      if (enteringGlass) {
+        vec3 H = normalize(uSunDir - rd);
+        float spec = pow(max(dot(N, H), 0.0), 520.0) * 5.0;
+        reflCol += vec3(1.0, 0.97, 0.92) * spec;
+      }
+      accum += tp * F * reflCol;
+
+      // Continue refracted ray
+      tp *= (1.0 - F);
+      ro = hp - N * 0.005;
+      rd = tDir;
+      medium = nextMedium;
+    }
+
+    if (max(tp.r, max(tp.g, tp.b)) < 0.006) break;
+  }
+
+  return accum;
+}
+
+// Disperse across 5 spectral bands starting from an already-located glass entry hit
+vec3 disperseAtGlassEntry(vec3 hp, vec3 rd, int outsideMedium, vec3 preAccum, vec3 preTp) {
+  vec3 gn = glassNormal(hp);
+  vec3 N = dot(rd, gn) < 0.0 ? gn : -gn;
+  float cosI = clamp(-dot(rd, N), 0.0, 1.0);
+
+  // Compute primary glass reflection ONCE (achromatic mirror direction!)
+  float n1Avg = (outsideMedium == 1) ? 1.333 : 1.0;
+  float n2Avg = iorGlass(0.535);
+  float Favg = fresnelDielectric(cosI, n1Avg, n2Avg);
+  vec3 rDir = reflect(rd, N);
+  vec3 reflCol = traceReflection(hp + N * 0.006, rDir, outsideMedium);
+  vec3 H = normalize(uSunDir - rd);
+  float spec = pow(max(dot(N, H), 0.0), 560.0) * 5.2;
+  reflCol += vec3(1.0, 0.97, 0.92) * spec;
+
+  vec3 dispersedTrans = vec3(0.0);
+  for (int k = 0; k < 5; k++) {
+    float lam = getWavelength(k);
+    vec3 w = getSpectralWeight(k);
+    float n1 = (outsideMedium == 1) ? iorWater(lam) : 1.0;
+    float n2 = iorGlass(lam);
+    float Fk = fresnelDielectric(cosI, n1, n2);
+    vec3 tDir = safeRefract(rd, N, n1 / n2);
+    vec3 branchCol;
+    if (length(tDir) < 0.01) {
+      branchCol = reflCol;
+    } else {
+      branchCol = traceSpectralBranch(hp - N * 0.005, tDir, 2, lam);
+    }
+    dispersedTrans += w * (1.0 - Fk) * branchCol;
+  }
+
+  return preAccum + preTp * (Favg * reflCol + dispersedTrans);
+}
+
+// ============================================================
+// Main Camera Ray Entry
+// ============================================================
+vec3 renderPixel(vec2 fragCoord) {
+  vec2 uv = (fragCoord - 0.5 * uResolution) / min(uResolution.x, uResolution.y);
+
+  // Camera basis
+  vec3 fwd = normalize(uCamTarget - uCamPos);
+  vec3 right = normalize(cross(fwd, vec3(0.0, 1.0, 0.0)));
+  vec3 up = cross(right, fwd);
+  float fov = 1.08;
+  vec3 rd = normalize(fwd * fov + right * uv.x + up * uv.y);
+  vec3 ro = uCamPos;
+
+  // Determine initial medium at camera position (allows dipping camera underwater!)
+  int medium = (sdWater(ro) < 0.0) ? 1 : 0;
+
+  vec3 accum = vec3(0.0);
+  vec3 tp = vec3(1.0);
+
+  vec3 hp;
+  float dist;
+  int hit = marchMedium(ro, rd, medium, 120, MAX_DIST, hp, dist);
+  applyMediumAbsorption(accum, tp, medium, dist);
+
+  if (hit == 0) {
+    return accum + tp * sampleSky(rd, true);
+  }
+  if (hit == 3) {
+    return accum + tp * shadeFloor(hp);
+  }
+  if (hit == 2) {
+    return disperseAtGlassEntry(hp, rd, medium, accum, tp);
+  }
+
+  // Primary hit is Water surface (Air -> Water OR Water -> Air)
+  vec3 wn = waterNormal(hp);
+  bool enteringWater = (medium == 0);
+  vec3 N = enteringWater ? wn : -wn;
+  float n1 = enteringWater ? 1.0 : 1.333;
+  float n2 = enteringWater ? 1.333 : 1.0;
+
+  float cosI = clamp(-dot(rd, N), 0.0, 1.0);
+  float F = fresnelDielectric(cosI, n1, n2);
+  vec3 rDir = reflect(rd, N);
+  vec3 tDir = safeRefract(rd, N, n1 / n2);
+
+  float push = 0.006 + dist * 0.0014;
+  // Full scene reflection on water (reflects both sky AND above-water glass!)
+  vec3 reflCol = traceReflection(hp + N * push, rDir, medium);
+  if (enteringWater) {
+    vec3 H = normalize(uSunDir - rd);
+    float spec = pow(max(dot(N, H), 0.0), 360.0) * 4.6;
+    reflCol += vec3(1.0, 0.94, 0.82) * spec;
+  }
+
+  if (length(tDir) < 0.01) {
+    // Total Internal Reflection looking up from underwater (Snell's window edge!)
+    return accum + tp * reflCol;
+  }
+
+  accum += tp * F * reflCol;
+  tp *= (1.0 - F);
+
+  // Continue refracted ray past water surface
+  int nextMed = enteringWater ? 1 : 0;
+  vec3 nextRo = hp - N * push;
+
+  vec3 hp2;
+  float dist2;
+  int hit2 = marchMedium(nextRo, tDir, nextMed, 88, MAX_DIST, hp2, dist2);
+  applyMediumAbsorption(accum, tp, nextMed, dist2);
+
+  vec3 res;
+  if (hit2 == 0) {
+    res = accum + tp * sampleSky(tDir, true);
+  } else if (hit2 == 3) {
+    res = accum + tp * shadeFloor(hp2);
+  } else if (hit2 == 2) {
+    // Refracted ray hit submerged glass (or air-side glass seen from underwater!)
+    res = disperseAtGlassEntry(hp2, tDir, nextMed, accum, tp);
+  } else {
+    // Secondary hit on water surface
+    res = accum + tp * traceSpectralBranch(hp2 - tDir * 0.012, tDir, nextMed, 0.535);
+  }
+
+  // Smooth atmospheric horizon haze for distant water
+  if (enteringWater) {
+    float haze = 1.0 - exp(-max(dist - 12.0, 0.0) * 0.075);
+    vec3 horizonCol = sampleSky(normalize(vec3(rd.x, 0.018, rd.z)), false);
+    res = mix(res, horizonCol, haze);
+  }
+  return res;
+}
+
+// ACES Filmic Tone Mapping
+vec3 acesToneMap(vec3 x) {
+  float a = 2.51;
+  float b = 0.03;
+  float c = 2.43;
+  float d = 0.59;
+  float e = 0.14;
+  return clamp((x * (a * x + b)) / (x * (c * x + d) + e), 0.0, 1.0);
+}
+
+void main() {
+  vec3 col = renderPixel(gl_FragCoord.xy);
+  col = acesToneMap(col);
+  col = pow(col, vec3(1.0 / 2.2));
+  fragColor = vec4(col, 1.0);
+}
+`;
+
+  function compileShader(type, src) {
+    const sh = gl.createShader(type);
+    gl.shaderSource(sh, src);
+    gl.compileShader(sh);
+    if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) {
+      const log = gl.getShaderInfoLog(sh);
+      gl.deleteShader(sh);
+      throw new Error((type === gl.VERTEX_SHADER ? 'Vertex' : 'Fragment') + ' shader error:\n' + log);
+    }
+    return sh;
+  }
+
+  let program;
+  try {
+    const vs = compileShader(gl.VERTEX_SHADER, vsSource);
+    const fs = compileShader(gl.FRAGMENT_SHADER, fsSource);
+    program = gl.createProgram();
+    gl.attachShader(program, vs);
+    gl.attachShader(program, fs);
+    gl.linkProgram(program);
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+      throw new Error('Program link error:\n' + gl.getProgramInfoLog(program));
+    }
+  } catch (err) {
+    showError(err.message);
+    return;
+  }
+
+  gl.useProgram(program);
+  const vao = gl.createVertexArray();
+  gl.bindVertexArray(vao);
+
+  const loc = {
+    res: gl.getUniformLocation(program, 'uResolution'),
+    time: gl.getUniformLocation(program, 'uTime'),
+    camPos: gl.getUniformLocation(program, 'uCamPos'),
+    camTarget: gl.getUniformLocation(program, 'uCamTarget'),
+    sunDir: gl.getUniformLocation(program, 'uSunDir'),
+    shape: gl.getUniformLocation(program, 'uShape'),
+    dispersion: gl.getUniformLocation(program, 'uDispersion'),
+    glassAbsorb: gl.getUniformLocation(program, 'uGlassAbsorb'),
+    waterAbsorb: gl.getUniformLocation(program, 'uWaterAbsorb'),
+    glassSigma: gl.getUniformLocation(program, 'uGlassSigma'),
+    waveAmp: gl.getUniformLocation(program, 'uWaveAmp'),
+  };
+
+  // Simulation & Camera State
+  const glassTints = [
+    [0.24, 0.055, 0.065], // Aquamarine optical
+    [0.05, 0.035, 0.030], // Pure clear crown
+    [0.48, 0.06,  0.22 ], // Emerald sea glass
+    [0.18, 0.42,  0.07 ], // Amethyst quartz
+  ];
+
+  const state = {
+    shape: 0,
+    dispersion: 1.0,
+    glassAbsorb: 1.0,
+    waterAbsorb: 1.0,
+    waveAmp: 1.0,
+    sunElevDeg: 40,
+    sunAzimDeg: 38,
+    tintIdx: 0,
+    paused: false,
+    simTime: 0.0,
+    highRes: false,
+  };
+
+  // Orbit Camera (spherical around target)
+  const cam = {
+    yaw: 0.62,
+    pitch: 0.24,
+    radius: 3.45,
+    targetY: 0.02,
+    velYaw: 0,
+    velPitch: 0,
+    velRadius: 0,
+    tYaw: 0.62,
+    tPitch: 0.24,
+    tRadius: 3.45,
+    tTargetY: 0.02,
+  };
+
+  // Mouse & Touch Orbit Controls
+  let dragging = false;
+  let lastX = 0, lastY = 0;
+  let pinchDist = 0;
+
+  canvas.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0 && e.pointerType === 'mouse') return;
+    dragging = true;
+    lastX = e.clientX;
+    lastY = e.clientY;
+    canvas.setPointerCapture(e.pointerId);
+  });
+
+  canvas.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+    const dx = e.clientX - lastX;
+    const dy = e.clientY - lastY;
+    lastX = e.clientX;
+    lastY = e.clientY;
+    cam.tYaw -= dx * 0.0065;
+    cam.tPitch = Math.max(-0.52, Math.min(1.38, cam.tPitch + dy * 0.0065));
+  });
+
+  const endDrag = () => { dragging = false; };
+  canvas.addEventListener('pointerup', endDrag);
+  canvas.addEventListener('pointercancel', endDrag);
+
+  canvas.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    cam.tRadius = Math.max(2.05, Math.min(8.5, cam.tRadius * (1 + e.deltaY * 0.0011)));
+  }, { passive: false });
+
+  canvas.addEventListener('dblclick', () => {
+    cam.tYaw = 0.62;
+    cam.tPitch = 0.24;
+    cam.tRadius = 3.45;
+    cam.tTargetY = 0.02;
+  });
+
+  // Two-finger pinch zoom for touchscreens
+  canvas.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 2) {
+      dragging = false;
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      pinchDist = Math.hypot(dx, dy);
+    }
+  }, { passive: true });
+
+  canvas.addEventListener('touchmove', (e) => {
+    if (e.touches.length === 2) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const dist = Math.hypot(dx, dy);
+      if (pinchDist > 0) {
+        const scale = pinchDist / dist;
+        cam.tRadius = Math.max(2.05, Math.min(8.5, cam.tRadius * scale));
+      }
+      pinchDist = dist;
+    }
+  }, { passive: true });
+
+  // Resize handling
+  const resLabel = document.getElementById('resLabel');
+  let pixelW = 1, pixelH = 1;
+  function resize() {
+    const maxDpr = state.highRes ? 1.75 : 1.0;
+    const dpr = Math.min(window.devicePixelRatio || 1, maxDpr);
+    pixelW = Math.max(1, Math.floor(window.innerWidth * dpr));
+    pixelH = Math.max(1, Math.floor(window.innerHeight * dpr));
+    canvas.width = pixelW;
+    canvas.height = pixelH;
+    gl.viewport(0, 0, pixelW, pixelH);
+    resLabel.textContent = `${pixelW}×${pixelH}`;
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  // UI Wiring
+  const hud = document.getElementById('hud');
+  const toggleHud = document.getElementById('toggleHud');
+  toggleHud.addEventListener('click', () => {
+    hud.classList.toggle('collapsed');
+    toggleHud.textContent = hud.classList.contains('collapsed') ? 'Controls' : 'Hide';
+  });
+
+  document.getElementById('shapeBtns').addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-shape]');
+    if (!btn) return;
+    state.shape = parseInt(btn.dataset.shape, 10);
+    document.querySelectorAll('#shapeBtns .pill').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+  });
+
+  document.getElementById('tintSwatches').addEventListener('click', (e) => {
+    const sw = e.target.closest('[data-tint]');
+    if (!sw) return;
+    state.tintIdx = parseInt(sw.dataset.tint, 10);
+    document.querySelectorAll('#tintSwatches .swatch').forEach(s => s.classList.remove('active'));
+    sw.classList.add('active');
+  });
+
+  const bindSlider = (id, labelId, key, fmt) => {
+    const el = document.getElementById(id);
+    const lbl = document.getElementById(labelId);
+    el.addEventListener('input', () => {
+      state[key] = parseFloat(el.value);
+      lbl.textContent = fmt(state[key]);
+    });
+  };
+  bindSlider('dispersion', 'valDispersion', 'dispersion', v => `${v.toFixed(2)}×`);
+  bindSlider('glassAbsorb', 'valGlassAbs', 'glassAbsorb', v => `${v.toFixed(2)}×`);
+  bindSlider('waterAbsorb', 'valWaterAbs', 'waterAbsorb', v => `${v.toFixed(2)}×`);
+  bindSlider('waveAmp', 'valWaveAmp', 'waveAmp', v => `${v.toFixed(2)}×`);
+  bindSlider('sunElev', 'valSunElev', 'sunElevDeg', v => `${Math.round(v)}°`);
+
+  document.getElementById('viewWaterline').addEventListener('click', () => {
+    cam.tPitch = 0.22; cam.tRadius = 3.45; cam.tTargetY = 0.02;
+  });
+  document.getElementById('viewOverhead').addEventListener('click', () => {
+    cam.tPitch = 0.92; cam.tRadius = 3.85; cam.tTargetY = 0.0;
+  });
+  document.getElementById('viewUnder').addEventListener('click', () => {
+    cam.tPitch = -0.28; cam.tRadius = 3.25; cam.tTargetY = -0.18;
+  });
+
+  const btnPause = document.getElementById('btnPause');
+  btnPause.addEventListener('click', () => {
+    state.paused = !state.paused;
+    btnPause.textContent = state.paused ? 'Resume Waves' : 'Pause Waves';
+    btnPause.classList.toggle('active', state.paused);
+  });
+
+  const btnQuality = document.getElementById('btnQuality');
+  btnQuality.addEventListener('click', () => {
+    state.highRes = !state.highRes;
+    btnQuality.textContent = state.highRes ? 'Res: Ultra' : 'Res: Balanced';
+    btnQuality.classList.toggle('active', state.highRes);
+    resize();
+  });
+
+  // Render Loop
+  const fpsLabel = document.getElementById('fpsLabel');
+  let lastFrameMs = performance.now();
+  let fpsAccum = 0, fpsCount = 0;
+
+  function frame(now) {
+    const dt = Math.min(0.05, (now - lastFrameMs) * 0.001);
+    lastFrameMs = now;
+
+    if (!state.paused) {
+      state.simTime += dt;
+    }
+
+    // Smooth camera damping
+    const damp = 1 - Math.exp(-12.0 * dt);
+    cam.yaw += (cam.tYaw - cam.yaw) * damp;
+    cam.pitch += (cam.tPitch - cam.pitch) * damp;
+    cam.radius += (cam.tRadius - cam.radius) * damp;
+    cam.targetY += (cam.tTargetY - cam.targetY) * damp;
+
+    // Prevent camera from clipping below seabed
+    const cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch);
+    const cy = Math.cos(cam.yaw), sy = Math.sin(cam.yaw);
+    const camX = cam.radius * cp * sy;
+    const camZ = cam.radius * cp * cy;
+    let camY = cam.targetY + cam.radius * sp;
+    if (camY < -1.42) camY = -1.42;
+
+    // Sun direction vector
+    const elRad = state.sunElevDeg * Math.PI / 180;
+    const azRad = state.sunAzimDeg * Math.PI / 180;
+    const sunX = Math.cos(elRad) * Math.sin(azRad);
+    const sunY = Math.sin(elRad);
+    const sunZ = -Math.cos(elRad) * Math.cos(azRad);
+
+    // Upload uniforms
+    gl.uniform2f(loc.res, pixelW, pixelH);
+    gl.uniform1f(loc.time, state.simTime);
+    gl.uniform3f(loc.camPos, camX, camY, camZ);
+    gl.uniform3f(loc.camTarget, 0.0, cam.targetY, 0.0);
+    gl.uniform3f(loc.sunDir, sunX, sunY, sunZ);
+    gl.uniform1i(loc.shape, state.shape);
+    gl.uniform1f(loc.dispersion, state.dispersion);
+    gl.uniform1f(loc.glassAbsorb, state.glassAbsorb);
+    gl.uniform1f(loc.waterAbsorb, state.waterAbsorb);
+    const sig = glassTints[state.tintIdx];
+    gl.uniform3f(loc.glassSigma, sig[0], sig[1], sig[2]);
+    gl.uniform1f(loc.waveAmp, state.waveAmp);
+
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+    // FPS counter
+    fpsAccum += dt;
+    fpsCount++;
+    if (fpsAccum >= 0.4) {
+      fpsLabel.textContent = `${Math.round(fpsCount / fpsAccum)} fps`;
+      fpsAccum = 0;
+      fpsCount = 0;
+    }
+
+    requestAnimationFrame(frame);
+  }
+
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

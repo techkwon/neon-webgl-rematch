@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Storm Globe — lightning that plays music</title>
+<style>
+  :root { --fg:#dbe8ff; --dim:#7f93b8; --acc:#7cc4ff; --acc2:#b48cff; }
+  * { box-sizing:border-box; }
+  html,body { margin:0; height:100%; background:#02040a; overflow:hidden; color:var(--fg);
+    font:13px/1.4 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-user-select:none; user-select:none; }
+  canvas#gl { position:fixed; inset:0; width:100%; height:100%; display:block; cursor:grab; touch-action:none; }
+  canvas#gl.drag { cursor:grabbing; }
+  .panel { position:fixed; background:rgba(8,14,30,.55); border:1px solid rgba(140,180,255,.16);
+    backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); border-radius:14px; padding:12px 14px; }
+  #title { left:18px; top:16px; pointer-events:none; }
+  #title h1 { margin:0; font-size:15px; letter-spacing:.22em; font-weight:600; text-transform:uppercase; }
+  #title p { margin:2px 0 0; color:var(--dim); font-size:12px; }
+  #stats { right:18px; top:16px; min-width:210px; }
+  #stats .row { display:flex; justify-content:space-between; gap:16px; margin:2px 0; color:var(--dim); }
+  #stats .row b { color:var(--fg); font-weight:600; font-variant-numeric:tabular-nums; }
+  .bar { height:5px; border-radius:3px; background:rgba(255,255,255,.08); overflow:hidden; margin:8px 0 4px; }
+  .bar > i { display:block; height:100%; width:0; background:linear-gradient(90deg,var(--acc),var(--acc2)); transition:width .15s; }
+  #spec { display:block; width:100%; height:34px; margin-top:8px; opacity:.9; }
+  #ctl { left:50%; bottom:18px; transform:translateX(-50%); display:flex; align-items:center; gap:16px; white-space:nowrap; }
+  #ctl label { color:var(--dim); display:flex; align-items:center; gap:8px; }
+  input[type=range] { accent-color:var(--acc); width:120px; }
+  button { font:inherit; color:var(--fg); background:rgba(124,196,255,.12); border:1px solid rgba(124,196,255,.4);
+    padding:7px 14px; border-radius:999px; cursor:pointer; transition:background .15s, transform .1s; }
+  button:hover { background:rgba(124,196,255,.24); } button:active { transform:scale(.97); }
+  button:focus-visible, input:focus-visible { outline:2px solid var(--acc); outline-offset:2px; }
+  #hint { position:fixed; left:18px; bottom:22px; color:var(--dim); font-size:12px; pointer-events:none; }
+  #intro { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:18px;
+    background:radial-gradient(ellipse at center, rgba(2,4,10,.15) 0%, rgba(2,4,10,.72) 70%); transition:opacity .9s ease; text-align:center; padding:24px; }
+  #intro.gone { opacity:0; pointer-events:none; }
+  #intro h2 { margin:0; font-size:clamp(26px,5vw,52px); font-weight:200; letter-spacing:.32em; text-transform:uppercase; text-shadow:0 0 30px rgba(124,196,255,.6); }
+  #intro p { margin:0; max-width:460px; color:#a9bbdd; font-size:14px; }
+  #start { font-size:17px; padding:14px 34px; letter-spacing:.08em; background:rgba(124,196,255,.18);
+    box-shadow:0 0 36px rgba(124,196,255,.35), inset 0 0 18px rgba(124,196,255,.15); animation:pulse 2.4s ease-in-out infinite; }
+  @keyframes pulse { 50% { box-shadow:0 0 56px rgba(180,140,255,.5), inset 0 0 22px rgba(180,140,255,.2); } }
+  #silent { background:none; border:none; color:var(--dim); font-size:12px; text-decoration:underline; padding:4px; }
+  #nogl { position:fixed; inset:0; display:none; align-items:center; justify-content:center; text-align:center; padding:30px; font-size:16px; }
+  @media (max-width:640px){ #stats{top:auto;bottom:70px;right:12px;left:12px;} #hint{display:none;} #ctl{width:calc(100% - 24px);justify-content:space-between;} input[type=range]{width:90px;} }
+</style>
+</head>
+<body>
+<canvas id="gl" aria-label="Interactive 3D Earth globe with lightning strikes"></canvas>
+
+<div id="title" class="panel">
+  <h1>Storm Globe</h1>
+  <p>Every strike plays a note</p>
+</div>
+
+<div id="stats" class="panel">
+  <div class="row"><span>Strikes</span><b id="sCount">0</b></div>
+  <div class="row"><span>Rate</span><b id="sRate">0.0 /s</b></div>
+  <div class="row"><span>Harmony</span><b id="sChord">—</b></div>
+  <div class="bar" title="Storm energy"><i id="sBar"></i></div>
+  <canvas id="spec" width="200" height="34"></canvas>
+</div>
+
+<div id="ctl" class="panel">
+  <button id="snd" type="button">♪ Sound off</button>
+  <label>Storm <input id="inten" type="range" min="0" max="2.5" step="0.05" value="1" aria-label="Storm intensity"></label>
+</div>
+<div id="hint">Drag to rotate · scroll to zoom · click the globe to strike</div>
+
+<div id="intro">
+  <h2>Storm Globe</h2>
+  <p>A living Earth, a restless storm. Lightning ripples across the planet and every strike drives an ambient score.</p>
+  <button id="start" type="button">▶ Start audio</button>
+  <button id="silent" type="button">continue without sound</button>
+</div>
+<div id="nogl">WebGL2 is not available in this browser.</div>
+
+<script>
+'use strict';
+(() => {
+/* ====================================================================== */
+/*  Utilities                                                              */
+/* ====================================================================== */
+const TAU = Math.PI * 2, D2R = Math.PI / 180;
+const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+const rand = (a = 1, b) => b === undefined ? Math.random() * a : a + Math.random() * (b - a);
+const randn = () => { let u = 0, v = 0; while (!u) u = Math.random(); v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(TAU * v); };
+const $ = id => document.getElementById(id);
+
+const Mat = {
+  persp(f, a, n, fa) { const t = 1 / Math.tan(f / 2), nf = 1 / (n - fa);
+    return new Float32Array([t / a,0,0,0, 0,t,0,0, 0,0,(fa + n) * nf,-1, 0,0,2 * fa * n * nf,0]); },
+  mul(a, b) { const o = new Float32Array(16);
+    for (let c = 0; c < 4; c++) for (let r = 0; r < 4; r++) {
+      let s = 0; for (let k = 0; k < 4; k++) s += a[k * 4 + r] * b[c * 4 + k]; o[c * 4 + r] = s; }
+    return o; },
+  rotX(a) { const c = Math.cos(a), s = Math.sin(a); return new Float32Array([1,0,0,0, 0,c,s,0, 0,-s,c,0, 0,0,0,1]); },
+  rotY(a) { const c = Math.cos(a), s = Math.sin(a); return new Float32Array([c,0,-s,0, 0,1,0,0, s,0,c,0, 0,0,0,1]); },
+  trans(x, y, z) { return new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, x,y,z,1]); },
+};
+
+/* ====================================================================== */
+/*  WebGL2 setup                                                           */
+/* ====================================================================== */
+const canvas = $('gl');
+const gl = canvas.getContext('webgl2', { antialias: true, alpha: false, powerPreference: 'high-performance' });
+if (!gl) { $('nogl').style.display = 'flex'; ['title','stats','ctl','hint','intro'].forEach(i => $(i).style.display = 'none'); return; }
+
+function compile(type, src) {
+  const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
+  if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) { console.error(gl.getShaderInfoLog(s), src); throw new Error('shader'); }
+  return s;
+}
+function program(vs, fs) {
+  const p = gl.createProgram();
+  gl.attachShader(p, compile(gl.VERTEX_SHADER, vs)); gl.attachShader(p, compile(gl.FRAGMENT_SHADER, fs));
+  gl.linkProgram(p);
+  if (!gl.getProgramParameter(p, gl.LINK_STATUS)) { console.error(gl.getProgramInfoLog(p)); throw new Error('link'); }
+  const u = {}; const n = gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS);
+  for (let i = 0; i < n; i++) { const nm = gl.getActiveUniform(p, i).name.replace('[0]', ''); u[nm] = gl.getUniformLocation(p, nm); }
+  return { p, u };
+}
+
+const MAXS = 40;           // simultaneous ripples
+const LIFE = 6.0;          // ripple life, seconds
+
+const NOISE_GLSL = `
+float hash(vec3 p){ p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
+float noise(vec3 x){
+  vec3 i = floor(x), f = fract(x); f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(mix(hash(i), hash(i + vec3(1,0,0)), f.x), mix(hash(i + vec3(0,1,0)), hash(i + vec3(1,1,0)), f.x), f.y),
+             mix(mix(hash(i + vec3(0,0,1)), hash(i + vec3(1,0,1)), f.x), mix(hash(i + vec3(0,1,1)), hash(i + vec3(1,1,1)), f.x), f.y), f.z);
+}
+float fbm(vec3 p, int oct){
+  float a = 0.5, s = 0.0, n = 0.0;
+  for (int i = 0; i < 6; i++) { if (i >= oct) break; s += a * noise(p); n += a; p = p * 2.03 + 11.7; a *= 0.5; }
+  return s / n;
+}`;
+
+/* ---------- background: stars + nebula + atmosphere glow (ray based) ---- */
+const bg = program(`#version 300 es
+out vec2 vNdc;
+void main(){ vec2 p = vec2((gl_VertexID << 1) & 2, gl_VertexID & 2); vNdc = p * 2.0 - 1.0; gl_Position = vec4(vNdc, 0.9999, 1.0); }`,
+`#version 300 es
+precision highp float;
+in vec2 vNdc; out vec4 oc;
+uniform float uAspect, uTan, uD, uTime, uPulse; uniform vec3 uSun;
+${NOISE_GLSL}
+float stars(vec3 d, float sc, float thr, float rad){
+  vec3 q = d * sc, c = floor(q), f = fract(q);
+  float h = hash(c); if (h < thr) return 0.0;
+  vec3 pos = vec3(hash(c + 1.7), hash(c + 3.1), hash(c + 5.3)) * 0.6 + 0.2;
+  float dist = length(f - pos);
+  float tw = 0.75 + 0.25 * sin(uTime * (1.0 + h * 3.0) + h * 40.0);
+  float b = smoothstep(rad, 0.0, dist);
+  return b * b * tw * (0.4 + 1.6 * (h - thr) / (1.0 - thr));
+}
+void main(){
+  vec3 o = vec3(0.0, 0.0, uD);
+  vec3 d = normalize(vec3(vNdc.x * uAspect * uTan, vNdc.y * uTan, -1.0));
+  vec3 col = vec3(0.004, 0.006, 0.016);
+  float neb = fbm(d * 2.2 + 4.0, 5);
+  col += vec3(0.020, 0.025, 0.07) * smoothstep(0.42, 0.85, neb) * 1.2;
+  col += vec3(0.05, 0.02, 0.07) * smoothstep(0.55, 0.9, fbm(d * 3.0 - 7.0, 4)) * 0.6;
+  float st = stars(d, 70.0, 0.90, 0.30) + stars(d, 130.0, 0.93, 0.28) * 0.8 + stars(d, 36.0, 0.96, 0.3) * 1.4;
+  col += vec3(0.8, 0.88, 1.0) * st * 0.85;
+  float tca = -dot(o, d); vec3 cp = o + d * tca; float b = length(cp);
+  float h = max(b - 1.0, 0.0);
+  float lit = smoothstep(-0.45, 0.55, dot(normalize(cp), uSun));
+  float glow = exp(-h * 16.0) * 0.55 + exp(-h * 70.0) * 0.8 + exp(-h * 4.0) * 0.07;
+  col += vec3(0.17, 0.42, 1.0) * glow * (0.12 + 0.88 * lit) * (1.0 + uPulse * 0.7);
+  oc = vec4(col, 1.0);
+}`);
+
+/* ---------- globe --------------------------------------------------- */
+const globe = program(`#version 300 es
+layout(location=0) in vec3 aPos;
+uniform mat4 uMVP, uModel;
+out vec3 vObj, vN;
+void main(){ vObj = aPos; vN = mat3(uModel) * aPos; gl_Position = uMVP * vec4(aPos, 1.0); }`,
+`#version 300 es
+precision highp float;
+#define MAXS ${MAXS}
+in vec3 vObj, vN; out vec4 oc;
+uniform sampler2D uMask;
+uniform vec3 uSun, uCam; uniform float uTime, uPulse;
+uniform vec4 uS[MAXS]; uniform vec4 uS2[MAXS];
+${NOISE_GLSL}
+void main(){
+  vec3 p = normalize(vObj), n = normalize(vN), V = normalize(uCam - n), L = normalize(uSun);
+  float lat = asin(clamp(p.y, -1.0, 1.0)), lon = atan(p.x, p.z);
+  vec2 uv = vec2(lon * 0.15915494 + 0.5, clamp(0.5 - lat * 0.31830989, 0.001, 0.999));
+  vec2 mk = texture(uMask, uv).rg;
+  float lt = abs(lat) * 0.63661977;
+
+  float n1 = fbm(p * 16.0, 4), n2 = fbm(p * 70.0, 3);
+  float land = smoothstep(0.46, 0.54, mk.r + (n1 - 0.5) * 1.0 + (n2 - 0.5) * 0.35);
+
+  /* ocean */
+  float shelf = smoothstep(0.03, 0.42, mk.g);
+  vec3 ocean = mix(vec3(0.004, 0.028, 0.10), vec3(0.02, 0.20, 0.30), shelf);
+  ocean += vec3(0.0, 0.012, 0.025) * noise(p * 140.0 + uTime * 0.03);
+
+  /* land biomes */
+  float moist = fbm(p * 4.0 + 3.0, 4);
+  float aridN = smoothstep(0.38, 0.62, fbm(p * 3.0 + 7.0, 4));
+  float desert = smoothstep(0.10, 0.19, lt) * (1.0 - smoothstep(0.30, 0.42, lt)) * aridN;
+  vec3 forest = vec3(0.035, 0.15, 0.05), grass = vec3(0.20, 0.30, 0.09), sand = vec3(0.55, 0.42, 0.24), tundra = vec3(0.26, 0.30, 0.24);
+  vec3 lc = mix(forest, grass, smoothstep(0.35, 0.75, moist));
+  lc = mix(lc, sand, desert);
+  lc = mix(lc, tundra, smoothstep(0.52, 0.70, lt));
+  float hgt = fbm(p * 11.0, 4);
+  lc *= 0.72 + 0.6 * hgt;
+  lc = mix(lc, vec3(0.8, 0.82, 0.85), smoothstep(0.64, 0.78, hgt) * 0.55 * smoothstep(0.1, 0.4, lt + 0.15));
+
+  float ice = smoothstep(0.80, 0.86, lt + (n1 - 0.5) * 0.10);
+  vec3 iceC = vec3(0.82, 0.88, 0.95);
+  vec3 surf = mix(ocean, lc, land);
+  surf = mix(surf, iceC, ice);
+
+  /* lighting */
+  float ndl = dot(n, L), lit = max(ndl, 0.0);
+  float night = 1.0 - smoothstep(-0.08, 0.16, ndl);
+  vec3 col = surf * (vec3(1.0, 0.95, 0.86) * pow(lit, 0.85) * 1.25 + vec3(0.018, 0.026, 0.06));
+  col += surf * vec3(0.9, 0.35, 0.05) * smoothstep(-0.05, 0.12, ndl) * (1.0 - smoothstep(0.12, 0.4, ndl)) * 0.45;
+  float spec = pow(max(dot(reflect(-L, n), V), 0.0), 70.0) * (1.0 - land) * (1.0 - ice) * step(0.0, ndl);
+  col += vec3(1.0, 0.92, 0.75) * spec * 0.7;
+
+  /* city lights */
+  float pop = smoothstep(0.50, 0.75, fbm(p * 9.0 + 9.0, 3));
+  float spots = smoothstep(0.70, 0.92, noise(p * 150.0) * 0.6 + noise(p * 310.0) * 0.5);
+  float lights = pop * spots * land * (1.0 - ice) * smoothstep(0.08, 0.22, lt) * (1.0 - smoothstep(0.58, 0.72, lt));
+  col += vec3(1.0, 0.68, 0.3) * lights * night * 1.5;
+
+  /* clouds */
+  float ca = uTime * 0.004;
+  vec3 pc = vec3(p.x * cos(ca) + p.z * sin(ca), p.y, -p.x * sin(ca) + p.z * cos(ca));
+  float cl = fbm(pc * 3.0 + fbm(pc * 6.0, 3) * 0.7, 5);
+  float cloud = smoothstep(0.54, 0.80, cl);
+  vec3 cloudC = vec3(0.92, 0.94, 0.98) * (pow(lit, 0.8) * 1.05) + vec3(0.02, 0.03, 0.055);
+  col = mix(col, cloudC, cloud * 0.72);
+
+  /* lightning: illumination + ripples */
+  vec3 add = vec3(0.0); float cflash = 0.0;
+  for (int i = 0; i < MAXS; i++) {
+    vec4 s = uS[i]; float age = s.w;
+    if (age < 0.0 || age > ${LIFE.toFixed(1)}) continue;
+    float I = uS2[i].x;
+    float d = 2.0 * asin(clamp(0.5 * length(p - s.xyz), 0.0, 1.0));
+    float flick = exp(-age * 4.0) * (0.65 + 0.35 * sin(age * 55.0 + float(i)));
+    cflash += exp(-d * d / (0.010 + 0.024 * I)) * flick * (0.5 + I);
+    float Rm = 0.15 + 0.36 * I;
+    float R = Rm * (1.0 - exp(-age * 1.2));
+    float w = 0.006 + 0.010 * age;
+    float fade = exp(-age * 0.5) * (1.0 - smoothstep(4.6, ${LIFE.toFixed(1)}, age));
+    float x1 = (d - R) / w, x2 = (d - R * 0.66) / (w * 1.5), x3 = (d - R * 0.34) / (w * 2.0);
+    float ring = exp(-x1 * x1) + 0.5 * exp(-x2 * x2) + 0.28 * exp(-x3 * x3);
+    vec3 rc = mix(vec3(0.30, 0.78, 1.0), vec3(0.78, 0.48, 1.0), smoothstep(0.0, 3.5, age));
+    float core = exp(-d * d / (0.0005 + 0.0009 * I)) * exp(-age * 6.5) * 2.8;
+    float halo = exp(-d * d / 0.006) * exp(-age * 2.0) * 0.45 * (0.4 + I);
+    add += rc * ring * fade * (0.7 + 1.4 * I) + vec3(0.85, 0.92, 1.0) * core + rc * halo;
+  }
+  col += cflash * (0.10 + cloud * 1.1) * vec3(0.55, 0.65, 1.0);
+  col += add;
+
+  /* atmosphere rim */
+  float fres = pow(1.0 - max(dot(n, V), 0.0), 3.2);
+  col += vec3(0.22, 0.48, 1.0) * fres * (0.22 + 0.95 * smoothstep(-0.35, 0.55, ndl)) * (1.0 + uPulse * 0.8);
+
+  col = 1.0 - exp(-col * 1.4);
+  col = pow(col, vec3(0.4545));
+  oc = vec4(col, 1.0);
+}`);
+
+/* ---------- bolts (screen-space ribbons) ----------------------------- */
+const bolt = program(`#version 300 es
+layout(location=0) in vec3 aA; layout(location=1) in vec3 aB; layout(location=2) in vec4 aP;
+uniform mat4 uMVP; uniform vec2 uRes;
+out float vSide, vB;
+void main(){
+  vec4 ca = uMVP * vec4(aA, 1.0), cb = uMVP * vec4(aB, 1.0);
+  vec2 sa = ca.xy / ca.w, sb = cb.xy / cb.w;
+  vec2 dir = (sb - sa) * uRes; float len = length(dir);
+  dir = len > 1e-4 ? dir / len : vec2(1.0, 0.0);
+  vec2 nrm = vec2(-dir.y, dir.x);
+  vec4 c = aP.y < 0.5 ? ca : cb;
+  c.xy += (nrm * aP.x * aP.w * 2.0 / uRes) * c.w;
+  c.z -= 0.0006 * c.w;
+  gl_Position = c; vSide = aP.x; vB = aP.z;
+}`,
+`#version 300 es
+precision highp float;
+in float vSide, vB; out vec4 oc;
+void main(){
+  float core = exp(-vSide * vSide * 3.2);
+  vec3 col = mix(vec3(0.45, 0.62, 1.0), vec3(1.0), core * core) * core * vB;
+  oc = vec4(col, 1.0);
+}`);
+
+/* ---------- glow sprites -------------------------------------------- */
+const sprite = program(`#version 300 es
+layout(location=0) in vec3 aPos; layout(location=1) in float aSize; layout(location=2) in vec4 aCol;
+uniform mat4 uMVP; uniform float uPx, uMaxPt;
+out vec4 vCol;
+void main(){
+  gl_Position = uMVP * vec4(aPos, 1.0);
+  gl_PointSize = clamp(aSize * uPx / gl_Position.w, 1.0, uMaxPt);
+  vCol = aCol;
+}`,
+`#version 300 es
+precision highp float;
+in vec4 vCol; out vec4 oc;
+void main(){
+  float r = length(gl_PointCoord - 0.5) * 2.0;
+  if (r > 1.0) discard;
+  float a = exp(-r * r * 5.0) * (1.0 - r * r);
+  oc = vec4(vCol.rgb * a * vCol.a, 1.0);
+}`);
+
+/* ====================================================================== */
+/*  Geometry                                                               */
+/* ====================================================================== */
+const sphere = (() => {
+  const SEG = 160, RING = 80, v = [], idx = [];
+  for (let y = 0; y <= RING; y++) {
+    const t = y / RING * Math.PI, st = Math.sin(t), ct = Math.cos(t);
+    for (let x = 0; x <= SEG; x++) { const a = x / SEG * TAU; v.push(st * Math.sin(a), ct, st * Math.cos(a)); }
+  }
+  for (let y = 0; y < RING; y++) for (let x = 0; x < SEG; x++) {
+    const a = y * (SEG + 1) + x, b = a + SEG + 1;
+    idx.push(a, b, a + 1, a + 1, b, b + 1);
+  }
+  const vao = gl.createVertexArray(); gl.bindVertexArray(vao);
+  const vb = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, vb); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(v), gl.STATIC_DRAW);
+  gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
+  const ib = gl.createBuffer(); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ib); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(idx), gl.STATIC_DRAW);
+  gl.bindVertexArray(null);
+  return { vao, count: idx.length };
+})();
+
+const emptyVAO = gl.createVertexArray();
+
+// dynamic bolt ribbons: a(3) b(3) side,t,bright,width(4) = 10 floats / vertex
+const BOLT_MAXV = 9000, boltData = new Float32Array(BOLT_MAXV * 10);
+const boltVAO = gl.createVertexArray(), boltBuf = gl.createBuffer();
+gl.bindVertexArray(boltVAO); gl.bindBuffer(gl.ARRAY_BUFFER, boltBuf);
+gl.bufferData(gl.ARRAY_BUFFER, boltData.byteLength, gl.DYNAMIC_DRAW);
+gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 40, 0);
+gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 40, 12);
+gl.enableVertexAttribArray(2); gl.vertexAttribPointer(2, 4, gl.FLOAT, false, 40, 24);
+gl.bindVertexArray(null);
+
+// dynamic sprites: pos(3) size(1) col(4) = 8 floats
+const SPR_MAX = MAXS * 3 + 8, sprData = new Float32Array(SPR_MAX * 8);
+const sprVAO = gl.createVertexArray(), sprBuf = gl.createBuffer();
+gl.bindVertexArray(sprVAO); gl.bindBuffer(gl.ARRAY_BUFFER, sprBuf);
+gl.bufferData(gl.ARRAY_BUFFER, sprData.byteLength, gl.DYNAMIC_DRAW);
+gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 32, 0);
+gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1, 1, gl.FLOAT, false, 32, 12);
+gl.enableVertexAttribArray(2); gl.vertexAttribPointer(2, 4, gl.FLOAT, false, 32, 16);
+gl.bindVertexArray(null);
+
+/* ====================================================================== */
+/*  Procedural Earth land mask (hand-built continent outlines, lon/lat)    */
+/* ====================================================================== */
+const LAND = [
+ // North America
+ [[-168,65.5],[-162,70],[-156,71.3],[-141,69.7],[-128,70.2],[-115,68.8],[-105,68.5],[-95,68],[-90,69],[-85,69.5],[-82,67],[-87,64.5],[-93,61],[-94.5,58.7],[-92.5,57],[-88,56.5],[-82.5,55],[-82,52.5],[-79,51.5],[-78.8,54],[-77,58],[-78,62],[-73,62.2],[-69,59],[-65,60.3],[-62,57],[-61,55],[-57,53.5],[-56,51.5],[-60,50.2],[-66,50.2],[-70,47.5],[-65,49],[-64.5,47.5],[-61,46],[-64,44.5],[-66,44],[-70,43.7],[-70.5,41.8],[-74,40.5],[-75.5,38],[-76,35],[-78,34],[-81,31.5],[-80.2,27],[-80,25.2],[-81.2,25.2],[-82.7,28],[-83.5,29.8],[-85.5,29.7],[-88,30.3],[-89.5,29.2],[-91.5,29.5],[-94,29.6],[-97,27.8],[-97.5,24],[-97.7,21],[-96,19],[-94.5,18.2],[-91,18.7],[-90.5,21],[-88,21.5],[-87,21],[-87.5,18],[-88.3,16],[-84,15.8],[-83.3,12.5],[-83.7,10.5],[-82,9],[-79.5,9.5],[-77.5,8.7],[-77.8,7.5],[-80.5,7.3],[-83,8.3],[-85.7,10],[-87.5,13],[-91,13.8],[-94,16],[-97,15.8],[-101,17.3],[-105.5,20],[-105.5,22.5],[-109,26],[-112.5,29.5],[-114.7,31.7],[-113.2,29.5],[-111,26],[-109.5,23],[-110.2,23],[-112,24.8],[-114.5,27.5],[-115.5,29.8],[-117.1,32.5],[-118.5,34],[-120.6,34.6],[-122.4,37.5],[-124,40.4],[-124.5,43],[-124,46.5],[-124.7,48.4],[-125,50],[-128,51.5],[-130,54],[-133,57],[-136,58.5],[-140,59.8],[-144,60],[-148,60.3],[-151.5,59.2],[-154,58.5],[-158,56.5],[-162,55],[-164.5,54.6],[-160,58.5],[-162,59.8],[-165,60.7],[-165,62.5],[-161,64],[-166,64.5]],
+ [[-80,73.5],[-72,71.5],[-67,69],[-62,66.5],[-65,63],[-72,64],[-78,64.5],[-74,67.5],[-84,70],[-88,72]],
+ [[-90,76.5],[-75,78.5],[-62,82],[-80,83],[-92,81],[-90,77]],
+ [[-118,72],[-104,73],[-101,69.5],[-112,68.7],[-119,70]],
+ // Greenland
+ [[-73,78.5],[-67,80],[-58,82],[-40,83.5],[-25,82.5],[-20,80],[-19,75],[-22,70.5],[-26,68.5],[-34,66],[-40,65],[-43,60],[-46,60.5],[-51,64],[-53,67],[-54,70],[-58,75.5],[-66,76]],
+ // Cuba, Hispaniola
+ [[-85,22],[-81,23],[-77,21.5],[-74.2,20.2],[-77.5,20],[-80,21.8]],
+ [[-74.4,18.5],[-72,19.9],[-68.4,18.6],[-71,17.8]],
+ // South America
+ [[-77.5,8.5],[-75.5,10.8],[-72,12],[-71.3,10.8],[-68,10.6],[-64,10.5],[-61.5,10.7],[-60,8.5],[-57,6],[-53,5.5],[-51,4],[-50,1.8],[-48.5,-0.5],[-44.5,-2.5],[-40,-2.8],[-37,-5],[-35,-6],[-34.8,-8],[-37.3,-11.5],[-39,-14],[-39.2,-17.8],[-40.8,-21.5],[-43,-23],[-45.5,-23.8],[-48.5,-26],[-48.8,-28.5],[-51,-31],[-53.5,-34],[-57,-34.8],[-57.5,-35.5],[-57,-37.5],[-58.5,-38.5],[-62,-39],[-62.3,-41],[-65,-41],[-64.5,-42.8],[-65.5,-45],[-67.5,-46.5],[-66,-48],[-69,-51],[-68.5,-52.5],[-71,-54],[-68,-55],[-72,-54],[-74,-52],[-75.5,-48],[-74,-44],[-73.5,-40],[-73.5,-37],[-71.6,-33],[-71.5,-28],[-70.3,-23],[-70.2,-18.5],[-75,-15.5],[-77.2,-12],[-79.5,-7.5],[-81.2,-5],[-80,-3],[-80.3,-1],[-80,1],[-78.8,1.8],[-77.3,4],[-77.4,7]],
+ // Eurasia
+ [[-9,37],[-9.5,39],[-8.8,42],[-9.3,43.2],[-8,43.7],[-1.8,43.4],[-1.2,46],[-2.5,47.3],[-4.7,48.4],[-1.5,48.7],[-1.5,49.7],[1.5,50.2],[3.5,51.3],[4.5,53],[8.5,53.8],[8.2,57],[10.6,57.7],[10.3,55],[11.5,54.2],[14,54],[18.5,54.8],[21,55.2],[21.2,57],[24,57.2],[24,59.3],[28,59.5],[30.2,59.9],[28.5,60.5],[25,60.2],[22.5,60],[21.5,61.5],[21.2,63],[25,65],[24.5,65.8],[22,65.8],[19,63.5],[17.5,62],[17.3,60.7],[18.8,59.7],[16.5,57.5],[16,56.2],[14.2,55.5],[12.8,56],[12,57.5],[11,59],[10,59],[8,58],[5.6,59],[5,61],[5.5,62.5],[8,63.5],[11,64.8],[13,67.2],[15.5,68.8],[18.5,70],[23,71],[28,71],[31,70.3],[33,69.4],[41,67.2],[44,68.5],[47,68],[53,68.8],[60,69.5],[68,69],[72,72.8],[80,73.5],[87,75],[98,76.2],[104,77.7],[113,75.7],[113,73.7],[125,73.5],[129,72],[140,72.5],[150,71.5],[160,69.7],[170,70],[180,69],[180,65],[178,64.5],[172,61],[170,60],[163,58],[160,54],[156.7,51],[156,56],[158,59],[155,59.5],[150,59.5],[143,59.3],[138,56],[137,54],[141,53],[140.5,48.5],[135,43.5],[131.5,42.8],[129.7,41],[128,39.5],[129.5,36.5],[129,35],[126.5,34.5],[126.5,37],[125,38],[125,39.7],[121.5,39],[122,40.5],[119.5,39.5],[118,38.5],[119,37.2],[122.5,37],[120,36],[119,34.5],[121.8,31.8],[122,30],[120.5,27],[118,24.5],[114,22.3],[110.5,21],[109.5,21.7],[108,21.5],[106.5,19.5],[108.5,16],[109.3,13],[109,11.5],[105,8.6],[104.8,10],[102.5,12],[100.8,13.5],[100,12.2],[99.2,10],[100.4,7.5],[101.5,6.8],[103.4,4.5],[103.5,1.4],[101.3,2.8],[100.3,5.5],[98.3,8],[98.5,10.5],[98.5,13],[97.7,16.5],[94.5,16.5],[94.3,18.5],[92,21.5],[91.2,22.6],[89,21.8],[86.8,20.5],[84.5,18.5],[82,16.5],[80.2,15],[80.3,12.5],[79.8,10.3],[78.2,8.8],[77.4,8.1],[76.3,10],[75,12.5],[73.5,16],[72.8,19.5],[72.8,21.5],[70.5,21],[69,22.3],[67,24.8],[62,25.2],[57.5,25.7],[56.5,27],[54,26.7],[51.5,27.8],[50.2,30],[48.8,30.2],[48,29.5],[48.5,28],[50,26.5],[51.3,25.2],[51.5,24.5],[54,24.2],[56,26],[56.5,24.5],[58.7,23.5],[59.8,22.5],[58,20.2],[56,17.9],[52,16.2],[49,14.5],[45,12.8],[43,13.5],[42.5,16],[41,19],[39.2,21.5],[38,24],[36.5,26],[35,28.5],[34.9,29.5],[34.7,31.8],[35.5,33.5],[36,35.8],[35.8,36.6],[34,36.2],[32,36.2],[30.5,36.6],[29,36.6],[27.3,37],[26.5,38.5],[26.3,40.3],[24,40.8],[22.7,40.3],[23,39],[24,38],[22.8,36.5],[21.5,36.8],[21.2,38.3],[20,39.7],[19.5,41.7],[18.5,42.5],[15.5,44.5],[13.7,45.5],[12.3,45.3],[12.5,44],[14,42.5],[16,41.5],[18.5,40.2],[17,39.5],[16.5,38.5],[15.7,37.9],[16,39],[15.5,40.2],[14,41],[12,41.8],[10.5,43],[8.7,44.4],[7,43.6],[4.5,43.4],[3,43],[3.2,41.8],[0.8,41],[0,39.5],[-0.5,38.3],[-2,36.8],[-4.5,36.7],[-5.6,36],[-6.3,36.8],[-7.5,37.2]],
+ [[-180,69],[-175,67.5],[-170,66],[-173,64.5],[-180,65]],
+ // Africa
+ [[-5.8,35.8],[-2,35.2],[1,36.5],[5,36.8],[9.8,37.3],[11,36.8],[10.2,34],[11.5,33.2],[15,32.3],[15.2,31.5],[19,30.3],[20,32],[22,32.8],[25,31.8],[29,30.9],[32.3,31.2],[34.2,31.3],[34.9,29.5],[34.3,27.8],[33.5,28],[32.6,29.9],[33.8,27.3],[35.6,23.5],[37.2,19.6],[39.5,15.6],[41.5,13.5],[43.2,12.6],[44,11],[47,11.2],[51.2,11.8],[51,10.5],[49,6],[47.5,3.5],[45,1.5],[42,-1],[40.5,-3],[39,-6.5],[39.5,-9.5],[40.5,-11],[40.5,-15],[37,-17.5],[35,-20],[35.5,-24],[33,-25.8],[32.8,-28.5],[31,-30],[28,-33],[26,-34],[22,-34.2],[19.5,-34.5],[18.4,-34],[17.8,-32],[16.5,-28.5],[15,-26.5],[14.5,-22.5],[12,-18],[11.8,-16],[13.5,-12],[13,-9],[12.2,-6],[12,-5],[9.5,-1],[9.3,1],[9.8,3.5],[8.5,4.5],[6,4.3],[4.5,6.3],[1,6],[-2,4.8],[-4.5,5.2],[-7.5,4.4],[-9.5,5.8],[-13,8.2],[-14.3,10],[-16.7,12.3],[-16.7,14],[-17.4,14.7],[-16.3,19],[-16.5,21],[-14.8,24],[-13,27.6],[-10,29.5],[-9.7,31.5],[-9,33],[-6.8,34]],
+ [[49.3,-12],[50.5,-15.5],[49.5,-18],[47.2,-24.8],[45,-25.5],[43.7,-23],[44.3,-19.5],[45.5,-16],[48,-13.5]],
+ // Islands: UK, Ireland, Iceland, Med
+ [[-5.5,50],[-3,50.6],[1.3,51],[1.7,52.7],[0,53.5],[-1.5,55],[-2,56.2],[-1.8,57.6],[-3.5,58.6],[-5,58.6],[-6,57.3],[-5.5,56],[-4.8,55],[-3,54.8],[-3.2,53.4],[-4.5,53.3],[-4.2,52.2],[-5.2,51.8],[-3,51.4],[-4.5,50.8]],
+ [[-10,51.8],[-6,52.2],[-6,54],[-5.7,54.8],[-8,55.3],[-10,54]],
+ [[-24,65.5],[-22,66.4],[-16,66.5],[-13.5,65],[-18,63.4],[-22.5,63.8]],
+ [[12.5,38.1],[15.6,38.2],[15.1,36.7],[12.7,37.6]], [[8.2,41],[9.7,41],[9.6,39.2],[8.5,39]],
+ [[23.5,35.3],[26.3,35.2],[24,35]], [[32.3,35],[34.5,35.6],[33,34.6]],
+ // East Asia islands
+ [[130.9,34],[132.5,35.5],[136,36],[137,37.3],[139.5,38.5],[140,40.5],[141.5,41.4],[142,39.5],[141,37],[140.8,35.5],[139.8,35],[138.5,34.7],[136.8,34.3],[135.5,33.5],[135,34.6],[133,34.3],[131,33.9]],
+ [[140,42],[141.5,43.3],[145,43.5],[143.5,42],[141,41.8]], [[129.8,33.5],[131.8,33.7],[131.5,31.2],[130.2,31.2],[129.8,32.5]],
+ [[132.5,33.8],[134.5,34.2],[134,33.2],[132.8,32.9]], [[142.5,46],[143.5,49],[143,53.5],[142,54],[142,49]],
+ [[120.2,23],[121.5,25.2],[121.8,24],[120.9,22]], [[108.7,19.2],[110.5,20.1],[111,19.5],[109.5,18.2]],
+ [[79.8,9.7],[81.8,7.5],[81,6],[80,6.2],[79.8,7.5]],
+ // South-East Asia & Oceania
+ [[120.3,18.5],[122.2,18.3],[122,16],[121.5,14],[124,13],[122.5,13.5],[120.5,14.2],[120,16]],
+ [[122,8],[125.5,9.8],[126.5,7],[125.5,5.8],[124,6.5],[123,8]], [[122.5,11],[125,12.5],[125,10],[123.5,9.5]],
+ [[109,1.5],[111,2],[113,3.2],[115.5,5.2],[117,7],[119,5],[117.5,1.5],[118,0.5],[116.5,-3],[114.5,-4],[110.5,-3],[110,-1.5]],
+ [[95.3,5.6],[98,4],[100.5,2],[104,-1],[106,-3],[105.8,-5.8],[104.5,-5.7],[102,-4],[100,-1.5],[98.5,1.5],[96,3.5]],
+ [[105.3,-6.8],[108.5,-6.5],[111,-6.5],[114.4,-7.7],[114.4,-8.7],[110,-8.2],[106.5,-7.5]],
+ [[119.5,-5.5],[120.4,-2.8],[121.5,-1],[123.5,0.8],[125,1.5],[120.5,0.8],[119.8,-0.5],[118.8,-3]],
+ [[131,-0.8],[134.2,-0.8],[137.5,-1.5],[141,-2.6],[145,-4.5],[147.5,-6],[147.8,-8],[150.5,-10.5],[147,-10],[143.5,-8.5],[141,-9.1],[138,-8.3],[137.8,-5.5],[135,-3.8],[133,-4],[132.5,-2.5]],
+ [[113.5,-22],[114,-26],[115,-34],[118,-35],[123,-34],[126,-32.2],[131,-31.5],[134,-32.8],[135.5,-35],[138,-34.8],[138,-32.5],[139,-35.5],[140,-38],[144,-38.5],[146,-39],[150,-37.5],[151,-34],[153.2,-30],[153.6,-28],[152.5,-25],[150,-22.5],[148.5,-20],[146,-18.8],[145.3,-15],[143.5,-14],[142.5,-10.8],[141.5,-13.5],[141.5,-17],[139.5,-17.5],[137,-15.8],[135.5,-14.8],[136.8,-12.2],[132.5,-11.5],[130,-12.5],[129.5,-15],[126,-14],[124,-16.3],[122.2,-18],[119,-20],[116,-20.7]],
+ [[144.7,-40.8],[148.3,-40.9],[148,-43],[146,-43.6],[145,-42]],
+ [[172.7,-34.5],[175.5,-37],[178.5,-37.7],[177,-39.5],[175,-41.5],[174.8,-39.5],[173.8,-39.2],[174.5,-37.5]],
+ [[172.6,-40.6],[174,-41.2],[173,-43.5],[171.2,-44.5],[169,-46.6],[166.5,-46],[168.5,-44],[171,-42.2]],
+ // Antarctica
+ [[-180,-78],[-150,-76],[-120,-74],[-100,-73],[-75,-72],[-68,-67],[-60,-63.5],[-58,-64],[-62,-68],[-62,-73],[-45,-78],[-30,-77],[-15,-72],[0,-70],[20,-70],[40,-68],[60,-67],[70,-69],[90,-66],[110,-66],[130,-66],[150,-68],[165,-71],[170,-77],[180,-78],[180,-90],[-180,-90]],
+];
+const WATER = [
+ [[28,41.5],[28.5,43.5],[30,45.5],[33,46],[33.5,44.5],[35.5,45],[38,47],[39.5,47],[37.5,45],[38.5,44.4],[41.5,42],[41.5,41.5],[38,40.9],[35,42],[31,41.2],[28.5,41.3]],
+ [[47,45],[49,46.5],[53,46.5],[53.5,45],[51,44.3],[50.5,42],[52.8,41.5],[53.9,39.5],[53.8,37.2],[51,36.8],[49,37.6],[49.5,40],[47.5,42],[47.5,43.5]],
+ [[-92,47],[-88,48.5],[-84.5,46.8],[-87.5,46.5]], [[-87.8,42],[-86.5,45.5],[-85,45.8],[-87,41.8]], [[-83.5,42],[-81,43],[-79,43.2],[-79.5,42.7],[-82.5,41.7]],
+];
+
+function buildMask() {
+  const W = 2048, H = 1024, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const c = cv.getContext('2d', { willReadFrequently: true });
+  c.fillStyle = '#000'; c.fillRect(0, 0, W, H);
+  const draw = (polys, col) => { c.fillStyle = col;
+    for (const poly of polys) { c.beginPath();
+      poly.forEach(([lo, la], i) => { const x = (lo + 180) / 360 * W, y = (90 - la) / 180 * H; i ? c.lineTo(x, y) : c.moveTo(x, y); });
+      c.closePath(); c.fill(); } };
+  draw(LAND, '#fff'); draw(WATER, '#000');
+  const src = c.getImageData(0, 0, W, H).data;
+  const a = new Float32Array(W * H); for (let i = 0; i < W * H; i++) a[i] = src[i * 4] / 255;
+  const tmp = new Float32Array(W * H);
+  function blur(buf, r) {            // separable box blur: wraps in x, clamps in y
+    const n = 2 * r + 1;
+    for (let y = 0; y < H; y++) { const o = y * W; let s = 0;
+      for (let k = -r; k <= r; k++) s += buf[o + ((k + W) % W)];
+      for (let x = 0; x < W; x++) { tmp[o + x] = s / n; s += buf[o + (x + r + 1) % W] - buf[o + ((x - r + W) % W)]; } }
+    for (let x = 0; x < W; x++) { let s = 0;
+      for (let k = -r; k <= r; k++) s += tmp[clamp(k, 0, H - 1) * W + x];
+      for (let y = 0; y < H; y++) { buf[y * W + x] = s / n; s += tmp[Math.min(H - 1, y + r + 1) * W + x] - tmp[Math.max(0, y - r) * W + x]; } }
+  }
+  const narrow = a.slice(); blur(narrow, 2); blur(narrow, 2); blur(narrow, 1);
+  const wide = a.slice(); for (let i = 0; i < 3; i++) blur(wide, 9);
+  const out = new Uint8Array(W * H * 2);
+  for (let i = 0; i < W * H; i++) { out[i * 2] = clamp(narrow[i] * 255, 0, 255); out[i * 2 + 1] = clamp(wide[i] * 255, 0, 255); }
+  const tex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RG8, W, H, 0, gl.RG, gl.UNSIGNED_BYTE, out);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  return tex;
+}
+const maskTex = buildMask();
+
+/* ====================================================================== */
+/*  Camera / interaction                                                   */
+/* ====================================================================== */
+const FOV = 40 * D2R;
+const cam = { yaw: -0.35, pitch: 0.38, vyaw: 0, vpitch: 0, dist: 3.5, targetDist: 3.5, dragging: false, last: 0 };
+let W = 1, H = 1, DPR = 1, model = Mat.mul(Mat.rotX(0), Mat.rotY(0)), effDist = 3.5;
+
+function resize() {
+  DPR = Math.min(window.devicePixelRatio || 1, 1.75);
+  W = Math.max(2, Math.floor(canvas.clientWidth * DPR)); H = Math.max(2, Math.floor(canvas.clientHeight * DPR));
+  canvas.width = W; canvas.height = H;
+}
+window.addEventListener('resize', resize); resize();
+
+let ptr = null, downInfo = null;
+canvas.addEventListener('pointerdown', e => {
+  canvas.setPointerCapture(e.pointerId);
+  ptr = { x: e.clientX, y: e.clientY }; downInfo = { x: e.clientX, y: e.clientY, t: performance.now(), moved: 0 };
+  cam.dragging = true; cam.vyaw = cam.vpitch = 0; canvas.classList.add('drag');
+});
+canvas.addEventListener('pointermove', e => {
+  if (!ptr) return;
+  const dx = e.clientX - ptr.x, dy = e.clientY - ptr.y; ptr = { x: e.clientX, y: e.clientY };
+  downInfo.moved += Math.abs(dx) + Math.abs(dy);
+  downInfo.tm = performance.now(); const k = 0.0052 * (cam.dist / 3.5);
+  cam.yaw += dx * k; cam.pitch = clamp(cam.pitch + dy * k, -1.45, 1.45);
+  cam.vyaw = dx * k * 60; cam.vpitch = dy * k * 60;
+});
+const endDrag = e => {
+  if (!ptr) return; if (performance.now() - (downInfo.tm || 0) > 90) cam.vyaw = cam.vpitch = 0;
+  ptr = null; cam.dragging = false; canvas.classList.remove('drag');
+  if (e.type === 'pointerup' && downInfo.moved < 6 && performance.now() - downInfo.t < 450) { cam.vyaw = cam.vpitch = 0; clickStrike(e.clientX, e.clientY); }
+};
+canvas.addEventListener('pointerup', endDrag); canvas.addEventListener('pointercancel', endDrag);
+canvas.addEventListener('wheel', e => { e.preventDefault(); cam.targetDist = clamp(cam.targetDist * Math.exp(e.deltaY * 0.0012), 2.0, 7); }, { passive: false });
+// pinch zoom
+const touches = new Map(); let pinch0 = 0;
+canvas.addEventListener('pointerdown', e => { if (e.pointerType === 'touch') touches.set(e.pointerId, e); });
+canvas.addEventListener('pointermove', e => { if (e.pointerType !== 'touch' || !touches.has(e.pointerId)) return; touches.set(e.pointerId, e);
+  if (touches.size === 2) { const [a, b] = [...touches.values()]; const d = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+    if (pinch0) cam.targetDist = clamp(cam.targetDist * pinch0 / d, 2.0, 7); pinch0 = d; } });
+const tEnd = e => { touches.delete(e.pointerId); if (touches.size < 2) pinch0 = 0; };
+canvas.addEventListener('pointerup', tEnd); canvas.addEventListener('pointercancel', tEnd);
+
+/* rotate vectors between model and world space */
+function toWorld(v) {
+  const cy = Math.cos(cam.yaw), sy = Math.sin(cam.yaw), cx = Math.cos(cam.pitch), sx = Math.sin(cam.pitch);
+  const x1 = v[0] * cy + v[2] * sy, z1 = -v[0] * sy + v[2] * cy;
+  return [x1, v[1] * cx - z1 * sx, v[1] * sx + z1 * cx];
+}
+function toModel(v) {
+  const cy = Math.cos(cam.yaw), sy = Math.sin(cam.yaw), cx = Math.cos(cam.pitch), sx = Math.sin(cam.pitch);
+  const y1 = v[1] * cx + v[2] * sx, z1 = -v[1] * sx + v[2] * cx;
+  return [v[0] * cy - z1 * sy, y1, v[0] * sy + z1 * cy];
+}
+function clickStrike(cx, cy) {
+  const r = canvas.getBoundingClientRect(), nx = ((cx - r.left) / r.width) * 2 - 1, ny = 1 - ((cy - r.top) / r.height) * 2;
+  const th = Math.tan(FOV / 2), asp = W / H;
+  let d = [nx * asp * th, ny * th, -1]; const l = Math.hypot(...d); d = d.map(v => v / l);
+  const o = [0, 0, effDist], b = o[0] * d[0] + o[1] * d[1] + o[2] * d[2], c = effDist * effDist - 1, disc = b * b - c;
+  if (disc < 0) return;
+  const t = -b - Math.sqrt(disc), hit = [o[0] + d[0] * t, o[1] + d[1] * t, o[2] + d[2] * t];
+  const m = toModel(hit), lat = Math.asin(clamp(m[1], -1, 1)) / D2R, lon = Math.atan2(m[0], m[2]) / D2R;
+  spawnStrike(lat, lon, rand(0.7, 1.0), true);
+}
+
+/* ====================================================================== */
+/*  Strike simulation                                                      */
+/* ====================================================================== */
+const strikes = [];                // active ripples
+const bolts = [];                  // active bolts
+const sArr = new Float32Array(MAXS * 4), sArr2 = new Float32Array(MAXS * 4);
+const state = { total: 0, activity: 0, rateEMA: 0, intensity: 1, recent: [] };
+
+const HOT = [[-3,-60,1],[-1,24,1],[1,110,1],[29,-88,.8],[37,-98,.9],[21,85,.9],[-14,132,.6],[-30,-60,.6],[8,-75,.5],[5,-5,.6],[35,115,.5],[45,15,.45],[-20,30,.5],[13,100,.6],[-6,-50,.4],[52,-2,.25]];
+const storms = HOT.map(h => ({ lat: h[0], lon: h[1], base: h[2], phase: rand(TAU), speed: rand(0.03, 0.09),
+  rad: rand(3, 7), vlat: 0, vlon: rand(-0.6, 0.6), acc: 0 }));
+const pending = [];                // queued follow-up strokes
+
+function ll2v(lat, lon) { const la = lat * D2R, lo = lon * D2R; return [Math.cos(la) * Math.sin(lo), Math.sin(la), Math.cos(la) * Math.cos(lo)]; }
+const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+const norm = a => { const l = Math.hypot(...a) || 1; return [a[0] / l, a[1] / l, a[2] / l]; };
+
+function makeBolt(dir, I) {
+  const up = Math.abs(dir[1]) < 0.95 ? [0, 1, 0] : [1, 0, 0];
+  const t1 = norm(cross(dir, up)), t2 = cross(dir, t1);
+  const H = 0.10 + 0.13 * I, N = 11, pts = [];
+  let ox = rand(-0.03, 0.03), oy = rand(-0.03, 0.03);
+  for (let k = 0; k <= N; k++) {
+    pts.push([ox, oy]); ox += randn() * 0.012; oy += randn() * 0.012;
+  }
+  const ex = pts[N][0], ey = pts[N][1];
+  const P = pts.map(([x, y], k) => { const s = k / N, bx = x - ex * s, by = y - ey * s, r = 1.004 + H * (1 - s);
+    return [dir[0] * r + t1[0] * bx + t2[0] * by, dir[1] * r + t1[1] * bx + t2[1] * by, dir[2] * r + t1[2] * bx + t2[2] * by, r, bx, by]; });
+  const segs = [];
+  for (let k = 0; k < N; k++) segs.push([P[k][0], P[k][1], P[k][2], P[k + 1][0], P[k + 1][1], P[k + 1][2], 1.4, 1.0]);
+  for (let k = 1; k < N - 2; k++) if (Math.random() < 0.38) {
+    let [bx, by] = [P[k][4], P[k][5]], r = P[k][3], ang = rand(TAU), len = rand(0.010, 0.018), prev = P[k];
+    const n = 2 + Math.floor(rand(4));
+    for (let j = 0; j < n; j++) {
+      ang += randn() * 0.6; bx += Math.cos(ang) * len; by += Math.sin(ang) * len; r -= len * 0.9;
+      const cur = [dir[0] * r + t1[0] * bx + t2[0] * by, dir[1] * r + t1[1] * bx + t2[1] * by, dir[2] * r + t1[2] * bx + t2[2] * by];
+      segs.push([prev[0], prev[1], prev[2], cur[0], cur[1], cur[2], 0.9, 0.65 - j * 0.1]); prev = cur;
+      if (r < 1.004) break;
+    }
+  }
+  return segs;
+}
+
+function spawnStrike(lat, lon, I, manual) {
+  const dir = ll2v(lat, lon), t = now;
+  const s = { dir, lat, lon, I, t0: t, seed: rand(100) };
+  if (strikes.length >= MAXS) strikes.shift();
+  strikes.push(s);
+  bolts.push({ s, segs: makeBolt(dir, I) }); if (bolts.length > 14) bolts.shift();
+  state.total++; state.activity += 0.35 + I * 0.65; state.recent.push(t);
+  const w = toWorld(dir);                      // for stereo position & audibility
+  Music.strike({ lat, lon, I, x: w[0], y: w[1], z: w[2], manual });
+}
+
+function simulate(dt) {
+  state.activity *= Math.exp(-dt / 3.5);
+  while (state.recent.length && now - state.recent[0] > 5) state.recent.shift();
+  state.rateEMA += (state.recent.length / 5 - state.rateEMA) * Math.min(1, dt * 2);
+  for (const st of storms) {
+    st.vlat += randn() * 0.15 * dt; st.vlat *= Math.exp(-dt * 0.3);
+    st.lat = clamp(st.lat + st.vlat * dt, -55, 58); st.lon += st.vlon * dt; if (st.lon > 180) st.lon -= 360; if (st.lon < -180) st.lon += 360;
+    const life = Math.pow(Math.max(0, Math.sin(now * st.speed + st.phase)), 1.4) * st.base;
+    st.acc += dt * life * 0.55 * state.intensity;
+    while (st.acc >= 1) { st.acc -= Math.random() * 1.0 + 0.2;
+      const la = clamp(st.lat + randn() * st.rad * 0.55, -80, 80);
+      const lo = st.lon + randn() * st.rad * 0.8 / Math.max(0.3, Math.cos(la * D2R));
+      const I = clamp(0.25 + Math.pow(Math.random(), 1.8) * 0.75 + life * 0.1, 0.2, 1);
+      spawnStrike(la, lo, I);
+      if (Math.random() < 0.3) for (let k = 0, n = 1 + Math.floor(rand(3)); k < n; k++)
+        pending.push({ t: now + rand(0.08, 0.5) * (k + 1), la: la + randn() * 0.15, lo: lo + randn() * 0.15, I: I * rand(0.4, 0.8) });
+    }
+  }
+  for (let i = pending.length - 1; i >= 0; i--) if (pending[i].t <= now) { const p = pending.splice(i, 1)[0]; spawnStrike(p.la, p.lo, p.I); }
+  while (strikes.length && now - strikes[0].t0 > LIFE) strikes.shift();
+  while (bolts.length && now - bolts[0].s.t0 > 0.7) bolts.shift();
+}
+
+/* ====================================================================== */
+/*  Music engine (Web Audio)                                               */
+/* ====================================================================== */
+const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
+const CHORDS = [   // Dm9 · Bbmaj9 · Gm9 · Fmaj9  (all share D-minor pentatonic colours)
+  { name: 'Dm9',    bass: 38, v: [57, 60, 64, 65] },
+  { name: 'B♭maj9', bass: 34, v: [57, 60, 62, 65] },
+  { name: 'Gm9',    bass: 43, v: [58, 62, 65, 69] },
+  { name: 'Fmaj9',  bass: 41, v: [57, 60, 64, 67] },
+];
+const PENT = (() => { const a = []; for (let o = 0; o < 4; o++) for (const d of [0, 3, 5, 7, 10]) a.push(50 + 12 * o + d); return a; })();
+const BEAT = 60 / 66, CHORD_LEN = BEAT * 8;
+
+const Music = {
+  ctx: null, on: false, voices: [], chordIdx: -1, nextChord: 0, nextStep: 0, step: 0, live: 0, bump: 0, lastCut: 0, analyser: null, freqData: null, noiseBuf: null,
+
+  start() {
+    if (this.ctx) { this.setOn(true); return; }
+    const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+    const ctx = this.ctx = new AC(), t = ctx.currentTime;
+    // master chain
+    this.master = ctx.createGain(); this.master.gain.value = 0;
+    const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -20; comp.knee.value = 24; comp.ratio.value = 3.5; comp.attack.value = 0.01; comp.release.value = 0.3;
+    this.analyser = ctx.createAnalyser(); this.analyser.fftSize = 128; this.analyser.smoothingTimeConstant = 0.8;
+    this.freqData = new Uint8Array(this.analyser.frequencyBinCount);
+    this.master.connect(comp); comp.connect(this.analyser); this.analyser.connect(ctx.destination);
+    // reverb (synthetic impulse)
+    const len = Math.floor(ctx.sampleRate * 4.2), ir = ctx.createBuffer(2, len, ctx.sampleRate);
+    for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); let lp = 0;
+      for (let i = 0; i < len; i++) { const x = i / len, a = 0.9 - 0.82 * x; lp += ((Math.random() * 2 - 1) - lp) * a;
+        d[i] = lp * Math.pow(1 - x, 2.4) * (i < 400 ? i / 400 : 1); } }
+    this.rev = ctx.createConvolver(); this.rev.buffer = ir;
+    this.revIn = ctx.createGain(); this.revIn.gain.value = 1; const revOut = ctx.createGain(); revOut.gain.value = 0.9;
+    this.revIn.connect(this.rev); this.rev.connect(revOut); revOut.connect(this.master);
+    // feedback delay (dotted eighth)
+    this.dlyIn = ctx.createGain(); const dly = ctx.createDelay(2); dly.delayTime.value = BEAT * 0.75;
+    const fb = ctx.createGain(); fb.gain.value = 0.42; const fbf = ctx.createBiquadFilter(); fbf.type = 'lowpass'; fbf.frequency.value = 2400;
+    const dOut = ctx.createGain(); dOut.gain.value = 0.55;
+    this.dlyIn.connect(dly); dly.connect(fbf); fbf.connect(fb); fb.connect(dly); dly.connect(dOut); dOut.connect(this.master); dOut.connect(this.revIn);
+    // pad
+    this.padFilter = ctx.createBiquadFilter(); this.padFilter.type = 'lowpass'; this.padFilter.Q.value = 0.8; this.padFilter.frequency.value = 600;
+    const padGain = ctx.createGain(); padGain.gain.value = 0.55;
+    this.padFilter.connect(padGain); padGain.connect(this.master); const padSend = ctx.createGain(); padSend.gain.value = 0.6; padGain.connect(padSend); padSend.connect(this.revIn);
+    const lfo = ctx.createOscillator(), lfoG = ctx.createGain(); lfo.frequency.value = 0.07; lfoG.gain.value = 260; lfo.connect(lfoG); lfoG.connect(this.padFilter.frequency); lfo.start();
+    this.shimmer = ctx.createGain(); this.shimmer.gain.value = 0; this.shimmer.connect(this.revIn); this.shimmer.connect(this.master);
+    CHORDS[0].v.forEach((m, i) => {
+      const g = ctx.createGain(); g.gain.value = 0; const pan = ctx.createStereoPanner(); pan.pan.value = [-0.6, -0.2, 0.2, 0.6][i];
+      const o1 = ctx.createOscillator(), o2 = ctx.createOscillator(), o3 = ctx.createOscillator(), o4 = ctx.createOscillator();
+      o1.type = o2.type = 'sawtooth'; o3.type = 'sine'; o4.type = 'sine'; o1.detune.value = -9; o2.detune.value = 9;
+      const g12 = ctx.createGain(); g12.gain.value = 0.22; o1.connect(g12); o2.connect(g12); g12.connect(g);
+      const g3 = ctx.createGain(); g3.gain.value = 0.5; o3.connect(g3); g3.connect(g);
+      const g4 = ctx.createGain(); g4.gain.value = 0.35; o4.connect(g4); g4.connect(this.shimmer);
+      g.connect(pan); pan.connect(this.padFilter);
+      [o1, o2, o3, o4].forEach(o => { o.frequency.value = mtof(m); o.start(); });
+      g.gain.setTargetAtTime(0.16, t + 0.2, 2.0);
+      this.voices.push({ o: [o1, o2, o3, o4], mult: [1, 1, 1, 2] });
+    });
+    // sub bass
+    this.sub = ctx.createOscillator(); this.sub.frequency.value = mtof(38); const subG = ctx.createGain(); subG.gain.value = 0;
+    const sub2 = ctx.createOscillator(); sub2.frequency.value = mtof(50); sub2.type = 'triangle'; const sub2G = ctx.createGain(); sub2G.gain.value = 0.1;
+    this.sub2 = sub2; this.sub.connect(subG); sub2.connect(sub2G); sub2G.connect(subG); subG.connect(this.master); subG.gain.setTargetAtTime(0.26, t + 0.5, 2.5); this.sub.start(); sub2.start(); this.subG = subG;
+    // noise for thunder
+    const nl = ctx.sampleRate * 3, nb = ctx.createBuffer(1, nl, ctx.sampleRate), nd = nb.getChannelData(0); let br = 0;
+    for (let i = 0; i < nl; i++) { br = (br + 0.02 * (Math.random() * 2 - 1)) / 1.02; nd[i] = br * 3.5; }
+    this.noiseBuf = nb;
+
+    this.nextChord = t + 0.1; this.nextStep = t + 0.2;
+    this.timer = setInterval(() => this.tick(), 25);
+    this.on = true; this.master.gain.setTargetAtTime(0.9, t, 1.2);
+    ctx.resume();
+  },
+  setOn(v) {
+    if (!this.ctx) return; this.on = v; const t = this.ctx.currentTime;
+    if (v) { this.ctx.resume(); this.master.gain.cancelScheduledValues(t); this.master.gain.setTargetAtTime(0.9, t, 0.3); }
+    else { this.master.gain.cancelScheduledValues(t); this.master.gain.setTargetAtTime(0, t, 0.15); setTimeout(() => { if (!this.on) this.ctx.suspend(); }, 700); }
+  },
+  act() { return 1 - Math.exp(-state.activity / 3.2); },
+
+  tick() {
+    const ctx = this.ctx; if (!ctx || !this.on) return; const t = ctx.currentTime;
+    while (this.nextChord < t + 0.2) { this.setChord((this.chordIdx + 1) % CHORDS.length, this.nextChord); this.nextChord += CHORD_LEN; }
+    while (this.nextStep < t + 0.15) { this.arp(this.nextStep); this.nextStep += BEAT / 2; this.step++; }
+    // continuous mapping from storm energy
+    const a = this.act(); this.bump *= 0.93;
+    const cut = 380 + a * 2400 + this.bump * 2200;
+    this.padFilter.frequency.setTargetAtTime(cut, t, 0.12);
+    this.shimmer.gain.setTargetAtTime(a * 0.5, t, 0.4);
+    this.subG.gain.setTargetAtTime(0.2 + a * 0.12, t, 0.5);
+    this.voices.forEach((v, i) => { const d = (i % 2 ? 1 : -1) * (6 + a * 14); v.o[0].detune.setTargetAtTime(-d - 3, t, 0.5); v.o[1].detune.setTargetAtTime(d + 3, t, 0.5); });
+  },
+  setChord(i, t) {
+    this.chordIdx = i; const c = CHORDS[i];
+    this.voices.forEach((v, k) => v.o.forEach((o, j) => o.frequency.setTargetAtTime(mtof(c.v[k]) * v.mult[j], t, 1.1)));
+    this.sub.frequency.setTargetAtTime(mtof(c.bass), t, 0.6); this.sub2.frequency.setTargetAtTime(mtof(c.bass + 12), t, 0.6);
+    const el = $('sChord'); setTimeout(() => el.textContent = c.name, Math.max(0, (t - this.ctx.currentTime) * 1000));
+  },
+  arp(t) {          // soft arpeggio whose density follows storm energy
+    const a = this.act(); if (this.live > 18) return;
+    const p = Math.pow(a, 1.15) * 0.85; if (Math.random() > p) return;
+    const c = CHORDS[Math.max(0, this.chordIdx)], pat = [0, 2, 1, 3, 2, 3, 1, 0];
+    const m = c.v[pat[this.step % 8]] + 12 + (this.step % 16 > 7 ? 12 : 0);
+    this.bell(mtof(m), 0.035 + a * 0.05, Math.sin(this.step * 0.9) * 0.5, t, 0.7 + a, 1.0, false);
+  },
+  bell(f, vel, pan, t, wet, dec, bright) {
+    const ctx = this.ctx; this.live++;
+    const o = ctx.createOscillator(), m = ctx.createOscillator(), mg = ctx.createGain(), g = ctx.createGain(), p = ctx.createStereoPanner();
+    o.frequency.value = f; m.frequency.value = f * (bright ? 3.5 : 2.0);
+    const idx = f * (bright ? 2.2 : 1.1); mg.gain.setValueAtTime(idx, t); mg.gain.exponentialRampToValueAtTime(1, t + dec * 0.5);
+    m.connect(mg); mg.connect(o.frequency);
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vel, t + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t + dec);
+    const o2 = ctx.createOscillator(); o2.type = 'triangle'; o2.frequency.value = f * 2; const g2 = ctx.createGain(); g2.gain.value = 0.15; o2.connect(g2); g2.connect(g);
+    p.pan.value = clamp(pan, -1, 1);
+    o.connect(g); g.connect(p); p.connect(this.master);
+    const rs = ctx.createGain(); rs.gain.value = wet * 0.8; p.connect(rs); rs.connect(this.revIn);
+    const ds = ctx.createGain(); ds.gain.value = 0.3 * wet; p.connect(ds); ds.connect(this.dlyIn);
+    o.start(t); m.start(t); o2.start(t); const e = t + dec + 0.1; o.stop(e); m.stop(e); o2.stop(e);
+    o.onended = () => { this.live--; };
+  },
+  thunder(t, vol, dark) {
+    const ctx = this.ctx, src = ctx.createBufferSource(); src.buffer = this.noiseBuf;
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.Q.value = 0.5;
+    const g = ctx.createGain(); const dur = 2.5 + vol * 2;
+    lp.frequency.setValueAtTime(260 + 500 * (1 - dark), t); lp.frequency.exponentialRampToValueAtTime(60, t + dur);
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol, t + 0.06 + Math.random() * 0.1);
+    for (let k = 1; k < 4; k++) g.gain.linearRampToValueAtTime(vol * rand(0.3, 0.8) * (1 - k / 4), t + 0.3 * k + rand(0.3));
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    src.connect(lp); lp.connect(g); g.connect(this.master); const r = ctx.createGain(); r.gain.value = 0.5; g.connect(r); r.connect(this.revIn);
+    src.loop = true; src.start(t, Math.random() * 1.5); src.stop(t + dur + 0.2);
+  },
+  strike(s) {
+    if (!this.ctx || !this.on) return;
+    const ctx = this.ctx, t = ctx.currentTime + 0.01;
+    const facing = clamp(s.z * 0.5 + 0.5, 0, 1);              // 1 = facing the viewer, 0 = far side
+    const vis = 0.35 + 0.65 * facing;
+    const tl = clamp((s.lat + 50) / 105, 0, 1);
+    let idx = Math.round(tl * (PENT.length - 6)) + Math.floor(Math.random() * 3);
+    idx = clamp(idx, 0, PENT.length - 1);
+    this.bell(mtof(PENT[idx]), (0.05 + 0.17 * s.I) * vis, s.x * 0.9, t, 0.5 + (1 - facing) * 0.8, 1.6 + s.I * 2.2, s.I > 0.55);
+    if (s.I > 0.6 && Math.random() < 0.6) this.bell(mtof(PENT[clamp(idx + 2, 0, PENT.length - 1)]), 0.05 * vis, s.x * 0.9, t + 0.09, 1, 2.5, true);
+    // electric crackle
+    const src = ctx.createBufferSource(); src.buffer = this.noiseBuf; const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 2500;
+    const cg = ctx.createGain(); const cp = ctx.createStereoPanner(); cp.pan.value = clamp(s.x, -1, 1);
+    cg.gain.setValueAtTime(0.0001, t); cg.gain.linearRampToValueAtTime(0.05 * s.I * vis, t + 0.002); cg.gain.exponentialRampToValueAtTime(0.0001, t + 0.05 + 0.06 * s.I);
+    src.connect(hp); hp.connect(cg); cg.connect(cp); cp.connect(this.master); src.start(t, Math.random() * 2, 0.2);
+    // thunder arrives later when far
+    const delay = 0.25 + (1 - facing) * 1.6 + Math.random() * 0.3;
+    this.thunder(t + delay, 0.05 + 0.2 * s.I * (0.4 + 0.6 * facing), 1 - facing);
+    // big strikes: low boom + filter bloom
+    this.bump = Math.min(1.5, this.bump + s.I * 0.9);
+    if (s.I > 0.8) { const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.setValueAtTime(70, t); o.frequency.exponentialRampToValueAtTime(34, t + 0.8);
+      g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.32 * s.I, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + 1.8);
+      o.connect(g); g.connect(this.master); o.start(t); o.stop(t + 1.9); }
+  },
+};
+
+/* ====================================================================== */
+/*  UI                                                                     */
+/* ====================================================================== */
+const intro = $('intro'), sndBtn = $('snd');
+$('start').addEventListener('click', () => { Music.start(); intro.classList.add('gone'); sndBtn.textContent = '♪ Sound on'; });
+$('silent').addEventListener('click', () => intro.classList.add('gone'));
+sndBtn.addEventListener('click', () => {
+  if (!Music.ctx) { Music.start(); sndBtn.textContent = '♪ Sound on'; return; }
+  Music.setOn(!Music.on); sndBtn.textContent = Music.on ? '♪ Sound on' : '♪ Sound off';
+});
+$('inten').addEventListener('input', e => { state.intensity = +e.target.value; });
+const spec = $('spec').getContext('2d');
+
+/* ====================================================================== */
+/*  Render loop                                                            */
+/* ====================================================================== */
+let now = 0, prev = performance.now(), pulse = 0, lastHud = 0;
+const ptRange = gl.getParameter(gl.ALIASED_POINT_SIZE_RANGE);
+gl.enable(gl.CULL_FACE); gl.cullFace(gl.BACK);
+
+function frame(ts) {
+  const dt = Math.min(0.1, (ts - prev) / 1000); prev = ts; now += dt;
+  // camera motion
+  if (!cam.dragging) {
+    cam.yaw += cam.vyaw * dt; cam.pitch = clamp(cam.pitch + cam.vpitch * dt, -1.45, 1.45);
+    const f = Math.exp(-dt * 2.8); cam.vyaw *= f; cam.vpitch *= f;
+    if (Math.abs(cam.vyaw) < 0.05) cam.yaw += 0.035 * dt;           // gentle idle spin
+  }
+  cam.dist += (cam.targetDist - cam.dist) * Math.min(1, dt * 8);
+  const asp = W / H;
+  effDist = cam.dist * (asp < 1 ? Math.min(1.9, 1 / asp * 0.82) : 1);
+
+  simulate(dt);
+
+  // audio-reactive glow
+  let lvl = 0;
+  if (Music.analyser && Music.on) { Music.analyser.getByteFrequencyData(Music.freqData); for (let i = 0; i < 8; i++) lvl += Music.freqData[i]; lvl /= 8 * 255; }
+  pulse += (lvl - pulse) * Math.min(1, dt * 10);
+
+  model = Mat.mul(Mat.rotX(cam.pitch), Mat.rotY(cam.yaw));
+  const proj = Mat.persp(FOV, asp, 0.1, 40), view = Mat.trans(0, 0, -effDist);
+  const mvp = Mat.mul(Mat.mul(proj, view), model), vp = Mat.mul(proj, view);
+  const sa = now * 0.03 + 0.7, sun = [Math.sin(sa) * 0.9, 0.28, Math.cos(sa) * 0.9];
+
+  gl.viewport(0, 0, W, H);
+  gl.clearColor(0, 0, 0, 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+  // background
+  gl.disable(gl.DEPTH_TEST); gl.disable(gl.BLEND); gl.disable(gl.CULL_FACE);
+  gl.useProgram(bg.p); gl.bindVertexArray(emptyVAO);
+  gl.uniform1f(bg.u.uAspect, asp); gl.uniform1f(bg.u.uTan, Math.tan(FOV / 2)); gl.uniform1f(bg.u.uD, effDist);
+  gl.uniform1f(bg.u.uTime, now); gl.uniform1f(bg.u.uPulse, pulse); gl.uniform3fv(bg.u.uSun, sun);
+  gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+  // globe
+  for (let i = 0; i < MAXS; i++) { const s = strikes[i];
+    if (s) { sArr[i * 4] = s.dir[0]; sArr[i * 4 + 1] = s.dir[1]; sArr[i * 4 + 2] = s.dir[2]; sArr[i * 4 + 3] = now - s.t0; sArr2[i * 4] = s.I; }
+    else { sArr[i * 4 + 3] = -1; sArr2[i * 4] = 0; } }
+  gl.enable(gl.DEPTH_TEST); gl.enable(gl.CULL_FACE);
+  gl.useProgram(globe.p); gl.bindVertexArray(sphere.vao);
+  gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, maskTex); gl.uniform1i(globe.u.uMask, 0);
+  gl.uniformMatrix4fv(globe.u.uMVP, false, mvp); gl.uniformMatrix4fv(globe.u.uModel, false, model);
+  gl.uniform3fv(globe.u.uSun, sun); gl.uniform3f(globe.u.uCam, 0, 0, effDist);
+  gl.uniform1f(globe.u.uTime, now); gl.uniform1f(globe.u.uPulse, pulse);
+  gl.uniform4fv(globe.u.uS, sArr); gl.uniform4fv(globe.u.uS2, sArr2);
+  gl.drawElements(gl.TRIANGLES, sphere.count, gl.UNSIGNED_SHORT, 0);
+
+  // additive effects
+  gl.disable(gl.CULL_FACE); gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE); gl.depthMask(false);
+
+  // bolts
+  let nv = 0; const D = boltData;
+  const vert = (sg, side, t, b, w) => { const o = nv++ * 10;
+    D[o] = sg[0]; D[o+1] = sg[1]; D[o+2] = sg[2]; D[o+3] = sg[3]; D[o+4] = sg[4]; D[o+5] = sg[5]; D[o+6] = side; D[o+7] = t; D[o+8] = b; D[o+9] = w; };
+  for (const bo of bolts) {
+    const age = now - bo.s.t0;
+    const f = Math.exp(-age * 5.5) * (0.5 + 0.5 * Math.pow(Math.sin(age * 62 + bo.s.seed), 2)) * (age < 0.05 ? 1.0 : 0.8) * (0.6 + 0.6 * bo.s.I);
+    if (f < 0.01) continue;
+    for (const sg of bo.segs) {
+      if (nv + 12 > BOLT_MAXV) break;
+      for (const pass of [[1.0, 1.0], [5.0, 0.18]]) { const w = sg[6] * pass[0] * DPR, b = sg[7] * pass[1] * f * 1.6;
+        vert(sg, -1, 0, b, w); vert(sg, 1, 0, b, w); vert(sg, 1, 1, b, w);
+        vert(sg, -1, 0, b, w); vert(sg, 1, 1, b, w); vert(sg, -1, 1, b, w); }
+    }
+  }
+  if (nv) {
+    gl.useProgram(bolt.p); gl.bindVertexArray(boltVAO); gl.bindBuffer(gl.ARRAY_BUFFER, boltBuf);
+    gl.bufferSubData(gl.ARRAY_BUFFER, 0, D, 0, nv * 10);
+    gl.uniformMatrix4fv(bolt.u.uMVP, false, mvp); gl.uniform2f(bolt.u.uRes, W, H);
+    gl.drawArrays(gl.TRIANGLES, 0, nv);
+  }
+
+  // glow sprites
+  let ns = 0; const S = sprData;
+  const put = (x, y, z, size, r, g, b, a) => { const o = ns++ * 8; S[o]=x; S[o+1]=y; S[o+2]=z; S[o+3]=size; S[o+4]=r; S[o+5]=g; S[o+6]=b; S[o+7]=a; };
+  for (const s of strikes) {
+    const age = now - s.t0; if (age > 1.6) continue;
+    const fl = Math.exp(-age * 8) * (0.7 + 0.3 * Math.sin(age * 55 + s.seed)) * 2.2 * (0.5 + s.I);
+    if (fl > 0.01) put(s.dir[0] * 1.012, s.dir[1] * 1.012, s.dir[2] * 1.012, 0.16 + 0.22 * s.I, 0.75, 0.85, 1.0, fl);
+    const hl = Math.exp(-age * 3.2) * 0.45 * (0.4 + s.I);
+    if (hl > 0.01) put(s.dir[0] * 1.07, s.dir[1] * 1.07, s.dir[2] * 1.07, 0.55 + 0.4 * s.I, 0.45, 0.55, 1.0, hl);
+  }
+  if (ns) {
+    gl.useProgram(sprite.p); gl.bindVertexArray(sprVAO); gl.bindBuffer(gl.ARRAY_BUFFER, sprBuf);
+    gl.bufferSubData(gl.ARRAY_BUFFER, 0, S, 0, ns * 8);
+    gl.uniformMatrix4fv(sprite.u.uMVP, false, mvp);
+    gl.uniform1f(sprite.u.uPx, H / (2 * Math.tan(FOV / 2))); gl.uniform1f(sprite.u.uMaxPt, ptRange[1]);
+    gl.drawArrays(gl.POINTS, 0, ns);
+  }
+  gl.depthMask(true); gl.disable(gl.BLEND); gl.bindVertexArray(null);
+
+  // HUD (throttled)
+  if (ts - lastHud > 90) { lastHud = ts;
+    $('sCount').textContent = state.total.toLocaleString();
+    $('sRate').textContent = state.rateEMA.toFixed(1) + ' /s';
+    $('sBar').style.width = (Music.act() * 100).toFixed(0) + '%';
+    const cw = spec.canvas.width, ch = spec.canvas.height; spec.clearRect(0, 0, cw, ch);
+    if (Music.analyser && Music.on) {
+      Music.analyser.getByteFrequencyData(Music.freqData); const n = 32, bw = cw / n;
+      const grad = spec.createLinearGradient(0, ch, 0, 0); grad.addColorStop(0, '#7cc4ff'); grad.addColorStop(1, '#b48cff'); spec.fillStyle = grad;
+      for (let i = 0; i < n; i++) { const v = Music.freqData[i] / 255, h = Math.max(1, v * ch); spec.fillRect(i * bw + 1, ch - h, bw - 2, h); }
+    } else { spec.fillStyle = 'rgba(124,196,255,.25)'; spec.fillRect(0, ch - 1, cw, 1); }
+  }
+  requestAnimationFrame(frame);
+}
+// opening salvo so the globe is alive immediately
+for (let i = 0; i < 3; i++) setTimeout(() => spawnStrike(rand(-20, 40), rand(-100, 30), rand(0.5, 1)), 400 + i * 450);
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

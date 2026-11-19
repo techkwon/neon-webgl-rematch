@@ -1,0 +1,955 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:">
+<link rel="icon" href="data:,">
+<title>Storm Atlas — Lightning in sound</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --ink: #0d0a14;
+    --paper: #f5eef8;
+    --muted: #b5a8c1;
+    --dim: #9b8aaa;
+    --line: #cdb1ec2b;
+    --pink: #ff9cc9;
+    --mono: ui-monospace, "SF Mono", Consolas, monospace;
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--ink);
+    color: var(--paper);
+    font: 15px/1.55 system-ui, sans-serif;
+  }
+  button, input { font: inherit; }
+  button { cursor: pointer; }
+  button:focus-visible, input:focus-visible, canvas:focus-visible {
+    outline: 2px solid var(--pink);
+    outline-offset: 4px;
+  }
+  [hidden] { display: none !important; }
+  .atlas {
+    width: min(100%, 1680px);
+    min-height: 100vh;
+    min-height: 100svh;
+    margin: 0 auto;
+    padding: 0 clamp(24px, 5.1vw, 84px);
+    display: flex;
+    flex-direction: column;
+  }
+  .masthead {
+    position: relative;
+    z-index: 2;
+    min-height: 78px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    border-bottom: 1px solid var(--line);
+  }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .mark {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border: 1px solid #e6b0f264;
+    border-radius: 50%;
+    background: #21162e;
+    box-shadow: 0 0 24px #d18bff16;
+  }
+  .mark::before {
+    content: "";
+    width: 13px;
+    height: 18px;
+    background: #f3cafa;
+    clip-path: polygon(62% 0, 8% 57%, 47% 57%, 30% 100%, 94% 37%, 53% 37%);
+  }
+  .brand-name {
+    color: #eadff1;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .19em;
+    text-transform: uppercase;
+  }
+  .small {
+    color: var(--dim);
+    font: 500 10px/1.45 var(--mono);
+    letter-spacing: .14em;
+    text-transform: uppercase;
+  }
+  .simulation { display: flex; align-items: center; gap: 10px; color: #cbb6d7; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--pink); box-shadow: 0 0 12px #ff8ecd9c; }
+  .hero {
+    position: relative;
+    isolation: isolate;
+    flex: 1;
+    min-height: 625px;
+    display: grid;
+    grid-template-columns: minmax(320px, 32%) minmax(0, 1fr);
+    align-items: center;
+  }
+  .introduction { position: relative; z-index: 1; padding: 24px 0 31px; pointer-events: none; }
+  .introduction > * { pointer-events: auto; }
+  .kicker { display: flex; align-items: center; gap: 11px; margin: 0 0 24px; color: #d3addd; }
+  .kicker::before { content: ""; width: 23px; height: 1px; background: #c086d8; }
+  h1 {
+    margin: 0 0 24px -5px;
+    font: 400 clamp(78px, 8.4vw, 138px)/.81 Baskerville, Georgia, serif;
+    letter-spacing: -.065em;
+  }
+  h1 em { display: block; color: #e4b0eb; font-weight: 400; }
+  .description {
+    max-width: 290px;
+    margin: 0 0 34px;
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.65;
+  }
+  .sound {
+    width: min(100%, 304px);
+    padding: 16px;
+    background: linear-gradient(138deg, #25182f, #191221 84%);
+    border: 1px solid #d8abe73b;
+    border-radius: 13px;
+  }
+  .sound-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 13px; }
+  .sound-title { margin: 0; color: #eee0f1; font-size: 13px; font-weight: 650; }
+  .sound-state { display: block; margin-top: 2px; font-size: 9px; letter-spacing: .10em; }
+  .meter { display: flex; align-items: center; justify-content: flex-end; gap: 3px; height: 29px; }
+  .meter i {
+    display: block;
+    width: 2px;
+    height: var(--bar, 8px);
+    border-radius: 3px;
+    background: #d9a0e8;
+    opacity: .5;
+  }
+  .sound[data-playing="true"] .meter i { opacity: .92; }
+  .audio-button {
+    width: 100%;
+    min-height: 43px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    border: 1px solid transparent;
+    border-radius: 7px;
+    background: #ebc7f5;
+    color: #28152f;
+    font-size: 13px;
+    font-weight: 750;
+    transition: background-color .2s, border-color .2s;
+  }
+  .audio-button:hover { background: #f7dafc; }
+  .audio-button[aria-pressed="true"] { background: #e3afe920; color: #f3d7fa; border-color: #dfaeea50; }
+  .audio-button[aria-pressed="true"]:hover { background: #e3afe937; }
+  .audio-button:disabled { cursor: default; opacity: .65; }
+  .play-icon { width: 11px; height: 12px; background: currentColor; clip-path: polygon(0 0, 100% 50%, 0 100%); }
+  [aria-pressed="true"] .play-icon {
+    clip-path: polygon(0 0, 35% 0, 35% 100%, 0 100%, 0 0, 65% 0, 100% 0, 100% 100%, 65% 100%, 65% 0);
+  }
+  .volume { display: flex; align-items: center; gap: 11px; margin-top: 13px; }
+  .volume label { font-size: 9px; letter-spacing: .11em; }
+  .volume input {
+    appearance: none;
+    display: block;
+    width: 100%;
+    height: 16px;
+    margin: 0;
+    border-radius: 6px;
+    background: transparent;
+    accent-color: #e6afea;
+    cursor: pointer;
+    --volume: 60%;
+  }
+  .volume input::-webkit-slider-runnable-track {
+    height: 3px; border-radius: 5px;
+    background: linear-gradient(to right, #c48dcf var(--volume), #4e3b58 var(--volume));
+  }
+  .volume input::-moz-range-track {
+    height: 3px; border-radius: 5px;
+    background: linear-gradient(to right, #c48dcf var(--volume), #4e3b58 var(--volume));
+  }
+  .volume input::-webkit-slider-thumb {
+    appearance: none; width: 10px; height: 10px; border-radius: 50%;
+    margin-top: -3.5px; border: 0; background: #f3caf8;
+  }
+  .volume input::-moz-range-thumb { width: 10px; height: 10px; border-radius: 50%; border: 0; background: #f3caf8; }
+  .stage {
+    position: absolute;
+    inset: 0 -2.2% 0 28%;
+    z-index: 0;
+    display: grid;
+    place-items: center;
+    animation: reveal .8s ease-out both;
+  }
+  @keyframes reveal { from { opacity: .25; } to { opacity: 1; } }
+  canvas { width: 100%; height: 100%; position: absolute; inset: 0; display: block; cursor: grab; touch-action: none; }
+  canvas.dragging { cursor: grabbing; }
+  canvas:focus-visible { outline-offset: -4px; }
+  .stage-error { z-index: 1; max-width: 240px; margin: 16px; text-align: center; color: var(--muted); }
+  .stage-bottom {
+    position: absolute;
+    bottom: 15px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+  .gesture { display: flex; align-items: center; gap: 8px; }
+  .gesture-icon { font-size: 17px; line-height: .75; font-family: system-ui, sans-serif; color: #d6b6e0; }
+  .reset {
+    pointer-events: auto;
+    display: inline-grid;
+    place-items: center;
+    min-width: 36px;
+    min-height: 36px;
+    padding: 0;
+    background: #160f20;
+    border: 1px solid var(--line);
+    border-radius: 50%;
+    color: #dcc5e6;
+    font-size: 20px;
+    line-height: 1;
+  }
+  .reset:hover { background: #302039; }
+  .readout {
+    position: relative;
+    z-index: 2;
+    min-height: 77px;
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr) auto;
+    gap: 24px;
+    align-items: center;
+    border-block: 1px solid var(--line);
+  }
+  .stat { min-width: 0; display: flex; align-items: center; gap: 13px; }
+  .strike-icon {
+    flex: 0 0 auto;
+    width: 29px;
+    height: 29px;
+    display: grid;
+    place-items: center;
+    border: 1px solid #db9ade50;
+    border-radius: 50%;
+  }
+  .strike-icon::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--pink); box-shadow: 0 0 10px var(--pink); }
+  .stat-label { display: block; margin-bottom: 2px; }
+  .stat-value { color: #e5d7ec; font-size: 13px; font-weight: 625; }
+  .stat-value.count { font: 500 15px/1.3 var(--mono); color: #e9b4ea; font-variant-numeric: tabular-nums; }
+  .coords { font: 500 11px/1.5 var(--mono); color: var(--dim); margin-left: 9px; white-space: nowrap; }
+  .legend { display: flex; align-items: center; gap: 10px; }
+  .legend i { display: block; width: 13px; height: 13px; border: 1px solid #ffc2df; border-radius: 50%; box-shadow: 0 0 8px #ff8cc76e, inset 0 0 5px #ff8cc745; }
+  .bottom-space { min-height: clamp(20px, 4vh, 46px); }
+  @media (max-width: 880px) {
+    .hero { grid-template-columns: minmax(252px, 34%) minmax(0, 1fr); min-height: 540px; }
+    .stage { inset-inline-start: 29%; }
+    h1 { font-size: clamp(73px, 11vw, 105px); }
+    .description { max-width: 235px; }
+    .sound { max-width: 253px; }
+  }
+  @media (max-width: 650px) {
+    .atlas { padding-inline: 20px; }
+    .masthead { min-height: 61px; }
+    .brand { gap: 9px; }
+    .brand-name { font-size: 10px; }
+    .mark { width: 28px; height: 28px; }
+    .mark::before { width: 10px; height: 14px; }
+    .simulation { font-size: 9px; letter-spacing: .08em; gap: 7px; }
+    .hero { display: flex; flex-direction: column; align-items: stretch; min-height: 0; }
+    .introduction { display: contents; }
+    .copy { order: 0; padding-top: 27px; }
+    .kicker { margin-bottom: 14px; font-size: 9px; }
+    h1 { font-size: clamp(49px, 14.4vw, 83px); line-height: .94; margin: 0 0 10px -2px; }
+    h1 em { display: inline; }
+    .description { max-width: 310px; margin: 0; font-size: 13px; }
+    .stage { position: relative; inset: auto; order: 1; margin-inline: -16px; height: clamp(250px, 85vw, 430px); }
+    .stage-bottom { bottom: 0; gap: 10px; }
+    .reset { min-width: 31px; min-height: 31px; }
+    .sound { order: 2; width: 100%; max-width: none; margin-top: 13px; margin-bottom: 20px; padding: 12px; }
+    .sound-top { margin-bottom: 9px; }
+    .volume { margin-top: 9px; }
+    .readout { min-height: 62px; grid-template-columns: 1fr auto; gap: 9px; }
+    .legend { display: none; }
+    .coords { display: none; }
+    .stat { gap: 8px; }
+    .stat-label { font-size: 8px; }
+    .stat-value { font-size: 12px; }
+    .bottom-space { min-height: 16px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="atlas">
+  <header class="masthead">
+    <div class="brand"><span class="mark" aria-hidden="true"></span><span class="brand-name">Storm Atlas</span></div>
+    <div class="simulation small"><span class="dot" aria-hidden="true"></span>Simulated lightning</div>
+  </header>
+  <main class="hero">
+    <div class="introduction">
+      <div class="copy">
+        <p class="kicker small">A global storm in sound</p>
+        <h1>Storm <em>Atlas</em></h1>
+        <p class="description">Watch lightning ripple across Earth, turning each strike into a note in an ambient score.</p>
+      </div>
+      <section class="sound" data-playing="false" aria-labelledby="sound-title">
+        <div class="sound-top">
+          <div>
+            <h2 class="sound-title" id="sound-title">Storm audio</h2>
+            <output class="sound-state small" id="audio-state" aria-live="polite">Sound off</output>
+          </div>
+          <div class="meter" id="meter" aria-hidden="true"></div>
+        </div>
+        <button class="audio-button" id="audio-toggle" type="button" aria-pressed="false"><span class="play-icon" aria-hidden="true"></span><span id="audio-label">Start audio</span></button>
+        <div class="volume">
+          <label class="small" for="volume">Volume</label>
+          <input id="volume" type="range" min="0" max="100" value="60">
+        </div>
+      </section>
+    </div>
+    <section class="stage" aria-label="Interactive Earth globe">
+      <canvas id="globe" tabindex="0" aria-label="3D Earth with simulated lightning. Drag or use arrow keys to rotate. Press Home to reset.">This experience needs a WebGL2-capable browser.</canvas>
+      <p class="stage-error" id="stage-error" role="status" hidden></p>
+      <div class="stage-bottom">
+        <span class="gesture small"><span class="gesture-icon" aria-hidden="true">⤧</span>Drag to rotate</span>
+        <button class="reset" id="reset" type="button" aria-label="Reset globe view" title="Reset globe view">↺</button>
+      </div>
+    </section>
+  </main>
+  <footer class="readout" aria-label="Lightning simulation status">
+    <div class="stat">
+      <span class="strike-icon" aria-hidden="true"></span>
+      <div><span class="stat-label small">Latest strike</span><span class="stat-value" id="region">—</span><span class="coords" id="coordinates"></span></div>
+    </div>
+    <div class="stat">
+      <div><span class="stat-label small">Session strikes</span><span class="stat-value count" id="count">000</span></div>
+    </div>
+    <div class="legend small"><i aria-hidden="true"></i>Lightning ripple</div>
+  </footer>
+  <div class="bottom-space" aria-hidden="true"></div>
+</div>
+<script>
+"use strict";
+
+const canvas = document.querySelector("#globe");
+const motion = matchMedia("(prefers-reduced-motion: reduce)");
+const byId = (id) => document.getElementById(id);
+const radians = Math.PI / 180;
+const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+
+// Simplified equirectangular coastlines, stored as longitude / latitude pairs.
+const coastlines = [
+  [-168,65,-165,60,-157,59,-152,57,-159,56,-163,55,-161,54,-153,56,-147,60,-140,59,-136,57,-131,55,-129,51,-125,49,-124,42,-122,38,-119,34,-115,32,-112,29,-109,24,-105,20,-103,18,-96,16,-92,16,-90,18,-88,21,-86,21,-87,17,-88,16,-86,15,-83,15,-82,10,-79,9,-77,8,-77,9,-82,9,-84,11,-86,12,-88,14,-92,14,-96,16,-99,17,-103,19,-106,23,-110,27,-113,30,-114,32,-114,29,-110,24,-109,23,-111,23,-115,28,-117,32,-113,32,-109,31,-105,31,-101,29,-98,27,-97,25,-95,29,-90,30,-88,30,-84,30,-82,27,-81,25,-80,25,-80,29,-81,32,-77,35,-75,35,-76,39,-74,40,-71,42,-70,43,-67,45,-64,45,-61,46,-61,47,-65,48,-69,48,-67,50,-64,50,-60,51,-57,52,-58,54,-61,56,-64,60,-65,60,-67,58,-70,59,-70,62,-75,63,-78,62,-77,59,-79,56,-82,55,-83,52,-86,55,-90,57,-94,58,-95,61,-93,62,-90,63,-88,65,-92,66,-96,68,-100,68,-104,69,-106,70,-112,69,-115,70,-120,70,-125,70,-131,70,-135,69,-140,69,-145,70,-150,71,-157,71,-161,70,-167,68],
+  [-166,61,-163,62,-160,61,-161,59,-165,60],[-179,52,-173,52,-168,53,-172,53],[-55,52,-56,50,-59,49,-59,47,-56,47,-55,48,-53,47,-52,48,-53,50],[-128,51,-125,50,-123,48,-125,48,-127,49],
+  [-101,72,-103,74,-99,76,-96,76,-94,74,-96,72],[-111,71,-115,72,-117,75,-112,75,-106,74,-105,72],[-121,72,-124,73,-125,75,-121,76,-117,74],[-113,77,-115,78,-111,79,-105,79,-101,78,-104,76],[-102,80,-100,81,-94,81,-93,79,-100,78],[-92,75,-96,76,-94,77,-90,77,-87,76,-83,77,-80,76,-85,74,-90,74],[-83,69,-87,70,-91,71,-90,73,-84,73,-81,73,-77,75,-74,74,-77,72,-72,71,-68,70,-65,69,-62,67,-64,65,-66,64,-69,63,-71,65,-74,66,-76,69,-79,70],[-80,76,-87,77,-82,79,-86,81,-83,82,-76,83,-66,83,-62,82,-69,80,-74,78],[-96,69,-98,71,-94,72,-91,71,-93,69],
+  [-73,79,-68,81,-60,82,-50,83,-32,83,-22,82,-19,81,-16,80,-19,78,-21,75,-24,73,-25,71,-25,69,-31,68,-34,66,-40,65,-42,63,-44,60,-49,61,-51,64,-54,66,-52,68,-55,70,-57,73,-60,75,-66,76,-70,77],
+  [-86,22,-83,23,-80,23,-76,21,-74,20,-77,20,-80,22,-83,22],[-74,20,-72,20,-68,19,-69,18,-72,18,-74,19],[-79,18,-76,18,-77,17,-79,17],[-67,18.5,-65.5,18.5,-66,17.8,-67,17.9],
+  [-80,8,-77,9,-74,11,-71,12,-70,11,-72,10,-71,9,-69,11,-66,10,-63,11,-61,10,-60,8,-58,8,-56,6,-54,5,-51,4,-50,1,-48,-1,-45,-2,-43,-3,-39,-3,-35,-5,-35,-8,-37,-11,-39,-14,-39,-17,-40,-20,-42,-23,-45,-24,-48,-26,-49,-29,-51,-31,-53,-33,-56,-35,-58,-35,-57,-38,-61,-39,-62,-41,-64,-41,-65,-43,-64,-45,-67,-46,-67,-49,-69,-51,-68,-53,-71,-54,-74,-52,-74,-49,-75,-46,-73,-42,-74,-39,-72,-37,-72,-33,-71,-30,-71,-26,-70,-22,-70,-18,-73,-16,-76,-14,-77,-11,-79,-8,-81,-5,-80,-3,-81,-1,-79,2,-77,4,-77,7],[-74,-53,-70,-53,-66,-55,-69,-56,-73,-55],[-61,-51,-58,-51,-57,-52,-61,-52],
+  [-10,36,-8,37,-9,40,-9,43,-6,44,-2,43,0,44,-1,46,-5,48,-2,49,1,49,2,51,5,53,8,54,8,56,10,57,11,55,14,55,13,57,16,59,18,60,17,62,19,64,22,65,24,66,23,64,22,63,22,60,25,60,29,60,27,59,24,59,23,58,23,56,20,55,20,54,17,54,15,54,13,54,14,55,12,56,12,59,10,59,8,58,5,59,5,62,7,63,10,64,12,66,16,68,20,70,25,71,31,70,33,69,39,68,39,67,34,66,37,65,41,66,43,68,47,68,49,67,45,66,47,66,51,68,55,68,58,69,60,69,63,70,67,71,69,70,71,71,72,73,75,72,75,69,78,72,78,74,83,73,88,74,93,76,99,76,105,77,109,76,112,74,118,73,123,73,127,72,130,71,134,71,137,72,141,72,146,72,150,71,154,71,160,70,163,69,167,69,170,69,174,70,178,69,180,68,180,65,176,65,177,63,172,62,170,60,166,60,163,60,162,57,163,55,161,53,158,52,156,51,156,53,155,56,157,58,159,59,160,61,156,62,153,60,150,59,146,60,142,59,140,57,139,55,138,54,141,54,141,51,140,49,139,47,137,45,135,43,132,43,130,42,129,40,127,38,130,36,129,35,127,34,126,35,126,38,124,39,122,40,121,40,122,38,120,37,118,38,119,35,121,34,121,31,122,30,121,28,119,26,117,24,114,23,112,21,109,21,110,20,108,20,106,21,106,19,107,17,109,15,109,12,108,10,106,9,104,10,103,12,101,13,100,12,100,10,99,9,100,7,103,3,104,1,102,2,101,4,99,6,98,8,98,10,98,13,97,16,95,16,94,19,92,21,91,22,89,22,88,22,87,21,85,20,83,18,81,16,80,13,80,10,77,8,76,10,75,13,73,16,73,20,72,20,71,21,68,23,66,25,62,25,59,25,57,26,56,27,54,26,52,25,51,25,50,26,49,27,48,29,48,30,50,29,52,27,55,26,56,24,57,23,59,22,58,20,57,19,55,17,53,17,50,15,48,14,46,13,44,13,43,12,42,16,40,19,39,22,37,24,36,27,34,28,35,30,34,31,35,33,36,35,34,36,31,36,29,37,27,37,26,40,29,41,32,42,35,42,36,41,39,41,41,42,39,44,37,45,36,47,35,46,33,45,32,45,33,46,30,46,29,45,28,43,28,42,26,41,24,40,23,40,24,38,23,38,23,36,22,36,21,38,20,40,19,41,17,43,15,45,13,45,13,44,15,42,17,41,18,40,18,39,16,40,16,38,15,38,15,40,13,41,12,43,10,44,9,44,8,44,6,43,4,43,3,42,2,41,0,40,0,38,-2,37,-5,36],
+  [-180,68,-173,67,-171,66,-173,65,-180,65],[-13,65,-15,66,-21,67,-24,66,-23,64,-19,63,-16,64],[-10,52,-10,54,-8,55,-6,55,-6,54,-6,52,-8,51],[-6,50,-5,51,-3,51,-4,53,-3,54,-5,55,-6,56,-5,58,-3,59,-2,58,-3,57,-2,57,-2,55,0,54,1,53,2,52,1,51,-1,50],
+  [52,71,54,72,55,73,56,74,60,74,65,76,68,76,67,77,62,77,58,76,55,75,53,73,51,73],[94,79,94,81,100,81,104,80,107,79,102,78,98,79],[137,75,135,74,140,74,144,75,145,76,141,76],[146,75,150,74,151,76,148,76],[176,71,178,72,-177,72,-177,70,179,70],
+  [-17,15,-17,20,-16,24,-13,28,-10,31,-8,32,-6,35,-4,36,0,35,3,37,8,37,10,37,11,34,13,32,16,31,19,30,20,32,23,32,26,31,30,31,33,31,34,30,33,28,35,27,37,23,38,20,40,16,42,13,44,11,47,11,51,12,51,10,50,8,47,4,44,1,42,-2,40,-4,39,-7,40,-10,40,-14,39,-17,36,-19,35,-22,35,-24,33,-26,32,-29,30,-31,28,-33,25,-34,21,-35,18,-34,18,-31,16,-27,15,-23,13,-18,12,-16,12,-12,13,-9,12,-6,10,-3,9,0,9,3,8,5,5,5,3,6,0,5,-3,5,-7,5,-9,4,-12,7,-14,9,-15,11,-16,12],
+  [49,-12,50,-15,50,-17,49,-19,48,-23,46,-25,44,-25,43,-22,44,-19,44,-17,47,-15],[-25,17,-23,17,-22,15,-24,15], [8,39,10,39,10,41,9,43,8,42],[12,38,15,38,16,37,15,36,13,37],[23,35.6,26,35.4,26,34.8,23,34.9],[32,35,35,35.6,34,34.5,32,34.6],
+  [79,9,80,10,81,9,82,7,81,6,80,6],[109,20,110,21,111,20,111,19,109,18],[120,25,122,25,122,24,120,22,120,23],[120,18,122,19,123,17,122,16,124,13,122,12,121,14,120,14],[123,13,125,13,125,11,124,11,124,10,123,10,122,8,123,7,125,6,126,8,127,9,126,10,125,10],[121,10,121,9,118,8,117,8,119,10],[133,34,135,35,136,36,138,38,140,40,141,41,142,39,141,37,140,36,140,35,138,34,137,34,135,33,134,34,132,34,131,33,130,31,129,32,129,33,131,34],[140,42,141,44,142,46,144,44,146,44,145,42,143,42,142,41],[142,46,141,48,142,51,143,54,144,54,143,51,144,49,143,46],
+  [95,6,97,5,99,3,100,2,103,0,104,-2,106,-4,105,-6,103,-5,101,-3,99,-1,98,2,96,3],[106,-6,108,-6,111,-6.5,114,-7,115,-8,114,-9,111,-8.5,108,-8,106,-7],[115,-8,117,-8,118,-8.5,117,-9,115,-9],[119,-8,122,-8,124,-8.5,123,-9,120,-9],[125,-8,128,-8,126,-10,124,-10],
+  [109,2,111,3,114,4,116,7,118,7,119,5,118,4,117,4,118,2,117,0,116,-2,116,-4,114,-4,112,-3,110,-3,109,-2,108,0],[119,1,121,1,125,2,124,0,122,0,121,-1,123,-2,122,-3,121,-2,120,-3,122,-5,121,-6,120,-5,120,-3,119,-5,118,-5,119,-2],[127,2,129,2,128,0,129,-2,127,-2,127,0],[130,-2,132,-1,134,-1,135,-3,137,-2,140,-2,144,-3,146,-5,149,-6,150,-8,151,-10,149,-10,146,-8,143,-8,141,-9,139,-8,137,-6,135,-5,134,-3,132,-3],[149,-5,152,-4,153,-5,151,-6,149,-6],[154,-5,155,-6,156,-7,157,-8,159,-9,159,-8,157,-7,156,-6],
+  [113,-22,114,-21,117,-20,119,-20,121,-19,122,-17,124,-16,125,-14,128,-15,129,-14,131,-12,133,-12,135,-12,136,-14,135,-15,137,-16,139,-17,141,-17,142,-14,142,-11,143,-11,144,-14,146,-17,146,-19,148,-20,149,-22,151,-23,153,-27,153,-29,152,-31,151,-33,150,-36,148,-38,146,-39,144,-38,142,-38,140,-38,139,-36,138,-35,137,-35,136,-35,136,-33,135,-34,134,-33,132,-32,129,-32,127,-33,124,-34,121,-34,119,-35,116,-35,115,-34,115,-31,114,-28,113,-26,114,-24],
+  [144,-40,148,-40,148,-42,147,-44,145,-43,144,-42],[173,-35,175,-36,175,-37,177,-38,178,-37,178,-39,176,-41,175,-41,174,-40,175,-38,173,-36],[174,-41,174,-42,172,-43,171,-45,169,-46,166,-46,167,-44,169,-43,171,-42,172,-41],[163,-20,166,-21,168,-22,167,-23,165,-22],[178,-16,180,-16,180,-18,177,-18,177,-17],
+  [-180,-78,-163,-78,-150,-77,-140,-75,-125,-74,-111,-75,-100,-73,-90,-73,-80,-72,-75,-70,-67,-68,-64,-64,-60,-63,-61,-66,-64,-69,-64,-72,-61,-74,-53,-75,-43,-77,-34,-77,-27,-75,-19,-74,-12,-71,0,-70,16,-70,29,-70,39,-69,49,-67,59,-67,69,-68,83,-67,95,-66,105,-66,117,-67,126,-66,137,-67,147,-68,157,-70,166,-72,170,-76,179,-78,180,-78,180,-90,-180,-90]
+];
+
+// Rasterize the embedded map directly into an 8-bit WebGL texture.
+function landTexture(gl) {
+  const width = 1024;
+  const height = 512;
+  const pixels = new Uint8Array(width * height);
+  for (const polygon of coastlines) {
+    const points = [];
+    let prior = polygon[0];
+    for (let i = 0; i < polygon.length; i += 2) {
+      let longitude = polygon[i];
+      if (polygon !== coastlines.at(-1)) {
+        while (longitude - prior > 180) longitude -= 360;
+        while (longitude - prior < -180) longitude += 360;
+      }
+      prior = longitude;
+      points.push([(longitude + 180) / 360 * width, (polygon[i + 1] + 90) / 180 * height]);
+    }
+    for (let row = 0; row < height; row++) {
+      const y = row + 0.5;
+      const intersections = [];
+      for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
+        const [ax, ay] = points[j];
+        const [bx, by] = points[i];
+        if ((ay > y) !== (by > y)) intersections.push(ax + (y - ay) * (bx - ax) / (by - ay));
+      }
+      intersections.sort((a, b) => a - b);
+      for (let i = 0; i + 1 < intersections.length; i += 2) {
+        for (let x = Math.ceil(intersections[i] - 0.5); x < intersections[i + 1] - 0.5; x++) {
+          pixels[row * width + (x + width) % width] = 255;
+        }
+      }
+    }
+  }
+  const texture = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, texture);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, width, height, 0, gl.RED, gl.UNSIGNED_BYTE, pixels);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.generateMipmap(gl.TEXTURE_2D);
+  return texture;
+}
+
+const maxRipples = 20;
+const rippleSeconds = 3.5;
+const home = { longitude: 16 * radians, latitude: 21 * radians };
+const view = { ...home, horizontalSpeed: 0, verticalSpeed: 0, idleAfter: 0 };
+const basis = new Float32Array(9);
+
+const vertexShader = `#version 300 es
+void main() {
+  vec2 p = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2));
+  gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0);
+}`;
+
+const fragmentShader = `#version 300 es
+precision highp float;
+out vec4 outColor;
+uniform vec2 uCenter;
+uniform float uRadius;
+uniform float uPixelScale;
+uniform mat3 uBasis;
+uniform sampler2D uLand;
+uniform int uStrikeCount;
+uniform vec4 uStrikes[${maxRipples}];
+uniform float uEnergy[${maxRipples}];
+uniform bool uReducedMotion;
+
+const float PI = 3.14159265359;
+const vec3 PLUM = vec3(.127, .069, .18);
+const vec3 PINK = vec3(1.0, .38, .61);
+const vec3 LILAC = vec3(.69, .40, 1.0);
+
+float hash(vec2 p) {
+  vec3 h = fract(vec3(p.xyx) * .1031);
+  h += dot(h, h.yzx + 33.33);
+  return fract((h.x + h.y) * h.z);
+}
+float stars(vec2 p, float size, float probability) {
+  vec2 tile = floor(p / size);
+  vec2 offset = vec2(hash(tile + 15.1), hash(tile - 23.7)) * .7 + .15;
+  float distanceToStar = length((fract(p / size) - offset) * size);
+  float seed = hash(tile + 6.1);
+  return exp(-distanceToStar * distanceToStar * (1.4 - seed * .7)) * step(1.0 - probability, seed) * seed;
+}
+
+void main() {
+  vec2 p = (gl_FragCoord.xy - uCenter) / uRadius;
+  float pixel = uPixelScale / uRadius;
+  float r = length(p);
+  float surround = 1.0 - smoothstep(1.05, 1.55, r);
+  vec3 color = PLUM * (.50 * exp(-r * r * 1.10) + .22 * exp(-abs(r - 1.0) * 4.7));
+  vec2 pix = gl_FragCoord.xy / uPixelScale;
+  float starlight = stars(pix, 24.0, .28) * .32 + stars(pix + 142.0, 64.0, .48) * .64;
+  color += mix(LILAC, vec3(.91, .73, .85), hash(floor(pix / 68.0))) * starlight * surround;
+  float orbit = abs(r - 1.135);
+  float sweep = atan(p.y, p.x);
+  float dashes = smoothstep(.13, .30, fract((sweep + PI) * 24.0));
+  color += LILAC * exp(-orbit / max(pixel * .55, .0005)) * (.13 + .24 * dashes);
+  vec2 tilted = mat2(.951, .309, -.309, .951) * p;
+  float ellipse = length(tilted * vec2(.785, 1.83));
+  color += LILAC * exp(-abs(ellipse - 1.0) * 300.0) * .32 * surround;
+  color += LILAC * exp(-max(r - 1.0, 0.0) * 23.0) * .14;
+
+  if (r <= 1.0) {
+    // The near intersection of an orthographic ray with a unit sphere.
+    vec3 facing = vec3(p, sqrt(max(0.0, 1.0 - dot(p, p))));
+    vec3 world = normalize(uBasis * facing);
+    float lon = atan(world.z, world.x);
+    float lat = asin(clamp(world.y, -1.0, 1.0));
+    vec2 uv = vec2(lon / (2.0 * PI) + .5, lat / PI + .5);
+    float land = texture(uLand, uv).r;
+    float west = texture(uLand, uv - vec2(.0017, 0)).r;
+    float south = texture(uLand, uv - vec2(0, .0034)).r;
+    float shore = max(abs(land - west), abs(land - south));
+    float light = clamp(dot(facing, normalize(vec3(-.45, .61, .70))), 0.0, 1.0);
+    float grain = hash(pix);
+    vec3 ocean = mix(vec3(.049, .034, .082), vec3(.116, .073, .161), light);
+    vec3 ground = mix(vec3(.131, .083, .191), vec3(.277, .147, .332), light);
+
+    vec2 fineGrid = vec2(lon, lat) * (168.0 / PI);
+    float row = floor(fineGrid.y);
+    fineGrid.x += mod(row, 2.0) * .5;
+    vec2 cell = fract(fineGrid) - .5;
+    float point = 1.0 - smoothstep(.14, .34, length(cell));
+    float stipple = mix(point, .16, smoothstep(.40, 1.05, max(fwidth(lon), fwidth(lat)) * (168.0 / PI)));
+    float variation = hash(floor(fineGrid)) * .55 + .45;
+    vec2 grid = vec2(lon, lat) / (PI / 9.0);
+    vec2 line = abs(fract(grid + .5) - .5) / max(fwidth(grid), vec2(.0001));
+    float gridline = 1.0 - smoothstep(.13, .93, min(line.x, line.y));
+    vec3 earth = mix(ocean, ground, land * .82);
+    earth += vec3(.44, .24, .53) * (stipple * land * variation * (.62 + .57 * light) + shore * .19);
+    earth += vec3(.32, .22, .48) * (gridline * (.16 + land * .05) * smoothstep(.03, .30, facing.z) + grain * .065);
+
+    vec3 storm = vec3(0.0);
+    for (int i = 0; i < ${maxRipples}; ++i) {
+      if (i >= uStrikeCount) break;
+      vec4 strike = uStrikes[i];
+      float energy = uEnergy[i];
+      float distanceSquared = max(0.0, 2.0 - 2.0 * dot(world, strike.xyz));
+      if (distanceSquared > .24) continue;
+      float distanceToStrike = sqrt(distanceSquared);
+      float age = strike.w;
+      float decay = max(0.0, 1.0 - age / 3.5);
+      float ringRadius = uReducedMotion ? .080 : .018 + age * (.083 + .025 * energy);
+      float width = max(.0032, pixel * 1.20);
+      float ringGap = abs(distanceToStrike - ringRadius);
+      float mainRing = exp(-ringGap / width);
+      float ringGlow = exp(-ringGap / (.012 + width));
+      float innerRing = exp(-abs(distanceToStrike - ringRadius * .61) / width);
+      float flash = uReducedMotion ? .26 * decay : exp(-age * 1.7);
+      float eye = exp(-distanceToStrike * distanceToStrike / .000115) * (.44 * decay + flash * .69);
+      float bloom = exp(-distanceToStrike * distanceToStrike / .0075) * (.13 * decay + .31 * flash);
+      vec3 hot = mix(PINK, vec3(1.0, .72, .58), energy);
+      storm += (hot * (mainRing * .55 + ringGlow * .32 + innerRing * .21) * decay +
+                 hot * bloom + vec3(1.0, .86, .91) * eye) * (.65 + energy * .52);
+    }
+    earth += storm * smoothstep(.015, .19, facing.z);
+    float rim = pow(1.0 - facing.z, 4.1);
+    earth += mix(vec3(.29, .14, .51), vec3(.78, .43, .81), light) * rim * .62;
+    float edge = smoothstep(0.0, pixel * 1.05, 1.0 - r);
+    color = mix(color + LILAC * .25, earth, edge);
+  }
+  outColor = vec4(1.0 - exp(-color * 1.25), min(1.0, surround * 1.5));
+}`;
+
+function createRenderer() {
+  const gl = canvas.getContext("webgl2", { alpha: true, premultipliedAlpha: false, antialias: false, powerPreference: "low-power" });
+  if (!gl) throw new Error("WebGL2 unavailable.");
+  function compile(type, source) {
+    const shader = gl.createShader(type);
+    gl.shaderSource(shader, source);
+    gl.compileShader(shader);
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(shader));
+    return shader;
+  }
+  const program = gl.createProgram();
+  const vertex = compile(gl.VERTEX_SHADER, vertexShader);
+  const fragment = compile(gl.FRAGMENT_SHADER, fragmentShader);
+  gl.attachShader(program, vertex);
+  gl.attachShader(program, fragment);
+  gl.linkProgram(program);
+  gl.deleteShader(vertex);
+  gl.deleteShader(fragment);
+  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program));
+  gl.useProgram(program);
+  gl.bindVertexArray(gl.createVertexArray());
+  gl.activeTexture(gl.TEXTURE0);
+  landTexture(gl);
+  const uniforms = Object.fromEntries(
+    ["uCenter", "uRadius", "uPixelScale", "uBasis", "uLand", "uStrikeCount", "uStrikes[0]", "uEnergy[0]", "uReducedMotion"]
+      .map((name) => [name, gl.getUniformLocation(program, name)])
+  );
+  gl.uniform1i(uniforms.uLand, 0);
+
+  const strikeUniforms = new Float32Array(maxRipples * 4);
+  const energies = new Float32Array(maxRipples);
+  let width = 0;
+  let height = 0;
+  let pixelScale = 1;
+  function resize() {
+    const size = canvas.getBoundingClientRect();
+    pixelScale = Math.min(devicePixelRatio || 1, 1.8);
+    width = Math.max(1, Math.round(size.width * pixelScale));
+    height = Math.max(1, Math.round(size.height * pixelScale));
+    canvas.width = width;
+    canvas.height = height;
+    gl.viewport(0, 0, width, height);
+    const mobile = matchMedia("(max-width: 650px)").matches;
+    gl.uniform2f(uniforms.uCenter, width * (mobile ? .50 : .515), height * (mobile ? .55 : .53));
+    gl.uniform1f(uniforms.uRadius, Math.min(width * .405, height * (mobile ? .406 : .416)));
+    gl.uniform1f(uniforms.uPixelScale, pixelScale);
+  }
+  resize();
+  return {
+    resize,
+    draw(time) {
+      const longitude = view.longitude;
+      const latitude = view.latitude;
+      const sinLon = Math.sin(longitude), cosLon = Math.cos(longitude);
+      const sinLat = Math.sin(latitude), cosLat = Math.cos(latitude);
+      basis[0] = -sinLon;           basis[1] = 0;       basis[2] = cosLon;
+      basis[3] = -cosLon * sinLat;  basis[4] = cosLat;  basis[5] = -sinLon * sinLat;
+      basis[6] = cosLon * cosLat;   basis[7] = sinLat;  basis[8] = sinLon * cosLat;
+      gl.uniformMatrix3fv(uniforms.uBasis, false, basis);
+      gl.uniform1i(uniforms.uReducedMotion, Number(motion.matches));
+      for (let i = 0; i < strikes.length; i++) {
+        const strike = strikes[i];
+        strikeUniforms.set(strike.vector, i * 4);
+        strikeUniforms[i * 4 + 3] = time - strike.time;
+        energies[i] = strike.energy;
+      }
+      gl.uniform1i(uniforms.uStrikeCount, strikes.length);
+      if (strikes.length) {
+        gl.uniform4fv(uniforms["uStrikes[0]"], strikeUniforms, 0, strikes.length * 4);
+        gl.uniform1fv(uniforms["uEnergy[0]"], energies, 0, strikes.length);
+      }
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+    }
+  };
+}
+
+const regions = [
+  { name: "Congo Basin", lat: -3, lon: 22, spread: 9, voice: 2 },
+  { name: "Amazon Basin", lat: -8, lon: -59, spread: 11, voice: 0 },
+  { name: "Mediterranean", lat: 37, lon: 16, spread: 8, voice: 4 },
+  { name: "Bay of Bengal", lat: 15, lon: 88, spread: 9, voice: 3 },
+  { name: "Maritime Southeast Asia", lat: -3, lon: 116, spread: 14, voice: 1 },
+  { name: "Central America", lat: 13, lon: -88, spread: 8, voice: 4 },
+  { name: "Great Plains", lat: 37, lon: -98, spread: 10, voice: 2 },
+  { name: "Lake Maracaibo", lat: 9, lon: -72, spread: 6, voice: 1 },
+  { name: "South China Sea", lat: 18, lon: 116, spread: 9, voice: 4 },
+  { name: "East African Rift", lat: -6, lon: 35, spread: 8, voice: 3 },
+  { name: "Coral Sea", lat: -18, lon: 153, spread: 11, voice: 0 },
+  { name: "North Atlantic", lat: 32, lon: -42, spread: 13, voice: 1 },
+  { name: "South Atlantic", lat: -28, lon: -19, spread: 13, voice: 2 },
+  { name: "West Africa", lat: 11, lon: 2, spread: 11, voice: 0 },
+  { name: "South Pacific", lat: -15, lon: -158, spread: 13, voice: 3 },
+  { name: "Argentine Pampas", lat: -33, lon: -60, spread: 8, voice: 2 },
+  { name: "Indian Ocean", lat: -18, lon: 72, spread: 15, voice: 0 }
+];
+const strikes = [];
+let strikeCount = 0;
+let nextStrike = 0;
+let stormRegion = null;
+
+const count = byId("count");
+const regionLabel = byId("region");
+const coordinateLabel = byId("coordinates");
+function coordinate(value, positive, negative) {
+  return Math.abs(value).toFixed(1) + "°" + (value < 0 ? negative : positive);
+}
+function lightning(time, region, centered = false, energy = .35 + Math.random() * .65) {
+  const offset = () => (Math.random() + Math.random() - 1) * region.spread;
+  const lat = region.lat + (centered ? 0 : offset());
+  const unwrapped = region.lon + (centered ? 0 : offset());
+  const lon = ((unwrapped + 540) % 360) - 180;
+  const cosLat = Math.cos(lat * radians);
+  const vector = [cosLat * Math.cos(lon * radians), Math.sin(lat * radians), cosLat * Math.sin(lon * radians)];
+  const strike = { time, lat, lon, vector, energy, voice: region.voice };
+  if (strikes.length === maxRipples) strikes.shift();
+  strikes.push(strike);
+  count.textContent = String(++strikeCount).padStart(3, "0");
+  regionLabel.textContent = region.name;
+  coordinateLabel.textContent = coordinate(lat, "N", "S") + " / " + coordinate(lon, "E", "W");
+  sound.strike(strike);
+}
+
+const audioButton = byId("audio-toggle");
+const audioLabel = byId("audio-label");
+const audioState = byId("audio-state");
+const volume = byId("volume");
+const meter = byId("meter");
+const meterRest = [5, 9, 13, 8, 17, 25, 14, 21, 11, 17, 10, 7, 4];
+const bars = meterRest.map((height) => {
+  const bar = document.createElement("i");
+  bar.style.setProperty("--bar", height + "px");
+  meter.append(bar);
+  return bar;
+});
+
+const sound = {
+  context: null,
+  active: false,
+  lastPad: -Infinity,
+  notes: 0,
+
+  setup() {
+    const Audio = window.AudioContext || window.webkitAudioContext;
+    const context = new Audio();
+    const dry = context.createGain();
+    const send = context.createGain();
+    const room = context.createConvolver();
+    const wet = context.createGain();
+    const master = context.createGain();
+    const compressor = context.createDynamicsCompressor();
+    const analyser = context.createAnalyser();
+    analyser.fftSize = 1024;
+    analyser.smoothingTimeConstant = .78;
+    master.gain.value = 0;
+    wet.gain.value = .58;
+    compressor.threshold.value = -19;
+    compressor.ratio.value = 5;
+
+    // A generated stereo impulse gives every strike a shared resonant space.
+    const length = Math.floor(context.sampleRate * 3.1);
+    const impulse = context.createBuffer(2, length, context.sampleRate);
+    for (let channel = 0; channel < impulse.numberOfChannels; channel++) {
+      const samples = impulse.getChannelData(channel);
+      let low = 0;
+      for (let i = 0; i < length; i++) {
+        low = low * .71 + (Math.random() * 2 - 1) * .29;
+        const fade = Math.min(1, i / (context.sampleRate * (.022 + .009 * channel)));
+        samples[i] = low * fade * (1 - i / length) ** 2.7;
+      }
+    }
+    room.buffer = impulse;
+    dry.connect(compressor);
+    send.connect(room).connect(wet).connect(compressor);
+    compressor.connect(master).connect(analyser).connect(context.destination);
+    Object.assign(this, { context, dry, send, master, analyser, spectrum: new Uint8Array(analyser.frequencyBinCount) });
+    context.addEventListener("statechange", () => {
+      if (this.active && context.state !== "running") this.setActive(false, "Sound paused");
+    });
+  },
+
+  setActive(active, message = active ? "Sound on" : "Sound off") {
+    this.active = active;
+    if (this.context) {
+      const now = this.context.currentTime;
+      this.master.gain.cancelScheduledValues(now);
+      this.master.gain.setTargetAtTime(active ? (volume.value / 100) ** 1.55 * .82 : 0, now, .075);
+    }
+    audioButton.setAttribute("aria-pressed", String(active));
+    audioButton.closest(".sound").dataset.playing = String(active);
+    audioLabel.textContent = active ? "Pause audio" : "Start audio";
+    audioState.textContent = message;
+  },
+
+  voice(midi, settings) {
+    const context = this.context;
+    const { time, amplitude, pan, attack, duration, soft } = settings;
+    const frequency = 440 * 2 ** ((midi - 69) / 12);
+    const tone = context.createOscillator();
+    const overtone = context.createOscillator();
+    const harmonicGain = context.createGain();
+    const filter = context.createBiquadFilter();
+    const envelope = context.createGain();
+    const stereo = context.createStereoPanner();
+
+    tone.type = soft ? "triangle" : "sine";
+    overtone.type = "sine";
+    tone.frequency.value = frequency;
+    overtone.frequency.value = frequency * (soft ? 1.5 : 2.003);
+    harmonicGain.gain.setValueAtTime(soft ? .10 : .20, time);
+    harmonicGain.gain.exponentialRampToValueAtTime(.012, time + duration * .68);
+    filter.type = "lowpass";
+    filter.frequency.value = soft ? 615 : Math.min(2400, frequency * 4.9);
+    stereo.pan.value = pan;
+    envelope.gain.setValueAtTime(.0001, time);
+    envelope.gain.exponentialRampToValueAtTime(amplitude, time + attack);
+    envelope.gain.exponentialRampToValueAtTime(.0001, time + duration);
+    tone.connect(filter);
+    overtone.connect(harmonicGain).connect(filter);
+    filter.connect(envelope).connect(stereo);
+    stereo.connect(this.dry);
+    stereo.connect(this.send);
+    tone.start(time);
+    overtone.start(time);
+    tone.stop(time + duration + .025);
+    overtone.stop(time + duration + .025);
+    overtone.onended = () => {
+      tone.disconnect();
+      overtone.disconnect();
+      harmonicGain.disconnect();
+      filter.disconnect();
+      envelope.disconnect();
+      stereo.disconnect();
+    };
+  },
+
+  strike(event) {
+    if (!this.active || this.context.state !== "running") return;
+    const scale = [0, 3, 5, 7, 10];
+    const roots = [50, 46, 53, 48];
+    const root = roots[Math.floor(this.notes++ / 13) % roots.length];
+    const interval = scale[(event.voice + (event.lat > 25 ? 1 : 0)) % scale.length];
+    const pitch = root + interval + (event.energy > .53 ? 12 : 0);
+    const pan = Math.sin(event.lon * radians) * .76;
+    const time = this.context.currentTime + .025;
+    this.voice(pitch, {
+      time, pan, amplitude: .039 + .059 * event.energy,
+      attack: .055 + .10 * (1 - event.energy), duration: 2.2 + event.energy * 1.5, soft: false
+    });
+    if (event.energy > .80 && time - this.lastPad > 2.5) {
+      this.lastPad = time;
+      this.voice(root - 12, { time, pan: pan * -.36, amplitude: .078, attack: .67, duration: 5.6, soft: true });
+      this.voice(root + 7, { time: time + .14, pan: pan * .56, amplitude: .032, attack: .86, duration: 4.8, soft: true });
+    }
+  },
+
+  updateMeter() {
+    if (this.active) this.analyser.getByteFrequencyData(this.spectrum);
+    for (let i = 0; i < bars.length; i++) {
+      const bin = 1 + Math.round(i ** 1.36);
+      const height = this.active ? 4 + this.spectrum[bin] / 255 * 24 : meterRest[i];
+      bars[i].style.setProperty("--bar", height.toFixed(1) + "px");
+    }
+  }
+};
+
+if (!window.AudioContext && !window.webkitAudioContext) {
+  audioButton.disabled = true;
+  audioState.textContent = "Web Audio unavailable";
+}
+
+audioButton.addEventListener("click", async () => {
+  if (sound.active) {
+    sound.setActive(false);
+    sound.updateMeter();
+    return;
+  }
+  audioButton.disabled = true;
+  try {
+    if (!sound.context) sound.setup();
+    await sound.context.resume();
+    if (sound.context.state !== "running") throw new Error("Audio context could not start.");
+    sound.setActive(true);
+    const time = performance.now() / 1000;
+    const proximity = (region) => {
+      const latitude = region.lat * radians;
+      return Math.sin(latitude) * Math.sin(view.latitude) +
+        Math.cos(latitude) * Math.cos(view.latitude) * Math.cos(region.lon * radians - view.longitude);
+    };
+    const target = regions.reduce((best, region) => proximity(region) > proximity(best) ? region : best);
+    lightning(time, target, false, .88);
+  } catch (error) {
+    console.error(error);
+    sound.setActive(false, "Audio could not start");
+  } finally {
+    audioButton.disabled = false;
+  }
+});
+
+volume.addEventListener("input", () => {
+  volume.style.setProperty("--volume", volume.value + "%");
+  if (sound.active) sound.setActive(true);
+});
+
+let pointer = null;
+function rotate(dx, dy) {
+  view.longitude = (view.longitude + dx + Math.PI * 3) % (Math.PI * 2) - Math.PI;
+  view.latitude = clamp(view.latitude + dy, -1.49, 1.49);
+}
+function resetView() {
+  Object.assign(view, home, { horizontalSpeed: 0, verticalSpeed: 0, idleAfter: performance.now() / 1000 + 4 });
+}
+byId("reset").addEventListener("click", resetView);
+canvas.addEventListener("pointerdown", (event) => {
+  if (pointer || event.button !== 0) return;
+  pointer = { id: event.pointerId, x: event.clientX, y: event.clientY, time: event.timeStamp };
+  view.horizontalSpeed = view.verticalSpeed = 0;
+  canvas.setPointerCapture(event.pointerId);
+  canvas.classList.add("dragging");
+});
+canvas.addEventListener("pointermove", (event) => {
+  if (event.pointerId !== pointer?.id) return;
+  const speed = Math.PI / Math.max(270, Math.min(canvas.clientWidth, canvas.clientHeight));
+  const dx = (pointer.x - event.clientX) * speed;
+  const dy = (event.clientY - pointer.y) * speed;
+  const elapsed = Math.max(.016, (event.timeStamp - pointer.time) / 1000);
+  rotate(dx, dy);
+  view.horizontalSpeed = clamp(dx / elapsed, -2.8, 2.8);
+  view.verticalSpeed = clamp(dy / elapsed, -2.8, 2.8);
+  Object.assign(pointer, { x: event.clientX, y: event.clientY, time: event.timeStamp });
+});
+function releasePointer(event) {
+  if (event.pointerId !== pointer?.id) return;
+  if (event.type !== "pointerup" || event.timeStamp - pointer.time > 100) {
+    view.horizontalSpeed = view.verticalSpeed = 0;
+  }
+  pointer = null;
+  view.idleAfter = performance.now() / 1000 + 4;
+  canvas.classList.remove("dragging");
+}
+for (const type of ["pointerup", "pointercancel", "lostpointercapture"]) canvas.addEventListener(type, releasePointer);
+canvas.addEventListener("keydown", (event) => {
+  const direction = {
+    ArrowLeft: [.14, 0], ArrowRight: [-.14, 0], ArrowUp: [0, .14], ArrowDown: [0, -.14]
+  }[event.key];
+  if (event.key === "Home") resetView();
+  else if (direction) {
+    rotate(...direction);
+    view.horizontalSpeed = view.verticalSpeed = 0;
+    view.idleAfter = performance.now() / 1000 + 4;
+  } else return;
+  event.preventDefault();
+});
+
+let renderer;
+const stageError = byId("stage-error");
+const reset = byId("reset");
+function restoreRenderer() {
+  try {
+    renderer = createRenderer();
+    stageError.hidden = true;
+    reset.disabled = false;
+    canvas.tabIndex = 0;
+  } catch (error) {
+    console.error(error);
+    renderer = null;
+    stageError.textContent = "The globe needs a browser with WebGL2 enabled.";
+    stageError.hidden = false;
+    reset.disabled = true;
+    canvas.tabIndex = -1;
+  }
+}
+restoreRenderer();
+new ResizeObserver(() => renderer?.resize()).observe(canvas);
+canvas.addEventListener("webglcontextlost", (event) => {
+  event.preventDefault();
+  renderer = null;
+  stageError.textContent = "Restoring the globe…";
+  stageError.hidden = false;
+});
+canvas.addEventListener("webglcontextrestored", restoreRenderer);
+
+const start = performance.now() / 1000;
+lightning(start - .90, regions[11], true, .73);
+lightning(start - .54, regions[2], true, .58);
+lightning(start - .36, regions[0], true, .94);
+nextStrike = start + .64;
+view.idleAfter = start + 3;
+let lastFrame = start;
+let lastMeter = start;
+function frame(timestamp) {
+  const time = timestamp / 1000;
+  const elapsed = clamp(time - lastFrame, 0, .05);
+  lastFrame = time;
+  if (!pointer && !motion.matches) {
+    const drift = time > view.idleAfter ? .047 : 0;
+    rotate((view.horizontalSpeed + drift) * elapsed, view.verticalSpeed * elapsed);
+    const friction = Math.exp(-5.1 * elapsed);
+    view.horizontalSpeed *= friction;
+    view.verticalSpeed *= friction;
+  }
+  while (strikes.length && time - strikes[0].time > rippleSeconds) strikes.shift();
+  if (time >= nextStrike) {
+    if (!stormRegion || Math.random() > .38) stormRegion = regions[Math.floor(Math.random() * regions.length)];
+    lightning(time, stormRegion);
+    nextStrike = time + .30 + Math.random() * .59;
+  }
+  if (time - lastMeter > .075) {
+    if (sound.active) sound.updateMeter();
+    lastMeter = time;
+  }
+  renderer?.draw(time);
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

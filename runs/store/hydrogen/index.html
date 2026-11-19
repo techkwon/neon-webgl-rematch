@@ -1,0 +1,3639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>STRATA—65 // Machined Topographic Mechanical Keyboard</title>
+  <style>
+    :root {
+      --bg: #09090b;
+      --bg-elevated: #111216;
+      --bg-card: #14161b;
+      --surface: rgba(255, 255, 255, 0.035);
+      --border: rgba(255, 255, 255, 0.085);
+      --border-strong: rgba(255, 255, 255, 0.18);
+      --text: #f3f3ef;
+      --text-muted: #8b8f98;
+      --text-dim: #585c66;
+      --accent: #ff4d00;
+      --accent-warm: #ff8a3d;
+      --accent-glow: rgba(255, 77, 0, 0.22);
+      --success: #3dd68c;
+      --font-sans: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      --font-mono: "SF Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      --radius-sm: 6px;
+      --radius-md: 12px;
+      --radius-lg: 20px;
+      --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+      --max-w: 1360px;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-sans);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      overflow-x: clip;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      overflow-x: clip;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    button {
+      font: inherit;
+      color: inherit;
+      background: none;
+      border: none;
+      cursor: pointer;
+    }
+
+    ::selection {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .container {
+      width: 100%;
+      max-width: var(--max-w);
+      margin: 0 auto;
+      padding: 0 clamp(20px, 4vw, 48px);
+    }
+
+    .mono {
+      font-family: var(--font-mono);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .eyebrow::before {
+      content: "";
+      width: 18px;
+      height: 1px;
+      background: var(--accent);
+    }
+
+    /* ---------------- NAVIGATION ---------------- */
+    .nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 50;
+      height: 68px;
+      display: flex;
+      align-items: center;
+      background: rgba(9, 9, 11, 0.68);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      transition: background 0.3s ease;
+    }
+
+    .nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      max-width: var(--max-w);
+      margin: 0 auto;
+      padding: 0 clamp(20px, 4vw, 48px);
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      font-size: 15px;
+    }
+
+    .brand-mark {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      border: 1px solid var(--border-strong);
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, rgba(255, 77, 0, 0.18), rgba(255, 255, 255, 0.02));
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 28px;
+    }
+
+    .nav-links a {
+      font-size: 13px;
+      color: var(--text-muted);
+      transition: color 0.2s ease;
+    }
+
+    .nav-links a:hover {
+      color: var(--text);
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn-ghost {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      font-size: 12px;
+      font-family: var(--font-mono);
+      color: var(--text-muted);
+      background: rgba(255, 255, 255, 0.02);
+      transition: all 0.2s ease;
+    }
+
+    .btn-ghost:hover {
+      border-color: var(--border-strong);
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 10px 18px;
+      border-radius: 999px;
+      background: var(--text);
+      color: var(--bg);
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      transition: transform 0.2s var(--ease-out), background 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .btn-primary:hover {
+      background: #fff;
+      transform: translateY(-1px);
+      box-shadow: 0 10px 30px rgba(255, 255, 255, 0.12);
+    }
+
+    .btn-accent {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 13px 24px;
+      border-radius: 999px;
+      background: var(--accent);
+      color: #fff;
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      transition: transform 0.2s var(--ease-out), box-shadow 0.2s ease, filter 0.2s ease;
+    }
+
+    .btn-accent:hover {
+      filter: brightness(1.08);
+      transform: translateY(-1px);
+      box-shadow: 0 12px 34px rgba(255, 77, 0, 0.32);
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 10px var(--accent);
+      animation: pulse 2.2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.45; transform: scale(0.8); }
+    }
+
+    /* ---------------- HERO (WEBGL2 TOPOGRAPHY) ---------------- */
+    .hero {
+      position: relative;
+      min-height: 100svh;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding-top: 96px;
+      padding-bottom: 36px;
+      overflow: hidden;
+      border-bottom: 1px solid var(--border);
+    }
+
+    #hero-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      z-index: 0;
+    }
+
+    .hero-vignette {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 68% 42%, transparent 0%, rgba(9, 9, 11, 0.35) 56%, rgba(9, 9, 11, 0.88) 100%),
+        linear-gradient(180deg, rgba(9, 9, 11, 0.45) 0%, transparent 25%, transparent 72%, rgba(9, 9, 11, 0.96) 100%);
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 2;
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+      gap: 40px;
+      align-items: end;
+      margin: auto 0;
+      padding: 40px 0;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--border-strong);
+      background: rgba(9, 9, 11, 0.65);
+      backdrop-filter: blur(8px);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      margin-bottom: 24px;
+    }
+
+    .hero-title {
+      font-size: clamp(44px, 7.2vw, 96px);
+      line-height: 0.96;
+      letter-spacing: -0.045em;
+      font-weight: 600;
+      margin-bottom: 24px;
+    }
+
+    .hero-title span.accent-word {
+      display: inline-block;
+      background: linear-gradient(135deg, #ffffff 10%, #ffb07a 60%, #ff4d00 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .hero-sub {
+      max-width: 520px;
+      font-size: clamp(16px, 1.5vw, 19px);
+      color: #c2c5cd;
+      line-height: 1.55;
+      margin-bottom: 34px;
+    }
+
+    .hero-cta-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 13px 22px;
+      border-radius: 999px;
+      border: 1px solid var(--border-strong);
+      background: rgba(17, 18, 22, 0.72);
+      backdrop-filter: blur(8px);
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+
+    .btn-secondary:hover {
+      border-color: rgba(255, 255, 255, 0.36);
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .hero-telemetry {
+      justify-self: end;
+      width: 100%;
+      max-width: 340px;
+      padding: 20px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-strong);
+      background: rgba(9, 9, 11, 0.72);
+      backdrop-filter: blur(14px);
+    }
+
+    .telemetry-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 12px;
+      margin-bottom: 14px;
+      border-bottom: 1px solid var(--border);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .telemetry-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .tele-item label {
+      display: block;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-dim);
+      margin-bottom: 3px;
+    }
+
+    .tele-item span {
+      font-family: var(--font-mono);
+      font-size: 14px;
+      color: var(--text);
+    }
+
+    .hero-footer {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .hero-metrics {
+      display: flex;
+      gap: 32px;
+      flex-wrap: wrap;
+    }
+
+    .hero-metrics strong {
+      color: var(--text);
+      font-weight: 500;
+    }
+
+    /* ---------------- PINNED 4-STAGE SCROLLYTELLING ---------------- */
+    .scrolly-section {
+      position: relative;
+      height: 400vh;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .scrolly-sticky {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 72% 50%, rgba(255, 77, 0, 0.07), transparent 52%),
+        var(--bg);
+    }
+
+    .scrolly-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 0.88fr) minmax(0, 1.12fr);
+      gap: clamp(24px, 4vw, 64px);
+      align-items: center;
+      width: 100%;
+    }
+
+    .scrolly-left {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .stage-pills {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .stage-pill {
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+      transition: all 0.25s ease;
+    }
+
+    .stage-pill.active {
+      border-color: var(--accent);
+      color: var(--text);
+      background: rgba(255, 77, 0, 0.14);
+    }
+
+    .stage-progress-track {
+      height: 2px;
+      width: 100%;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .stage-progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent), var(--accent-warm));
+      transition: width 0.08s linear;
+    }
+
+    .stage-card-stack {
+      position: relative;
+      min-height: 260px;
+    }
+
+    .stage-item {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      transform: translateY(18px);
+      pointer-events: none;
+      transition: opacity 0.45s var(--ease-out), transform 0.45s var(--ease-out);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .stage-item.active {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+
+    .stage-num {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--accent);
+      margin-bottom: 12px;
+    }
+
+    .stage-title {
+      font-size: clamp(28px, 3.6vw, 46px);
+      line-height: 1.06;
+      letter-spacing: -0.035em;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+
+    .stage-desc {
+      font-size: 16px;
+      color: var(--text-muted);
+      line-height: 1.65;
+      max-width: 470px;
+      margin-bottom: 24px;
+    }
+
+    .stage-specs {
+      display: flex;
+      gap: 24px;
+      padding-top: 18px;
+      border-top: 1px solid var(--border);
+      font-family: var(--font-mono);
+      font-size: 12px;
+    }
+
+    .stage-specs div span {
+      display: block;
+      font-size: 10px;
+      color: var(--text-dim);
+      margin-bottom: 4px;
+    }
+
+    .scrolly-viewport {
+      position: relative;
+      height: min(68vh, 620px);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+      background: radial-gradient(circle at 50% 45%, #16181f 0%, #0b0c0f 100%);
+      overflow: hidden;
+      box-shadow: 0 30px 90px rgba(0, 0, 0, 0.55);
+    }
+
+    #explode-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: grab;
+    }
+
+    #explode-canvas:active {
+      cursor: grabbing;
+    }
+
+    .viewport-hud {
+      position: absolute;
+      inset: 16px;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .hud-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    .hud-tag {
+      padding: 5px 10px;
+      border-radius: 999px;
+      background: rgba(9, 9, 11, 0.72);
+      border: 1px solid var(--border);
+      backdrop-filter: blur(8px);
+    }
+
+    /* ---------------- BEFORE / AFTER SPLIT SLIDER ---------------- */
+    .section-pad {
+      padding: clamp(80px, 11vh, 140px) 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 32px;
+      margin-bottom: 48px;
+      flex-wrap: wrap;
+    }
+
+    .section-title {
+      font-size: clamp(32px, 4.4vw, 56px);
+      line-height: 1.04;
+      letter-spacing: -0.04em;
+      font-weight: 600;
+      margin-top: 14px;
+      max-width: 680px;
+    }
+
+    .section-lead {
+      max-width: 420px;
+      color: var(--text-muted);
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    .split-frame {
+      position: relative;
+      width: 100%;
+      height: clamp(380px, 58vh, 580px);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-strong);
+      overflow: hidden;
+      background: #0d0e12;
+      user-select: none;
+      touch-action: none;
+      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5);
+    }
+
+    .split-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .split-divider {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 50%;
+      width: 2px;
+      background: var(--text);
+      transform: translateX(-50%);
+      z-index: 4;
+      pointer-events: none;
+      box-shadow: 0 0 24px rgba(255, 255, 255, 0.4);
+    }
+
+    .split-handle {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: var(--text);
+      color: var(--bg);
+      display: grid;
+      place-items: center;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 700;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.65);
+      pointer-events: auto;
+      cursor: ew-resize;
+      z-index: 5;
+      transition: transform 0.15s ease;
+    }
+
+    .split-handle:hover {
+      transform: translate(-50%, -50%) scale(1.08);
+    }
+
+    .split-label {
+      position: absolute;
+      top: 20px;
+      z-index: 3;
+      padding: 8px 14px;
+      border-radius: 8px;
+      background: rgba(9, 9, 11, 0.78);
+      border: 1px solid var(--border-strong);
+      backdrop-filter: blur(8px);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      pointer-events: none;
+    }
+
+    .split-label.left { left: 20px; color: #b5bac4; }
+    .split-label.right { right: 20px; color: var(--accent-warm); border-color: rgba(255, 77, 0, 0.35); }
+
+    .split-controls {
+      margin-top: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .split-presets {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .sound-compare {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .btn-sound {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 16px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      transition: all 0.2s ease;
+    }
+
+    .btn-sound:hover {
+      border-color: var(--border-strong);
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .btn-sound.tuned {
+      border-color: rgba(255, 77, 0, 0.4);
+      color: var(--accent-warm);
+    }
+
+    .btn-sound.playing {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+
+    /* ---------------- 3D WIREFRAME SPEC CARD ---------------- */
+    .spec-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.12fr) minmax(0, 0.88fr);
+      gap: 32px;
+      align-items: stretch;
+    }
+
+    .wireframe-card-wrap {
+      perspective: 1400px;
+    }
+
+    .wireframe-card {
+      position: relative;
+      height: 100%;
+      min-height: 520px;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-strong);
+      background: linear-gradient(155deg, #13161d 0%, #090a0d 100%);
+      overflow: hidden;
+      transform-style: preserve-3d;
+      transition: transform 0.2s var(--ease-out), border-color 0.3s ease;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-shadow: 0 36px 90px rgba(0, 0, 0, 0.6);
+    }
+
+    .wireframe-card-glare {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: radial-gradient(circle 340px at var(--mx, 50%) var(--my, 50%), rgba(255, 77, 0, 0.14), transparent 70%);
+      z-index: 1;
+    }
+
+    .wireframe-card-head {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .wireframe-tabs {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .wf-tab {
+      padding: 5px 11px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-muted);
+      transition: all 0.2s ease;
+    }
+
+    .wf-tab.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    .wireframe-stage {
+      position: relative;
+      flex: 1;
+      min-height: 330px;
+      z-index: 2;
+    }
+
+    #wireframe-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: grab;
+    }
+
+    .wireframe-card-foot {
+      position: relative;
+      z-index: 2;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      padding: 18px 24px;
+      border-top: 1px solid var(--border);
+      background: rgba(9, 9, 11, 0.65);
+    }
+
+    .wf-stat span {
+      display: block;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-dim);
+      margin-bottom: 4px;
+    }
+
+    .wf-stat strong {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .spec-matrix {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
+    .spec-row {
+      padding: 20px 22px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      background: var(--bg-elevated);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 20px;
+      transition: border-color 0.2s ease, transform 0.2s ease;
+    }
+
+    .spec-row:hover {
+      border-color: var(--border-strong);
+      transform: translateX(4px);
+    }
+
+    .spec-row h3 {
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 4px;
+    }
+
+    .spec-row p {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .spec-val {
+      text-align: right;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      color: var(--text);
+      white-space: nowrap;
+    }
+
+    .spec-val small {
+      display: block;
+      font-size: 10px;
+      color: var(--accent-warm);
+      margin-top: 3px;
+    }
+
+    /* ---------------- LIVE COLOR CONFIGURATOR ---------------- */
+    .config-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.18fr) minmax(0, 0.82fr);
+      gap: 32px;
+      align-items: start;
+    }
+
+    .config-viewport {
+      position: sticky;
+      top: 90px;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-strong);
+      background: radial-gradient(circle at 50% 42%, #1b1e27 0%, #0a0b0e 100%);
+      overflow: hidden;
+      height: clamp(440px, 64vh, 620px);
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 36px 90px rgba(0, 0, 0, 0.55);
+    }
+
+    #config-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: grab;
+    }
+
+    #config-canvas:active {
+      cursor: grabbing;
+    }
+
+    .config-hud-top {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      right: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      pointer-events: none;
+      z-index: 3;
+    }
+
+    .config-hud-bottom {
+      position: absolute;
+      bottom: 16px;
+      left: 16px;
+      right: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      z-index: 3;
+    }
+
+    .cam-pills {
+      display: flex;
+      gap: 6px;
+      padding: 4px;
+      border-radius: 999px;
+      background: rgba(9, 9, 11, 0.78);
+      border: 1px solid var(--border);
+      backdrop-filter: blur(8px);
+    }
+
+    .cam-pill {
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-muted);
+      transition: all 0.2s ease;
+    }
+
+    .cam-pill.active {
+      background: var(--text);
+      color: var(--bg);
+    }
+
+    .config-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      padding: 28px;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+      background: var(--bg-elevated);
+    }
+
+    .cfg-group-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .cfg-group-head label {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .cfg-group-head span {
+      font-size: 12px;
+      color: var(--text);
+      font-weight: 500;
+    }
+
+    .swatch-row {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 10px;
+    }
+
+    .swatch {
+      position: relative;
+      aspect-ratio: 1;
+      border-radius: 10px;
+      border: 2px solid transparent;
+      padding: 3px;
+      background: rgba(255, 255, 255, 0.04);
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+
+    .swatch:hover {
+      transform: translateY(-2px);
+    }
+
+    .swatch.active {
+      border-color: var(--accent);
+    }
+
+    .swatch-fill {
+      width: 100%;
+      height: 100%;
+      border-radius: 6px;
+      display: block;
+      box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.25), inset 0 -2px 4px rgba(0, 0, 0, 0.4);
+    }
+
+    .option-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .opt-btn {
+      text-align: left;
+      padding: 12px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.02);
+      transition: all 0.2s ease;
+    }
+
+    .opt-btn:hover {
+      border-color: var(--border-strong);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .opt-btn.active {
+      border-color: var(--accent);
+      background: rgba(255, 77, 0, 0.09);
+    }
+
+    .opt-btn strong {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      margin-bottom: 2px;
+    }
+
+    .opt-btn small {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    .cfg-summary {
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .cfg-price-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+
+    .cfg-price {
+      font-size: 34px;
+      font-weight: 600;
+      letter-spacing: -0.03em;
+    }
+
+    .cfg-sku {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .typing-hint {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px 14px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px dashed var(--border-strong);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    /* ---------------- FOOTER ---------------- */
+    .footer {
+      padding: 64px 0 48px;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+
+    .footer-grid {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 32px;
+      flex-wrap: wrap;
+      padding-bottom: 40px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .footer-bottom {
+      padding-top: 24px;
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+
+    /* ---------------- RESERVATION DRAWER ---------------- */
+    .drawer-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.68);
+      backdrop-filter: blur(6px);
+      z-index: 90;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+
+    .drawer-backdrop.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .drawer {
+      position: fixed;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: min(440px, 100vw);
+      background: #101216;
+      border-left: 1px solid var(--border-strong);
+      z-index: 100;
+      transform: translateX(100%);
+      transition: transform 0.35s var(--ease-out);
+      display: flex;
+      flex-direction: column;
+      padding: 28px;
+    }
+
+    .drawer.open {
+      transform: translateX(0);
+    }
+
+    .drawer-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 18px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .drawer-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 22px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .cart-item {
+      padding: 16px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .cart-item-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+
+    .cart-specs {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    .drawer-foot {
+      padding-top: 18px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: #181a20;
+      border: 1px solid var(--accent);
+      color: var(--text);
+      padding: 12px 20px;
+      border-radius: 999px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.3s var(--ease-out);
+      z-index: 120;
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.55);
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    @media (max-width: 980px) {
+      .nav-links { display: none; }
+      .hero-content,
+      .scrolly-grid,
+      .spec-layout,
+      .config-grid {
+        grid-template-columns: 1fr;
+      }
+      .hero-telemetry { justify-self: start; }
+      .scrolly-viewport { height: 42vh; }
+      .config-viewport { position: relative; top: 0; height: 400px; }
+      .wireframe-card-foot { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAVIGATION -->
+  <header class="nav">
+    <div class="nav-inner">
+      <a href="#hero" class="brand">
+        <span class="brand-mark">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+            <rect x="1" y="2" width="12" height="10" rx="2" stroke="#F3F3EF" stroke-width="1.3"/>
+            <line x1="3.5" y1="5.5" x2="10.5" y2="5.5" stroke="#FF4D00" stroke-width="1.3"/>
+            <line x1="3.5" y1="8.5" x2="8.5" y2="8.5" stroke="#F3F3EF" stroke-width="1.3"/>
+          </svg>
+        </span>
+        <span>STRATA—65</span>
+      </a>
+
+      <nav class="nav-links" aria-label="Primary">
+        <a href="#architecture">Architecture</a>
+        <a href="#acoustics">Acoustics</a>
+        <a href="#specs">Wireframe</a>
+        <a href="#configure">Configure</a>
+      </nav>
+
+      <div class="nav-actions">
+        <button id="btn-sound-toggle" class="btn-ghost" type="button" title="Toggle Acoustic Synth">
+          <span class="status-dot"></span>
+          <span id="sound-label">AUDIO: ON</span>
+        </button>
+        <button id="btn-open-drawer" class="btn-primary" type="button">
+          <span>Reserve</span>
+          <span id="cart-count" class="mono" style="font-size:11px;opacity:0.75;">(0)</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- 1. HERO: WEBGL2 TOPOGRAPHIC SHADER -->
+  <section id="hero" class="hero">
+    <canvas id="hero-canvas" aria-label="Interactive WebGL2 Topographic Elevation Shader"></canvas>
+    <div class="hero-vignette"></div>
+
+    <div class="container hero-content">
+      <div>
+        <div class="hero-badge">
+          <span class="status-dot"></span>
+          <span>FOUNDERS EDITION · BATCH 01 // 500 UNITS</span>
+        </div>
+        <h1 class="hero-title">
+          Machined from<br />
+          <span class="accent-word">solid topography.</span>
+        </h1>
+        <p class="hero-sub">
+          A 65% mechanical instrument milled from a 4.2 kg aerospace 6063-T6 billet. Engineered around leaf-spring gasket acoustics, internal resonance chambers, and zero-latency 8 kHz sensing.
+        </p>
+        <div class="hero-cta-row">
+          <a href="#configure" class="btn-accent">Configure Your Build &rarr;</a>
+          <a href="#architecture" class="btn-secondary">Explore 4-Stage Stack</a>
+        </div>
+      </div>
+
+      <aside class="hero-telemetry" aria-label="Live Topographic Shader Telemetry">
+        <div class="telemetry-head">
+          <span>GLSL // ISOLINE FIELD</span>
+          <span style="color:var(--accent-warm);">ACTIVE</span>
+        </div>
+        <div class="telemetry-grid">
+          <div class="tele-item">
+            <label>POINTER COORD</label>
+            <span id="tele-coord">0.500, 0.500</span>
+          </div>
+          <div class="tele-item">
+            <label>ISOLINE PITCH</label>
+            <span>0.020 MM</span>
+          </div>
+          <div class="tele-item">
+            <label>PEAK ELEVATION</label>
+            <span id="tele-elev">+14.20 MM</span>
+          </div>
+          <div class="tele-item">
+            <label>ACOUSTIC FLOOR</label>
+            <span>42.0 dBA</span>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <div class="container hero-footer">
+      <div class="hero-metrics">
+        <span>CHASSIS: <strong>6063-T6 BILLET</strong></span>
+        <span>ANGLE: <strong>6.5° TYPING</strong></span>
+        <span>POLLING: <strong>8,000 HZ</strong></span>
+        <span>STARTING AT: <strong>$380 USD</strong></span>
+      </div>
+      <span>MOVE CURSOR TO PERTURB FIELD · SCROLL ↓</span>
+    </div>
+  </section>
+
+  <!-- 2. PINNED 4-STAGE SCROLLYTELLING -->
+  <section id="architecture" class="scrolly-section">
+    <div class="scrolly-sticky">
+      <div class="container scrolly-grid">
+        <div class="scrolly-left">
+          <span class="eyebrow">01 // EXPLODED ARCHITECTURE</span>
+
+          <div class="stage-pills" role="tablist" aria-label="Architecture Stages">
+            <button class="stage-pill active" data-stage="0" type="button">01. CHASSIS</button>
+            <button class="stage-pill" data-stage="1" type="button">02. GASKET</button>
+            <button class="stage-pill" data-stage="2" type="button">03. ACOUSTICS</button>
+            <button class="stage-pill" data-stage="3" type="button">04. PCB</button>
+          </div>
+
+          <div class="stage-progress-track">
+            <div id="scrolly-progress" class="stage-progress-fill"></div>
+          </div>
+
+          <div class="stage-card-stack">
+            <article class="stage-item active" data-stage-card="0">
+              <div class="stage-num">STAGE 01 / 04 — MONOBLOCK ENCLOSURE</div>
+              <h2 class="stage-title">Five-axis CNC milled from solid 6063-T6.</h2>
+              <p class="stage-desc">
+                Every external bevel and internal acoustic step is carved over 4.5 hours of continuous milling, then bead-blasted with #220 glass media and sealed in Type-III hard anodization.
+              </p>
+              <div class="stage-specs">
+                <div><span>TOLERANCE</span>±0.015 MM</div>
+                <div><span>MASS (CASE)</span>1,420 G</div>
+                <div><span>FRONT HEIGHT</span>18.2 MM</div>
+              </div>
+            </article>
+
+            <article class="stage-item" data-stage-card="1">
+              <div class="stage-num">STAGE 02 / 04 — LEAF-SPRING SUSPENSION</div>
+              <h2 class="stage-title">Zero metal-on-metal contact paths.</h2>
+              <p class="stage-desc">
+                Eighteen compression-molded 40A silicone socks suspend the switch plate inside precision pockets. Every bottom-out absorbs shock cleanly while retaining crisp rebound.
+              </p>
+              <div class="stage-specs">
+                <div><span>DUROMETER</span>40 SHORE A</div>
+                <div><span>TRAVEL FLEX</span>1.4 MM</div>
+                <div><span>ISOLATION</span>100% DECOUPLED</div>
+              </div>
+            </article>
+
+            <article class="stage-item" data-stage-card="2">
+              <div class="stage-num">STAGE 03 / 04 — STEPPED RESONANCE CORE</div>
+              <h2 class="stage-title">Tuned to 340 Hz deep acoustic warmth.</h2>
+              <p class="stage-desc">
+                Open-cell 3.5mm Poron core foam and an IXPE switch pad strip away high-frequency metallic ping while letting the low-mid marbly keystroke character breathe.
+              </p>
+              <div class="stage-specs">
+                <div><span>DAMPENING</span>PORON + IXPE</div>
+                <div><span>RESONANCE</span>340 HZ PEAK</div>
+                <div><span>NOISE FLOOR</span>42.0 dBA</div>
+              </div>
+            </article>
+
+            <article class="stage-item" data-stage-card="3">
+              <div class="stage-num">STAGE 04 / 04 — 8 KHZ FLEX-CUT PCB</div>
+              <h2 class="stage-title">Engineered for zero-latency expression.</h2>
+              <p class="stage-desc">
+                A matte-black 1.2mm ENIG gold-plated PCB with strategic relief cuts, hot-swap Kailh sockets, unified daughterboard USB-C, and full open-source QMK / VIA mapping.
+              </p>
+              <div class="stage-specs">
+                <div><span>SCAN RATE</span>8,000 HZ</div>
+                <div><span>FIRMWARE</span>QMK / VIA</div>
+                <div><span>SOCKETS</span>HOT-SWAP 5-PIN</div>
+              </div>
+            </article>
+          </div>
+        </div>
+
+        <div class="scrolly-viewport">
+          <canvas id="explode-canvas" aria-label="Interactive WebGL2 Exploded Keyboard Assembly"></canvas>
+          <div class="viewport-hud">
+            <div class="hud-row">
+              <span class="hud-tag">WEBGL2 // LAYER ASSEMBLY</span>
+              <span id="explode-hud-stage" class="hud-tag" style="color:var(--accent-warm);">FOCUS: MONOBLOCK CHASSIS</span>
+            </div>
+            <div class="hud-row">
+              <span class="hud-tag">DRAG TO ORBIT · SCROLL TO EXPLODE</span>
+              <span id="explode-hud-sep" class="hud-tag">SEPARATION: 0%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. BEFORE / AFTER SPLIT SLIDER -->
+  <section id="acoustics" class="section-pad">
+    <div class="container">
+      <div class="section-header">
+        <div>
+          <span class="eyebrow">02 // SURFACE & ACOUSTIC COMPARISON</span>
+          <h2 class="section-title">Raw CNC billet vs. tuned instrument.</h2>
+        </div>
+        <p class="section-lead">
+          Drag the split plane to inspect how #220 bead-blasting, Type-III anodization, and internal acoustic dampening transform both surface grain and frequency response.
+        </p>
+      </div>
+
+      <div id="split-frame" class="split-frame">
+        <canvas id="split-canvas" class="split-canvas"></canvas>
+        <div id="split-divider" class="split-divider"></div>
+        <button id="split-handle" class="split-handle" type="button" role="slider" aria-label="Before and after comparison slider" aria-valuemin="5" aria-valuemax="95" aria-valuenow="50">
+          ◂▸
+        </button>
+        <div class="split-label left">BEFORE // RAW CNC MILL · UNISOLATED (58.4 dBA)</div>
+        <div class="split-label right">AFTER // OBSIDIAN TYPE-III · TUNED STACK (42.0 dBA)</div>
+      </div>
+
+      <div class="split-controls">
+        <div class="split-presets">
+          <span class="mono" style="font-size:11px;color:var(--text-dim);margin-right:6px;">SNAP:</span>
+          <button class="stage-pill split-snap" data-pct="20" type="button">20%</button>
+          <button class="stage-pill split-snap active" data-pct="50" type="button">50%</button>
+          <button class="stage-pill split-snap" data-pct="80" type="button">80%</button>
+        </div>
+
+        <div class="sound-compare">
+          <button id="btn-play-before" class="btn-sound" type="button">
+            <span>▶</span>
+            <span>HEAR RAW TRAY PING</span>
+          </button>
+          <button id="btn-play-after" class="btn-sound tuned" type="button">
+            <span>▶</span>
+            <span>HEAR TUNED STRATA THOCK</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. 3D WIREFRAME SPEC CARD -->
+  <section id="specs" class="section-pad">
+    <div class="container">
+      <div class="section-header">
+        <div>
+          <span class="eyebrow">03 // DIMENSIONAL TELEMETRY</span>
+          <h2 class="section-title">Precision CAD spec card.</h2>
+        </div>
+        <p class="section-lead">
+          Inspect the live WebGL2 wireframe blueprint. Hover to tilt the card in 3D space, drag the mesh, or isolate structural subsystems below.
+        </p>
+      </div>
+
+      <div class="spec-layout">
+        <div class="wireframe-card-wrap">
+          <div id="wireframe-card" class="wireframe-card">
+            <div class="wireframe-card-glare"></div>
+
+            <div class="wireframe-card-head">
+              <div class="mono" style="font-size:11px;color:var(--text-muted);">CAD // STR65-REV4.STEP</div>
+              <div class="wireframe-tabs">
+                <button class="wf-tab active" data-wf="all" type="button">ALL</button>
+                <button class="wf-tab" data-wf="chassis" type="button">CHASSIS</button>
+                <button class="wf-tab" data-wf="plate" type="button">GASKET</button>
+                <button class="wf-tab" data-wf="pcb" type="button">PCB</button>
+              </div>
+            </div>
+
+            <div class="wireframe-stage">
+              <canvas id="wireframe-canvas" aria-label="Interactive WebGL2 3D CAD Wireframe"></canvas>
+            </div>
+
+            <div class="wireframe-card-foot">
+              <div class="wf-stat">
+                <span>DIMENSIONS</span>
+                <strong id="wf-dim">312.4 × 114.2 MM</strong>
+              </div>
+              <div class="wf-stat">
+                <span>TYPING ANGLE</span>
+                <strong id="wf-angle">6.5° ERGONOMIC</strong>
+              </div>
+              <div class="wf-stat">
+                <span>TOTAL MASS</span>
+                <strong id="wf-mass">1,840 GRAMS</strong>
+              </div>
+              <div class="wf-stat">
+                <span>SUBSYSTEM</span>
+                <strong id="wf-sub" style="color:var(--accent-warm);">FULL ASSEMBLY</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="spec-matrix">
+          <div class="spec-row">
+            <div>
+              <h3>Layout & Geometry</h3>
+              <p>Compact 65% ANSI with CNC 0.5u arrow blocker & dedicated nav column</p>
+            </div>
+            <div class="spec-val">67 KEYS<small>31.8 MM REAR</small></div>
+          </div>
+          <div class="spec-row">
+            <div>
+              <h3>Enclosure Metallurgy</h3>
+              <p>6063-T6 extruded billet, #220 glass bead blast, Type-III anodization</p>
+            </div>
+            <div class="spec-val">6063-T6 AL<small>HV 400 HARDCOAT</small></div>
+          </div>
+          <div class="spec-row">
+            <div>
+              <h3>Acoustic Architecture</h3>
+              <p>Dual-durometer silicone leaf-spring socks + 3.5mm Poron + IXPE sheet</p>
+            </div>
+            <div class="spec-val">42.0 dBA<small>340 HZ FUNDAMENTAL</small></div>
+          </div>
+          <div class="spec-row">
+            <div>
+              <h3>Switch & Stabilizer Spec</h3>
+              <p>Factory hand-lubed linear or tactile, PCB screw-in tuned stabilizers</p>
+            </div>
+            <div class="spec-val">5-PIN HOTSWAP<small>20MM TWO-STAGE SPRING</small></div>
+          </div>
+          <div class="spec-row">
+            <div>
+              <h3>Electronics & Firmware</h3>
+              <p>ARM Cortex-M4 MCU, 8,000 Hz USB-C polling, isolated daughterboard</p>
+            </div>
+            <div class="spec-val">0.125 MS<small>QMK + VIA READY</small></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. LIVE COLOR CONFIGURATOR -->
+  <section id="configure" class="section-pad">
+    <div class="container">
+      <div class="section-header">
+        <div>
+          <span class="eyebrow">04 // BESPOKE STUDIO</span>
+          <h2 class="section-title">Configure your STRATA—65.</h2>
+        </div>
+        <p class="section-lead">
+          Every material update renders in real time in WebGL2. Drag to inspect finishes, or type on your keyboard to actuate the 3D switches live.
+        </p>
+      </div>
+
+      <div class="config-grid">
+        <div class="config-viewport">
+          <div class="config-hud-top">
+            <span class="hud-tag mono" style="font-size:10px;">STUDIO // REAL-TIME WEBGL2</span>
+            <span id="cfg-weight-badge" class="hud-tag mono" style="font-size:10px;color:var(--accent-warm);">WEIGHT: 1,840 G</span>
+          </div>
+
+          <canvas id="config-canvas" aria-label="Live Interactive 3D Keyboard Configurator"></canvas>
+
+          <div class="config-hud-bottom">
+            <div class="cam-pills">
+              <button class="cam-pill active" data-cam="iso" type="button">ISO</button>
+              <button class="cam-pill" data-cam="top" type="button">TOP</button>
+              <button class="cam-pill" data-cam="side" type="button">SIDE</button>
+              <button class="cam-pill" data-cam="rear" type="button">WEIGHT</button>
+            </div>
+            <button id="btn-type-demo" class="btn-ghost" type="button" style="background:rgba(9,9,11,0.8);">
+              <span>⌨</span>
+              <span>TEST KEYSTROKE WAVE</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="config-panel">
+          <!-- Chassis Finish -->
+          <div>
+            <div class="cfg-group-head">
+              <label>01 / Chassis Finish</label>
+              <span id="lbl-chassis">Obsidian Matte</span>
+            </div>
+            <div class="swatch-row" id="swatch-chassis">
+              <button class="swatch active" data-chassis="obsidian" title="Obsidian Matte" type="button"><span class="swatch-fill" style="background:#1c1e24;"></span></button>
+              <button class="swatch" data-chassis="titanium" title="Raw Titanium" type="button"><span class="swatch-fill" style="background:#9096a0;"></span></button>
+              <button class="swatch" data-chassis="sage" title="Nordic Sage" type="button"><span class="swatch-fill" style="background:#4f6154;"></span></button>
+              <button class="swatch" data-chassis="terracotta" title="Terracotta Oxide" type="button"><span class="swatch-fill" style="background:#a54c35;"></span></button>
+              <button class="swatch" data-chassis="cobalt" title="Cobalt Slate" type="button"><span class="swatch-fill" style="background:#2b405c;"></span></button>
+              <button class="swatch" data-chassis="chalk" title="Chalk Ceramic (+$20)" type="button"><span class="swatch-fill" style="background:#e5e2da;"></span></button>
+            </div>
+          </div>
+
+          <!-- Keycap Set -->
+          <div>
+            <div class="cfg-group-head">
+              <label>02 / PBT Keycap Theme</label>
+              <span id="lbl-keycaps">Graphite Mono</span>
+            </div>
+            <div class="option-grid" id="opt-keycaps">
+              <button class="opt-btn active" data-keycaps="graphite" type="button">
+                <strong>Graphite Mono</strong>
+                <small>OBSIDIAN + VERMILION ACCENT</small>
+              </button>
+              <button class="opt-btn" data-keycaps="bauhaus" type="button">
+                <strong>Bauhaus Bone</strong>
+                <small>WARM CHALK + SLATE MODS</small>
+              </button>
+              <button class="opt-btn" data-keycaps="amber" type="button">
+                <strong>Industrial Amber</strong>
+                <small>CHARCOAL + GOLD ACCENT</small>
+              </button>
+              <button class="opt-btn" data-keycaps="dolch" type="button">
+                <strong>Dolch Heritage</strong>
+                <small>ASH GREY + TEAL ACCENT</small>
+              </button>
+            </div>
+          </div>
+
+          <!-- Weight & Plate -->
+          <div>
+            <div class="cfg-group-head">
+              <label>03 / Acoustic Weight</label>
+              <span id="lbl-weight">Sandblasted Brass</span>
+            </div>
+            <div class="option-grid" id="opt-weight">
+              <button class="opt-btn active" data-weight="brass" type="button">
+                <strong>Sandblasted Brass</strong>
+                <small>INCLUDED · +420 G</small>
+              </button>
+              <button class="opt-btn" data-weight="copper" type="button">
+                <strong>PVD Mirror Copper</strong>
+                <small>+$45 USD · +420 G</small>
+              </button>
+              <button class="opt-btn" data-weight="stainless" type="button">
+                <strong>Bead-Blasted Steel</strong>
+                <small>+$35 USD · +390 G</small>
+              </button>
+              <button class="opt-btn" data-weight="carbon" type="button">
+                <strong>Forged Carbon</strong>
+                <small>+$25 USD · -180 G</small>
+              </button>
+            </div>
+          </div>
+
+          <!-- Switch Pack -->
+          <div>
+            <div class="cfg-group-head">
+              <label>04 / Factory-Lubed Switches</label>
+              <span id="lbl-switch">Obsidian Linear (45g)</span>
+            </div>
+            <div class="option-grid" id="opt-switch">
+              <button class="opt-btn active" data-switch="linear" type="button">
+                <strong>Obsidian Linear</strong>
+                <small>45G · DEEP THOCK (INCLUDED)</small>
+              </button>
+              <button class="opt-btn" data-switch="tactile" type="button">
+                <strong>Amber Tactile</strong>
+                <small>58G · CRISP BUMP (+$15)</small>
+              </button>
+              <button class="opt-btn" data-switch="silent" type="button">
+                <strong>Whisper Linear</strong>
+                <small>42G · DAMPED SILENT (+$20)</small>
+              </button>
+              <button class="opt-btn" data-switch="barebone" type="button">
+                <strong>Barebones Kit</strong>
+                <small>NO SWITCHES (-$30)</small>
+              </button>
+            </div>
+          </div>
+
+          <div class="typing-hint">
+            <span>LIVE INPUT: PRESS ANY KEY ON YOUR KEYBOARD</span>
+            <span id="last-key-badge" style="color:var(--accent-warm);">READY</span>
+          </div>
+
+          <div class="cfg-summary">
+            <div class="cfg-price-row">
+              <div>
+                <div class="cfg-sku" id="cfg-sku">SKU // STR65-OBS-GRP-BRS-LIN</div>
+                <div style="font-size:12px;color:var(--text-muted);margin-top:3px;">Ships in CNC-foam flight case · Est. Q1 Dispatch</div>
+              </div>
+              <div class="cfg-price" id="cfg-price">$380</div>
+            </div>
+            <button id="btn-add-build" class="btn-accent" style="width:100%;" type="button">
+              Add Configuration to Reservation &rarr;
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div>
+          <div class="brand" style="margin-bottom:10px;">
+            <span>STRATA—65</span>
+          </div>
+          <p style="max-width:360px;color:var(--text-muted);">
+            Precision peripheral instrumentation. Machined, anodized, and acoustically validated in small numbered batches.
+          </p>
+        </div>
+        <div style="display:flex;gap:48px;flex-wrap:wrap;">
+          <div>
+            <div class="mono" style="font-size:10px;color:var(--text-dim);margin-bottom:10px;">ALLOCATION</div>
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <span>Batch 01: 500 Serialized Units</span>
+              <span>Lead Time: 6–8 Weeks</span>
+              <span>2-Year Hardware Warranty</span>
+            </div>
+          </div>
+          <div>
+            <div class="mono" style="font-size:10px;color:var(--text-dim);margin-bottom:10px;">ENGINEERED WITH</div>
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <span>Raw WebGL2 (GLSL ES 3.00)</span>
+              <span>Zero External Dependencies</span>
+              <span>Procedural Web Audio Synth</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>© 2026 STRATA INSTRUMENT LABS. ALL RIGHTS RESERVED.</span>
+        <span>SELF-CONTAINED SINGLE-FILE LAUNCH EXPERIENCE</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- RESERVATION DRAWER -->
+  <div id="drawer-backdrop" class="drawer-backdrop"></div>
+  <aside id="drawer" class="drawer" aria-label="Build Reservation Summary">
+    <div class="drawer-head">
+      <div>
+        <div class="mono" style="font-size:11px;color:var(--accent-warm);">BATCH 01 ALLOCATION</div>
+        <h3 style="font-size:18px;font-weight:600;margin-top:2px;">Your Build Reservation</h3>
+      </div>
+      <button id="btn-close-drawer" class="btn-ghost" type="button">CLOSE ✕</button>
+    </div>
+
+    <div id="drawer-body" class="drawer-body">
+      <div style="color:var(--text-muted);font-size:14px;padding:32px 0;text-align:center;">
+        No builds reserved yet. Configure a STRATA—65 below to lock your serialized slot.
+      </div>
+    </div>
+
+    <div class="drawer-foot">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;">
+        <span class="mono" style="font-size:11px;color:var(--text-muted);">ESTIMATED TOTAL</span>
+        <strong id="drawer-total" style="font-size:24px;">$0</strong>
+      </div>
+      <button id="btn-confirm-order" class="btn-accent" style="width:100%;" type="button">
+        Lock Batch 01 Slot &rarr;
+      </button>
+    </div>
+  </aside>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script>
+  (() => {
+    "use strict";
+
+    /* =========================================================================
+       1. PROCEDURAL WEB AUDIO ENGINE (ZERO EXTERNAL ASSETS)
+    ========================================================================= */
+    const AudioEngine = (() => {
+      let ctx = null;
+      let enabled = true;
+      let noiseBuffer = null;
+
+      function ensureCtx() {
+        if (!enabled) return null;
+        if (!ctx) {
+          const AC = window.AudioContext || window.webkitAudioContext;
+          if (!AC) return null;
+          ctx = new AC();
+          const len = Math.floor(ctx.sampleRate * 0.14);
+          noiseBuffer = ctx.createBuffer(1, len, ctx.sampleRate);
+          const data = noiseBuffer.getChannelData(0);
+          for (let i = 0; i < len; i++) {
+            data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.018));
+          }
+        }
+        if (ctx.state === "suspended") ctx.resume();
+        return ctx;
+      }
+
+      function playKeystroke(profile = "linear", pitchJitter = 1.0) {
+        const ac = ensureCtx();
+        if (!ac) return;
+        const now = ac.currentTime;
+
+        const osc = ac.createOscillator();
+        const bodyGain = ac.createGain();
+        const noise = ac.createBufferSource();
+        const filter = ac.createBiquadFilter();
+        const noiseGain = ac.createGain();
+
+        noise.buffer = noiseBuffer;
+
+        if (profile === "raw_ping") {
+          // Hollow, resonant tray-mount ping (Before state)
+          osc.type = "triangle";
+          osc.frequency.setValueAtTime(1620 * pitchJitter, now);
+          osc.frequency.exponentialRampToValueAtTime(420, now + 0.085);
+          bodyGain.gain.setValueAtTime(0.18, now);
+          bodyGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
+
+          filter.type = "bandpass";
+          filter.frequency.value = 2600 * pitchJitter;
+          filter.Q.value = 3.2;
+          noiseGain.gain.setValueAtTime(0.28, now);
+          noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.045);
+        } else if (profile === "tactile") {
+          // Crisp marbly tactile bump
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(460 * pitchJitter, now);
+          osc.frequency.exponentialRampToValueAtTime(125, now + 0.052);
+          bodyGain.gain.setValueAtTime(0.26, now);
+          bodyGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.065);
+
+          filter.type = "bandpass";
+          filter.frequency.value = 1450 * pitchJitter;
+          filter.Q.value = 1.8;
+          noiseGain.gain.setValueAtTime(0.24, now);
+          noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.025);
+        } else if (profile === "silent") {
+          // Muted whisper damped switch
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(190 * pitchJitter, now);
+          osc.frequency.exponentialRampToValueAtTime(75, now + 0.035);
+          bodyGain.gain.setValueAtTime(0.08, now);
+          bodyGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.04);
+
+          filter.type = "lowpass";
+          filter.frequency.value = 520;
+          noiseGain.gain.setValueAtTime(0.06, now);
+          noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.02);
+        } else {
+          // Deep 340Hz tuned STRATA thock (linear)
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(340 * pitchJitter, now);
+          osc.frequency.exponentialRampToValueAtTime(86, now + 0.058);
+          bodyGain.gain.setValueAtTime(0.32, now);
+          bodyGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.072);
+
+          filter.type = "lowpass";
+          filter.frequency.value = 880 * pitchJitter;
+          noiseGain.gain.setValueAtTime(0.18, now);
+          noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.028);
+        }
+
+        osc.connect(bodyGain).connect(ac.destination);
+        noise.connect(filter).connect(noiseGain).connect(ac.destination);
+
+        osc.start(now);
+        osc.stop(now + 0.13);
+        noise.start(now);
+        noise.stop(now + 0.12);
+      }
+
+      function playBurst(profile, count = 6, intervalMs = 88) {
+        for (let i = 0; i < count; i++) {
+          setTimeout(() => {
+            const jitter = 0.92 + Math.random() * 0.16;
+            playKeystroke(profile, jitter);
+          }, i * intervalMs);
+        }
+      }
+
+      return {
+        playKeystroke,
+        playBurst,
+        isEnabled: () => enabled,
+        toggle() {
+          enabled = !enabled;
+          return enabled;
+        }
+      };
+    })();
+
+    /* =========================================================================
+       2. WEBGL2 & MATRIX UTILITIES
+    ========================================================================= */
+    const GL = {
+      compile(gl, type, src) {
+        const s = gl.createShader(type);
+        gl.shaderSource(s, src.trimStart());
+        gl.compileShader(s);
+        if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+          console.error("WebGL2 Shader Error:", gl.getShaderInfoLog(s));
+          gl.deleteShader(s);
+          return null;
+        }
+        return s;
+      },
+
+      program(gl, vsSrc, fsSrc) {
+        const vs = this.compile(gl, gl.VERTEX_SHADER, vsSrc);
+        const fs = this.compile(gl, gl.FRAGMENT_SHADER, fsSrc);
+        if (!vs || !fs) return null;
+        const p = gl.createProgram();
+        gl.attachShader(p, vs);
+        gl.attachShader(p, fs);
+        gl.linkProgram(p);
+        if (!gl.getProgramParameter(p, gl.LINK_STATUS)) {
+          console.error("WebGL2 Link Error:", gl.getProgramInfoLog(p));
+          return null;
+        }
+        gl.deleteShader(vs);
+        gl.deleteShader(fs);
+        return p;
+      },
+
+      resize(canvas, maxDpr = 2) {
+        const dpr = Math.min(window.devicePixelRatio || 1, maxDpr);
+        const w = Math.max(1, Math.floor(canvas.clientWidth * dpr));
+        const h = Math.max(1, Math.floor(canvas.clientHeight * dpr));
+        if (canvas.width !== w || canvas.height !== h) {
+          canvas.width = w;
+          canvas.height = h;
+          return true;
+        }
+        return false;
+      },
+
+      observeVisibility(el, onChange) {
+        const io = new IntersectionObserver((entries) => {
+          onChange(entries[0].isIntersecting);
+        }, { rootMargin: "120px" });
+        io.observe(el);
+      }
+    };
+
+    const Mat4 = {
+      perspective(fovyRad, aspect, near, far) {
+        const f = 1.0 / Math.tan(fovyRad / 2);
+        const nf = 1 / (near - far);
+        return new Float32Array([
+          f / aspect, 0, 0, 0,
+          0, f, 0, 0,
+          0, 0, (far + near) * nf, -1,
+          0, 0, 2 * far * near * nf, 0
+        ]);
+      },
+      lookAt(eye, target, up) {
+        let zx = eye[0] - target[0], zy = eye[1] - target[1], zz = eye[2] - target[2];
+        let len = Math.hypot(zx, zy, zz) || 1;
+        zx /= len; zy /= len; zz /= len;
+        let xx = up[1] * zz - up[2] * zy;
+        let xy = up[2] * zx - up[0] * zz;
+        let xz = up[0] * zy - up[1] * zx;
+        len = Math.hypot(xx, xy, xz) || 1;
+        xx /= len; xy /= len; xz /= len;
+        let yx = zy * xz - zz * xy;
+        let yy = zz * xx - zx * xz;
+        let yz = zx * xy - zy * xx;
+        return new Float32Array([
+          xx, yx, zx, 0,
+          xy, yy, zy, 0,
+          xz, yz, zz, 0,
+          -(xx * eye[0] + xy * eye[1] + xz * eye[2]),
+          -(yx * eye[0] + yy * eye[1] + yz * eye[2]),
+          -(zx * eye[0] + zy * eye[1] + zz * eye[2]),
+          1
+        ]);
+      },
+      mul(a, b) {
+        const out = new Float32Array(16);
+        for (let i = 0; i < 4; i++) {
+          for (let j = 0; j < 4; j++) {
+            out[j * 4 + i] =
+              a[0 * 4 + i] * b[j * 4 + 0] +
+              a[1 * 4 + i] * b[j * 4 + 1] +
+              a[2 * 4 + i] * b[j * 4 + 2] +
+              a[3 * 4 + i] * b[j * 4 + 3];
+          }
+        }
+        return out;
+      }
+    };
+
+    /* =========================================================================
+       3. PROCEDURAL 65% KEYBOARD 3D SOLID + CAD WIREFRAME BUILDER
+    ========================================================================= */
+    const KeyboardBuilder = (() => {
+      // Exact 65% ANSI layout summing to 16.0u per row, with 0.5u CNC blocker in Row 4
+      const ROWS = [
+        [ // Row 0 (15 keys)
+          { w: 1, role: 2, code: "Escape" }, { w: 1, role: 0, code: "Digit1" }, { w: 1, role: 0, code: "Digit2" },
+          { w: 1, role: 0, code: "Digit3" }, { w: 1, role: 0, code: "Digit4" }, { w: 1, role: 0, code: "Digit5" },
+          { w: 1, role: 0, code: "Digit6" }, { w: 1, role: 0, code: "Digit7" }, { w: 1, role: 0, code: "Digit8" },
+          { w: 1, role: 0, code: "Digit9" }, { w: 1, role: 0, code: "Digit0" }, { w: 1, role: 0, code: "Minus" },
+          { w: 1, role: 0, code: "Equal" }, { w: 2, role: 1, code: "Backspace" }, { w: 1, role: 1, code: "Delete" }
+        ],
+        [ // Row 1 (15 keys)
+          { w: 1.5, role: 1, code: "Tab" }, { w: 1, role: 0, code: "KeyQ" }, { w: 1, role: 0, code: "KeyW" },
+          { w: 1, role: 0, code: "KeyE" }, { w: 1, role: 0, code: "KeyR" }, { w: 1, role: 0, code: "KeyT" },
+          { w: 1, role: 0, code: "KeyY" }, { w: 1, role: 0, code: "KeyU" }, { w: 1, role: 0, code: "KeyI" },
+          { w: 1, role: 0, code: "KeyO" }, { w: 1, role: 0, code: "KeyP" }, { w: 1, role: 0, code: "BracketLeft" },
+          { w: 1, role: 0, code: "BracketRight" }, { w: 1.5, role: 1, code: "Backslash" }, { w: 1, role: 1, code: "PageUp" }
+        ],
+        [ // Row 2 (14 keys)
+          { w: 1.75, role: 1, code: "CapsLock" }, { w: 1, role: 0, code: "KeyA" }, { w: 1, role: 0, code: "KeyS" },
+          { w: 1, role: 0, code: "KeyD" }, { w: 1, role: 0, code: "KeyF" }, { w: 1, role: 0, code: "KeyG" },
+          { w: 1, role: 0, code: "KeyH" }, { w: 1, role: 0, code: "KeyJ" }, { w: 1, role: 0, code: "KeyK" },
+          { w: 1, role: 0, code: "KeyL" }, { w: 1, role: 0, code: "Semicolon" }, { w: 1, role: 0, code: "Quote" },
+          { w: 2.25, role: 2, code: "Enter" }, { w: 1, role: 1, code: "PageDown" }
+        ],
+        [ // Row 3 (14 keys)
+          { w: 2.25, role: 1, code: "ShiftLeft" }, { w: 1, role: 0, code: "KeyZ" }, { w: 1, role: 0, code: "KeyX" },
+          { w: 1, role: 0, code: "KeyC" }, { w: 1, role: 0, code: "KeyV" }, { w: 1, role: 0, code: "KeyB" },
+          { w: 1, role: 0, code: "KeyN" }, { w: 1, role: 0, code: "KeyM" }, { w: 1, role: 0, code: "Comma" },
+          { w: 1, role: 0, code: "Period" }, { w: 1, role: 0, code: "Slash" }, { w: 1.75, role: 1, code: "ShiftRight" },
+          { w: 1, role: 1, code: "ArrowUp" }, { w: 1, role: 1, code: "End" }
+        ],
+        [ // Row 4 (9 keys + 0.5u CNC blocker)
+          { w: 1.25, role: 1, code: "ControlLeft" }, { w: 1.25, role: 1, code: "MetaLeft" }, { w: 1.25, role: 1, code: "AltLeft" },
+          { w: 6.25, role: 0, code: "Space" }, { w: 1.25, role: 1, code: "AltRight" }, { w: 1.25, role: 1, code: "ContextMenu" },
+          { w: 0.5, gap: true },
+          { w: 1, role: 1, code: "ArrowLeft" }, { w: 1, role: 1, code: "ArrowDown" }, { w: 1, role: 1, code: "ArrowRight" }
+        ]
+      ];
+
+      const keyCodeMap = new Map();
+
+      function buildMesh() {
+        const verts = [];
+        const wireVerts = [];
+
+        function pushTri(p0, p1, p2, part, layer, keyIdx) {
+          const ux = p1[0] - p0[0], uy = p1[1] - p0[1], uz = p1[2] - p0[2];
+          const vx = p2[0] - p0[0], vy = p2[1] - p0[1], vz = p2[2] - p0[2];
+          let nx = uy * vz - uz * vy;
+          let ny = uz * vx - ux * vz;
+          let nz = ux * vy - uy * vx;
+          const len = Math.hypot(nx, ny, nz) || 1;
+          nx /= len; ny /= len; nz /= len;
+          const pts = [p0, p1, p2];
+          for (const p of pts) {
+            verts.push(p[0], p[1], p[2], nx, ny, nz, part, layer, keyIdx);
+          }
+        }
+
+        function pushEdge(a, b, part, layer) {
+          wireVerts.push(a[0], a[1], a[2], part, layer, b[0], b[1], b[2], part, layer);
+        }
+
+        // Tapered hexahedron helper: bottom rect (x,z,w,d at y0) -> top rect (with inset & optional pitch tilt)
+        function addPrism(cx, y0, y1, cz, bw, bd, tw, td, part, layer, keyIdx = -1, topPitch = 0, addWire = true) {
+          const hbw = bw * 0.5, hbd = bd * 0.5;
+          const htw = tw * 0.5, htd = td * 0.5;
+          const b0 = [cx - hbw, y0, cz + hbd];
+          const b1 = [cx + hbw, y0, cz + hbd];
+          const b2 = [cx + hbw, y0, cz - hbd];
+          const b3 = [cx - hbw, y0, cz - hbd];
+
+          const dyF = Math.sin(topPitch) * htd;
+          const t0 = [cx - htw, y1 - dyF, cz + htd];
+          const t1 = [cx + htw, y1 - dyF, cz + htd];
+          const t2 = [cx + htw, y1 + dyF, cz - htd];
+          const t3 = [cx - htw, y1 + dyF, cz - htd];
+
+          // Top
+          pushTri(t0, t1, t2, part, layer, keyIdx);
+          pushTri(t0, t2, t3, part, layer, keyIdx);
+          // Bottom
+          pushTri(b3, b2, b1, part, layer, keyIdx);
+          pushTri(b3, b1, b0, part, layer, keyIdx);
+          // Front (+Z)
+          pushTri(b0, b1, t1, part, layer, keyIdx);
+          pushTri(b0, t1, t0, part, layer, keyIdx);
+          // Back (-Z)
+          pushTri(b2, b3, t3, part, layer, keyIdx);
+          pushTri(b2, t3, t2, part, layer, keyIdx);
+          // Right (+X)
+          pushTri(b1, b2, t2, part, layer, keyIdx);
+          pushTri(b1, t2, t1, part, layer, keyIdx);
+          // Left (-X)
+          pushTri(b3, b0, t0, part, layer, keyIdx);
+          pushTri(b3, t0, t3, part, layer, keyIdx);
+
+          if (addWire) {
+            pushEdge(b0, b1, part, layer); pushEdge(b1, b2, part, layer);
+            pushEdge(b2, b3, part, layer); pushEdge(b3, b0, part, layer);
+            pushEdge(t0, t1, part, layer); pushEdge(t1, t2, part, layer);
+            pushEdge(t2, t3, part, layer); pushEdge(t3, t0, part, layer);
+            pushEdge(b0, t0, part, layer); pushEdge(b1, t1, part, layer);
+            pushEdge(b2, t2, part, layer); pushEdge(b3, t3, part, layer);
+          }
+        }
+
+        // Dimensions in keyboard units (1u = 1.0)
+        // Layout spans X: [-8, +8], Z: [-2.5, +2.5]
+        const outerW = 16.86, outerD = 5.92;
+        const innerW = 16.06, innerD = 5.06;
+
+        // LAYER 0: Bottom Chassis + Brass Acoustic Weight
+        // Lower housing base with sculpted side chamfer
+        addPrism(0, -0.58, -0.14, 0, outerW - 0.34, outerD - 0.34, outerW, outerD, 1.0, 0.0);
+        // Sculpted bottom foot bar
+        addPrism(0, -0.66, -0.58, -1.8, 14.4, 0.72, 14.6, 0.80, 1.0, 0.0);
+        addPrism(0, -0.66, -0.58, 1.85, 14.4, 0.56, 14.6, 0.62, 1.0, 0.0);
+
+        // Rear / Underside Brass Weight Bar (visible from rear, side & underside + subtle rear lip)
+        addPrism(0, -0.68, -0.30, -1.25, 11.4, 1.65, 11.6, 1.75, 2.0, 0.0);
+        // Rear accent badge strip on top rear lip
+        addPrism(5.9, 0.34, 0.42, -2.74, 2.8, 0.16, 2.74, 0.14, 2.0, 3.0);
+
+        // LAYER 1: Stepped Acoustic Poron Core + Silicone Gasket Socks
+        addPrism(0, -0.13, 0.01, 0, 15.85, 4.92, 15.85, 4.92, 4.0, 1.0);
+        // 8 Silicone Leaf-Spring Gasket Socks along perimeter
+        const sockXs = [-6.2, -2.1, 2.1, 6.2];
+        for (const sx of sockXs) {
+          addPrism(sx, 0.02, 0.18, -2.56, 0.88, 0.18, 0.88, 0.18, 4.0, 1.0);
+          addPrism(sx, 0.02, 0.18, 2.56, 0.88, 0.18, 0.88, 0.18, 4.0, 1.0);
+        }
+
+        // LAYER 2: 1.2mm Flex-Cut PCB (with SMD IC & USB-C port detail)
+        addPrism(0, 0.02, 0.10, 0, 15.9, 4.96, 15.9, 4.96, 5.0, 2.0);
+        // USB-C Daughterboard Housing on rear
+        addPrism(-4.6, 0.0, 0.18, -2.68, 0.9, 0.45, 0.9, 0.45, 2.0, 2.0);
+        // ARM Cortex-M4 MCU chip on PCB
+        addPrism(-1.2, 0.10, 0.15, -0.4, 0.68, 0.68, 0.65, 0.65, 2.0, 2.0, -1, 0, false);
+
+        // LAYER 3: Switch Plate
+        addPrism(0, 0.14, 0.22, 0, 15.96, 5.0, 15.96, 5.0, 3.0, 3.0);
+
+        // LAYER 3/4: Top Aluminum Bezel Frame (4 separate frame rails framing the 16x5 key well)
+        const wallH0 = -0.14, wallH1 = 0.41;
+        const topZ = -2.53 - (outerD - innerD) * 0.25;
+        const botZ = 2.53 + (outerD - innerD) * 0.25;
+        const sideD = (outerD - innerD) * 0.5;
+        const sideW = (outerW - innerW) * 0.5;
+        // Back wall
+        addPrism(0, wallH0, wallH1, -innerD * 0.5 - sideD * 0.5, outerW, sideD, outerW - 0.12, sideD - 0.08, 0.0, 3.0);
+        // Front wall
+        addPrism(0, wallH0, wallH1, innerD * 0.5 + sideD * 0.5, outerW, sideD, outerW - 0.12, sideD - 0.08, 0.0, 3.0);
+        // Left wall
+        addPrism(-innerW * 0.5 - sideW * 0.5, wallH0, wallH1, 0, sideW, innerD, sideW - 0.08, innerD, 0.0, 3.0);
+        // Right wall
+        addPrism(innerW * 0.5 + sideW * 0.5, wallH0, wallH1, 0, sideW, innerD, sideW - 0.08, innerD, 0.0, 3.0);
+        // 0.5u Bespoke CNC Blocker between Fn and Left Arrow (Row 4)
+        addPrism(4.75, 0.18, 0.41, 2.0, 0.48, 0.96, 0.44, 0.92, 0.0, 3.0);
+
+        // LAYER 4: 67 Sculpted Keycaps (Cherry profile taper & row angle)
+        let keyIdx = 0;
+        const rowPitches = [-0.09, -0.05, 0.01, 0.06, 0.04];
+        const rowHeights = [0.68, 0.62, 0.59, 0.61, 0.62];
+
+        for (let r = 0; r < ROWS.length; r++) {
+          let cursorX = -8.0;
+          const cz = -2.0 + r * 1.0;
+          for (const k of ROWS[r]) {
+            const cx = cursorX + k.w * 0.5;
+            cursorX += k.w;
+            if (k.gap) continue;
+
+            if (k.code) keyCodeMap.set(k.code, keyIdx);
+
+            const bw = k.w - 0.08;
+            const bd = 0.91;
+            const tw = bw - 0.22;
+            const td = bd - 0.22;
+            const part = 10.0 + k.role;
+            // Subtle keycap base + stem visual
+            addPrism(cx, 0.26, rowHeights[r], cz, bw, bd, tw, td, part, 4.0, keyIdx, rowPitches[r], true);
+            keyIdx++;
+          }
+        }
+
+        // Ground shadow plane (part = -1)
+        const sw = 12.0, sd = 6.0;
+        pushTri([-sw, -0.70, sd], [sw, -0.70, sd], [sw, -0.70, -sd], -1.0, -1.0, -1.0);
+        pushTri([-sw, -0.70, sd], [sw, -0.70, -sd], [-sw, -0.70, -sd], -1.0, -1.0, -1.0);
+
+        // Outer CAD bounding box cage + corner crosshair ticks for Wireframe mode (part = 99)
+        const bx = 8.7, by0 = -0.72, by1 = 0.78, bz = 3.2;
+        const c = [
+          [-bx, by0, bz], [bx, by0, bz], [bx, by0, -bz], [-bx, by0, -bz],
+          [-bx, by1, bz], [bx, by1, bz], [bx, by1, -bz], [-bx, by1, -bz]
+        ];
+        pushEdge(c[0], c[1], 99, 0); pushEdge(c[1], c[2], 99, 0);
+        pushEdge(c[2], c[3], 99, 0); pushEdge(c[3], c[0], 99, 0);
+        pushEdge(c[4], c[5], 99, 0); pushEdge(c[5], c[6], 99, 0);
+        pushEdge(c[6], c[7], 99, 0); pushEdge(c[7], c[4], 99, 0);
+        pushEdge(c[0], c[4], 99, 0); pushEdge(c[1], c[5], 99, 0);
+        pushEdge(c[2], c[6], 99, 0); pushEdge(c[3], c[7], 99, 0);
+        // Origin axis datum ticks
+        pushEdge([-9.4, 0, 0], [-8.9, 0, 0], 99, 0);
+        pushEdge([8.9, 0, 0], [9.4, 0, 0], 99, 0);
+        pushEdge([0, 0, -3.7], [0, 0, -3.3], 99, 0);
+        pushEdge([0, 0, 3.3], [0, 0, 3.7], 99, 0);
+
+        return {
+          solidData: new Float32Array(verts),
+          solidCount: verts.length / 9,
+          wireData: new Float32Array(wireVerts),
+          wireCount: wireVerts.length / 5,
+          keyCount: keyIdx,
+          keyCodeMap
+        };
+      }
+
+      return { buildMesh };
+    })();
+
+    const KB_MESH = KeyboardBuilder.buildMesh();
+
+    /* =========================================================================
+       4. HERO WEBGL2 TOPOGRAPHIC SHADER
+    ========================================================================= */
+    (() => {
+      const canvas = document.getElementById("hero-canvas");
+      const gl = canvas.getContext("webgl2", { alpha: false, antialias: true, powerPreference: "high-performance" });
+      if (!gl) return;
+
+      const vs = `#version 300 es
+        layout(location = 0) in vec2 a_pos;
+        out vec2 v_uv;
+        void main() {
+          v_uv = a_pos * 0.5 + 0.5;
+          gl_Position = vec4(a_pos, 0.0, 1.0);
+        }
+      `;
+
+      const fs = `#version 300 es
+        precision highp float;
+        in vec2 v_uv;
+        out vec4 fragColor;
+
+        uniform vec2 u_res;
+        uniform float u_time;
+        uniform vec2 u_mouse;
+        uniform float u_scroll;
+
+        float hash(vec2 p) {
+          p = fract(p * vec2(123.34, 456.21));
+          p += dot(p, p + 45.32);
+          return fract(p.x * p.y);
+        }
+
+        float noise(vec2 p) {
+          vec2 i = floor(p);
+          vec2 f = fract(p);
+          vec2 u = f * f * (3.0 - 2.0 * f);
+          float a = hash(i);
+          float b = hash(i + vec2(1.0, 0.0));
+          float c = hash(i + vec2(0.0, 1.0));
+          float d = hash(i + vec2(1.0, 1.0));
+          return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
+        }
+
+        float fbm(vec2 p) {
+          float v = 0.0;
+          float a = 0.5;
+          mat2 rot = mat2(0.80, -0.60, 0.60, 0.80);
+          for (int i = 0; i < 5; i++) {
+            v += a * noise(p);
+            p = rot * p * 2.03 + vec2(17.1, 31.7);
+            a *= 0.5;
+          }
+          return v;
+        }
+
+        void main() {
+          vec2 aspect = vec2(u_res.x / max(u_res.y, 1.0), 1.0);
+          vec2 p = (v_uv - 0.5) * aspect;
+          vec2 m = (u_mouse - 0.5) * aspect;
+
+          // Subtle topographic drift + scroll parallax
+          vec2 q = p * 2.35 + vec2(u_time * 0.032, -u_time * 0.022 + u_scroll * 0.7);
+          float warp = fbm(q * 0.9 + vec2(u_time * 0.015));
+          float h = fbm(q + warp * 0.75);
+
+          // Interactive pointer magnetic ridge + concentric ripple
+          float distM = length(p - m);
+          float ripple = sin(distM * 26.0 - u_time * 2.8) * 0.014 * exp(-distM * 3.8);
+          float dome = 0.24 * exp(-distM * distM * 8.5);
+          h += dome + ripple;
+
+          // Crisp anti-aliased topographic isolines using screen-space derivatives
+          float levels = 24.0;
+          float v = h * levels;
+          float f = abs(fract(v - 0.5) - 0.5) / max(fwidth(v), 0.0001);
+          float line = 1.0 - smoothstep(0.0, 1.35, f);
+
+          // Major index contour every 5th line
+          float vMajor = h * (levels / 5.0);
+          float fMajor = abs(fract(vMajor - 0.5) - 0.5) / max(fwidth(vMajor), 0.0001);
+          float majorLine = 1.0 - smoothstep(0.0, 1.7, fMajor);
+
+          // Palette: deep obsidian milled valley -> copper-amber elevation ridges
+          vec3 colBg = vec3(0.035, 0.036, 0.043);
+          vec3 colMid = vec3(0.075, 0.078, 0.092);
+          vec3 colLineDim = vec3(0.18, 0.20, 0.24);
+          vec3 colCopper = vec3(1.0, 0.30, 0.0);
+          vec3 colGold = vec3(1.0, 0.64, 0.26);
+
+          float ridgeMask = smoothstep(0.46, 0.88, h);
+          vec3 base = mix(colBg, colMid, smoothstep(0.2, 0.8, h));
+
+          vec3 lineCol = mix(colLineDim, colCopper, ridgeMask);
+          lineCol = mix(lineCol, colGold, majorLine * ridgeMask * 0.85);
+
+          float intensity = line * (0.28 + 0.72 * ridgeMask) + majorLine * (0.45 + 0.55 * ridgeMask);
+          vec3 col = mix(base, lineCol, clamp(intensity, 0.0, 1.0));
+
+          // Subtle coordinate tick grid
+          vec2 gridUv = fract(p * 12.0);
+          float tick = (step(0.985, gridUv.x) * step(0.985, gridUv.y)) * 0.18;
+          col += vec3(0.45, 0.48, 0.55) * tick;
+
+          // Soft ambient glow near pointer
+          col += colCopper * exp(-distM * 4.5) * 0.09;
+
+          fragColor = vec4(col, 1.0);
+        }
+      `;
+
+      const prog = GL.program(gl, vs, fs);
+      const quad = new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]);
+      const vao = gl.createVertexArray();
+      gl.bindVertexArray(vao);
+      const vbo = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+      gl.bufferData(gl.ARRAY_BUFFER, quad, gl.STATIC_DRAW);
+      gl.enableVertexAttribArray(0);
+      gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+
+      const uRes = gl.getUniformLocation(prog, "u_res");
+      const uTime = gl.getUniformLocation(prog, "u_time");
+      const uMouse = gl.getUniformLocation(prog, "u_mouse");
+      const uScroll = gl.getUniformLocation(prog, "u_scroll");
+
+      let mouse = { x: 0.62, y: 0.48, tx: 0.62, ty: 0.48 };
+      let visible = true;
+      const teleCoord = document.getElementById("tele-coord");
+      const teleElev = document.getElementById("tele-elev");
+
+      window.addEventListener("pointermove", (e) => {
+        const rect = canvas.getBoundingClientRect();
+        if (e.clientY <= rect.bottom) {
+          mouse.tx = Math.min(1, Math.max(0, (e.clientX - rect.left) / Math.max(rect.width, 1)));
+          mouse.ty = 1.0 - Math.min(1, Math.max(0, (e.clientY - rect.top) / Math.max(rect.height, 1)));
+          if (teleCoord) teleCoord.textContent = `${mouse.tx.toFixed(3)}, ${mouse.ty.toFixed(3)}`;
+          if (teleElev) {
+            const elev = 10.2 + Math.sin(mouse.tx * 5.2) * 3.1 + Math.cos(mouse.ty * 4.7) * 2.4;
+            teleElev.textContent = `+${elev.toFixed(2)} MM`;
+          }
+        }
+      }, { passive: true });
+
+      GL.observeVisibility(canvas, (v) => { visible = v; });
+
+      function loop(now) {
+        requestAnimationFrame(loop);
+        if (!visible) return;
+        GL.resize(canvas, 1.75);
+        gl.viewport(0, 0, canvas.width, canvas.height);
+
+        mouse.x += (mouse.tx - mouse.x) * 0.08;
+        mouse.y += (mouse.ty - mouse.y) * 0.08;
+
+        gl.useProgram(prog);
+        gl.bindVertexArray(vao);
+        gl.uniform2f(uRes, canvas.width, canvas.height);
+        gl.uniform1f(uTime, now * 0.001);
+        gl.uniform2f(uMouse, mouse.x, mouse.y);
+        gl.uniform1f(uScroll, window.scrollY / Math.max(window.innerHeight, 1));
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      }
+      requestAnimationFrame(loop);
+    })();
+
+    /* =========================================================================
+       5. SHARED 3D PBR-STYLE KEYBOARD SHADER FACTORY (USED BY SCROLLY + CONFIG)
+    ========================================================================= */
+    function createSolidKeyboardRenderer(canvas) {
+      const gl = canvas.getContext("webgl2", { antialias: true, alpha: true, powerPreference: "high-performance" });
+      if (!gl) return null;
+
+      const vs = `#version 300 es
+        layout(location = 0) in vec3 a_pos;
+        layout(location = 1) in vec3 a_norm;
+        layout(location = 2) in float a_part;
+        layout(location = 3) in float a_layer;
+        layout(location = 4) in float a_keyIdx;
+
+        uniform mat4 u_vp;
+        uniform float u_explode;
+        uniform float u_keyTravel[67];
+
+        out vec3 v_world;
+        out vec3 v_norm;
+        out float v_part;
+        out float v_layer;
+
+        void main() {
+          vec3 pos = a_pos;
+
+          // Exploded Y offsets per mechanical layer (0: Bottom stays anchored above ground plane, 1..4 lift upward)
+          float layerOffset = 0.0;
+          if (a_layer >= 0.0) {
+            layerOffset = a_layer * u_explode * 1.32;
+          }
+          pos.y += layerOffset;
+
+          // Live keystroke actuation (-0.19 units travel), guarded against non-key vertices (a_keyIdx = -1)
+          if (a_keyIdx >= -0.25) {
+            int kIdx = int(a_keyIdx + 0.5);
+            if (kIdx >= 0 && kIdx < 67) {
+              pos.y -= u_keyTravel[kIdx] * 0.19;
+            }
+          }
+
+          v_world = pos;
+          v_norm = a_norm;
+          v_part = a_part;
+          v_layer = a_layer;
+          gl_Position = u_vp * vec4(pos, 1.0);
+        }
+      `;
+
+      const fs = `#version 300 es
+        precision highp float;
+        in vec3 v_world;
+        in vec3 v_norm;
+        in float v_part;
+        in float v_layer;
+
+        out vec4 fragColor;
+
+        uniform vec3 u_camPos;
+        uniform vec3 u_chassisCol;
+        uniform vec3 u_weightCol;
+        uniform float u_weightMetallic;
+        uniform vec3 u_alphaCol;
+        uniform vec3 u_modCol;
+        uniform vec3 u_accentCol;
+        uniform float u_focusLayer; // -1 = all lit, 0..4 = highlight specific layer
+
+        void main() {
+          // Ground shadow catcher
+          if (v_part < -0.5) {
+            float d = length(v_world.xz * vec2(0.105, 0.24));
+            float shadow = smoothstep(1.1, 0.22, d) * 0.55;
+            fragColor = vec4(0.02, 0.02, 0.03, shadow);
+            return;
+          }
+
+          vec3 N = normalize(v_norm);
+          vec3 V = normalize(u_camPos - v_world);
+
+          // Material classification
+          vec3 albedo = u_chassisCol;
+          float rough = 0.38;
+          float metallic = 0.65;
+          float emissive = 0.0;
+
+          if (abs(v_part - 2.0) < 0.25) {
+            // Brass / Copper / Carbon Weight
+            albedo = u_weightCol;
+            metallic = u_weightMetallic;
+            rough = u_weightMetallic > 0.8 ? 0.18 : 0.45;
+          } else if (abs(v_part - 3.0) < 0.25) {
+            // Switch Plate
+            albedo = mix(u_chassisCol, vec3(0.75, 0.77, 0.80), 0.35);
+            rough = 0.28;
+            metallic = 0.85;
+          } else if (abs(v_part - 4.0) < 0.25) {
+            // Silicone Gasket + Poron Acoustic Core
+            albedo = vec3(0.14, 0.145, 0.16);
+            rough = 0.85;
+            metallic = 0.04;
+          } else if (abs(v_part - 5.0) < 0.25) {
+            // Flex-cut PCB with procedural copper trace lines
+            albedo = vec3(0.055, 0.06, 0.075);
+            float traceX = step(0.92, fract(v_world.x * 3.5));
+            float traceZ = step(0.92, fract(v_world.z * 3.5));
+            float trace = max(traceX, traceZ) * 0.35;
+            albedo = mix(albedo, vec3(0.85, 0.48, 0.18), trace);
+            rough = 0.32;
+            metallic = 0.4;
+          } else if (v_part >= 9.5) {
+            // Keycaps: 10 = alpha, 11 = mod, 12 = accent
+            rough = 0.62;
+            metallic = 0.04;
+            if (v_part > 11.5) {
+              albedo = u_accentCol;
+            } else if (v_part > 10.5) {
+              albedo = u_modCol;
+            } else {
+              albedo = u_alphaCol;
+            }
+          }
+
+          // Studio 3-point lighting
+          vec3 L1 = normalize(vec3(6.5, 11.0, 7.5));
+          vec3 L2 = normalize(vec3(-8.0, 4.5, -6.0));
+          vec3 L3 = normalize(vec3(0.0, -5.0, 4.0));
+
+          float diff1 = max(dot(N, L1), 0.0);
+          float diff2 = max(dot(N, L2), 0.0);
+          float diff3 = max(dot(N, L3), 0.0);
+
+          vec3 H1 = normalize(L1 + V);
+          vec3 H2 = normalize(L2 + V);
+          float specPow = mix(140.0, 14.0, rough);
+          float spec1 = pow(max(dot(N, H1), 0.0), specPow) * (1.0 - rough * 0.7);
+          float spec2 = pow(max(dot(N, H2), 0.0), specPow * 0.6) * 0.45;
+
+          // Procedural studio softbox environment reflection
+          vec3 R = reflect(-V, N);
+          float sky = smoothstep(-0.2, 0.85, R.y);
+          vec3 env = mix(vec3(0.04, 0.045, 0.055), vec3(0.32, 0.35, 0.42), sky);
+          float fresnel = pow(1.0 - max(dot(N, V), 0.0), 4.0);
+
+          vec3 col = albedo * (0.18 + diff1 * 0.92 + diff2 * 0.34 + diff3 * 0.14);
+          vec3 specTint = mix(vec3(1.0), albedo, metallic);
+          col += specTint * (spec1 * vec3(1.0, 0.97, 0.93) + spec2 * vec3(0.55, 0.68, 0.92));
+          col = mix(col, env * mix(vec3(1.0), albedo, metallic), fresnel * mix(0.25, 0.65, metallic));
+
+          // Scrollytelling subsystem focus highlight/dimming (-1 = full studio lit, 0..3 = stage focus)
+          if (u_focusLayer >= -0.2) {
+            bool activePart = false;
+            if (u_focusLayer < 0.5) {
+              activePart = (v_part < 2.5); // Stage 0: Chassis & Brass Weight
+            } else if (u_focusLayer < 1.5) {
+              activePart = (abs(v_part - 3.0) < 0.3 || abs(v_part - 4.0) < 0.3); // Stage 1: Gasket & Plate
+            } else if (u_focusLayer < 2.5) {
+              activePart = (abs(v_part - 4.0) < 0.3 || abs(v_part - 2.0) < 0.3); // Stage 2: Acoustic Core & Weight
+            } else {
+              activePart = (abs(v_part - 5.0) < 0.3); // Stage 3: Flex-Cut PCB
+            }
+            if (activePart) {
+              col += vec3(1.0, 0.30, 0.0) * fresnel * 0.45;
+            } else {
+              float luma = dot(col, vec3(0.299, 0.587, 0.114));
+              col = mix(vec3(luma) * 0.32, col, 0.25);
+            }
+          }
+
+          // Subtle bevel ambient occlusion near bottom seam
+          float ao = smoothstep(-0.75, 0.25, v_world.y);
+          col *= (0.72 + 0.28 * ao);
+
+          // Gamma
+          col = pow(max(col, vec3(0.0)), vec3(1.0 / 2.15));
+          fragColor = vec4(col, 1.0);
+        }
+      `;
+
+      const prog = GL.program(gl, vs, fs);
+      const vao = gl.createVertexArray();
+      gl.bindVertexArray(vao);
+      const vbo = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+      gl.bufferData(gl.ARRAY_BUFFER, KB_MESH.solidData, gl.STATIC_DRAW);
+
+      const stride = 9 * 4;
+      gl.enableVertexAttribArray(0);
+      gl.vertexAttribPointer(0, 3, gl.FLOAT, false, stride, 0);
+      gl.enableVertexAttribArray(1);
+      gl.vertexAttribPointer(1, 3, gl.FLOAT, false, stride, 3 * 4);
+      gl.enableVertexAttribArray(2);
+      gl.vertexAttribPointer(2, 1, gl.FLOAT, false, stride, 6 * 4);
+      gl.enableVertexAttribArray(3);
+      gl.vertexAttribPointer(3, 1, gl.FLOAT, false, stride, 7 * 4);
+      gl.enableVertexAttribArray(4);
+      gl.vertexAttribPointer(4, 1, gl.FLOAT, false, stride, 8 * 4);
+
+      const loc = {
+        vp: gl.getUniformLocation(prog, "u_vp"),
+        explode: gl.getUniformLocation(prog, "u_explode"),
+        keyTravel: gl.getUniformLocation(prog, "u_keyTravel"),
+        camPos: gl.getUniformLocation(prog, "u_camPos"),
+        chassisCol: gl.getUniformLocation(prog, "u_chassisCol"),
+        weightCol: gl.getUniformLocation(prog, "u_weightCol"),
+        weightMetallic: gl.getUniformLocation(prog, "u_weightMetallic"),
+        alphaCol: gl.getUniformLocation(prog, "u_alphaCol"),
+        modCol: gl.getUniformLocation(prog, "u_modCol"),
+        accentCol: gl.getUniformLocation(prog, "u_accentCol"),
+        focusLayer: gl.getUniformLocation(prog, "u_focusLayer")
+      };
+
+      return {
+        render(state) {
+          GL.resize(canvas, 2);
+          gl.viewport(0, 0, canvas.width, canvas.height);
+          gl.clearColor(0, 0, 0, 0);
+          gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+          gl.enable(gl.DEPTH_TEST);
+          gl.enable(gl.BLEND);
+          gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+          const aspect = canvas.width / Math.max(canvas.height, 1);
+          const proj = Mat4.perspective(0.62, aspect, 0.5, 100.0);
+          const camX = Math.sin(state.yaw) * Math.cos(state.pitch) * state.dist;
+          const camY = Math.sin(state.pitch) * state.dist + (state.camYOffset || 0);
+          const camZ = Math.cos(state.yaw) * Math.cos(state.pitch) * state.dist;
+          const view = Mat4.lookAt([camX, camY, camZ], [0, state.targetY || 0, 0], [0, 1, 0]);
+          const vp = Mat4.mul(proj, view);
+
+          gl.useProgram(prog);
+          gl.bindVertexArray(vao);
+          gl.uniformMatrix4fv(loc.vp, false, vp);
+          gl.uniform1f(loc.explode, state.explode || 0);
+          gl.uniform1fv(loc.keyTravel, state.keyTravel);
+          gl.uniform3f(loc.camPos, camX, camY, camZ);
+          gl.uniform3fv(loc.chassisCol, state.chassisCol);
+          gl.uniform3fv(loc.weightCol, state.weightCol);
+          gl.uniform1f(loc.weightMetallic, state.weightMetallic);
+          gl.uniform3fv(loc.alphaCol, state.alphaCol);
+          gl.uniform3fv(loc.modCol, state.modCol);
+          gl.uniform3fv(loc.accentCol, state.accentCol);
+          gl.uniform1f(loc.focusLayer, state.focusLayer ?? -1.0);
+
+          gl.drawArrays(gl.TRIANGLES, 0, KB_MESH.solidCount);
+        }
+      };
+    }
+
+    /* =========================================================================
+       6. PINNED 4-STAGE SCROLLYTELLING CONTROLLER
+    ========================================================================= */
+    (() => {
+      const section = document.getElementById("architecture");
+      const canvas = document.getElementById("explode-canvas");
+      const progressFill = document.getElementById("scrolly-progress");
+      const hudStage = document.getElementById("explode-hud-stage");
+      const hudSep = document.getElementById("explode-hud-sep");
+      const pills = Array.from(document.querySelectorAll(".stage-pill[data-stage]"));
+      const cards = Array.from(document.querySelectorAll(".stage-item"));
+
+      const renderer = createSolidKeyboardRenderer(canvas);
+      if (!renderer) return;
+
+      const stageNames = [
+        "FOCUS: MONOBLOCK CHASSIS",
+        "FOCUS: LEAF-SPRING GASKET",
+        "FOCUS: ACOUSTIC RESONANCE",
+        "FOCUS: 8 KHZ FLEX-CUT PCB"
+      ];
+      // Maps stage 0..3 directly to shader subsystem focus modes
+      const stageLayerMap = [0.0, 1.0, 2.0, 3.0];
+
+      let visible = false;
+      let activeStage = 0;
+      let targetExplode = 0.0;
+      let curExplode = 0.0;
+      let orbitYaw = -0.45, orbitPitch = 0.46;
+      let targetYaw = -0.45, targetPitch = 0.46;
+      let dragging = false, lastX = 0, lastY = 0;
+      const zeroKeys = new Float32Array(67);
+
+      function setStage(idx) {
+        if (idx === activeStage) return;
+        activeStage = idx;
+        pills.forEach((p, i) => p.classList.toggle("active", i === idx));
+        cards.forEach((c, i) => c.classList.toggle("active", i === idx));
+        hudStage.textContent = stageNames[idx];
+      }
+
+      pills.forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const idx = Number(btn.dataset.stage);
+          const rect = section.getBoundingClientRect();
+          const topAbs = window.scrollY + rect.top;
+          const scrollable = Math.max(1, section.offsetHeight - window.innerHeight);
+          const targetScroll = topAbs + (idx / 3.4) * scrollable + 10;
+          window.scrollTo({ top: targetScroll, behavior: "smooth" });
+        });
+      });
+
+      canvas.addEventListener("pointerdown", (e) => {
+        dragging = true;
+        lastX = e.clientX;
+        lastY = e.clientY;
+        canvas.setPointerCapture(e.pointerId);
+      });
+      canvas.addEventListener("pointermove", (e) => {
+        if (!dragging) return;
+        targetYaw -= (e.clientX - lastX) * 0.008;
+        targetPitch = Math.max(0.08, Math.min(1.25, targetPitch + (e.clientY - lastY) * 0.006));
+        lastX = e.clientX;
+        lastY = e.clientY;
+      });
+      canvas.addEventListener("pointerup", () => { dragging = false; });
+
+      GL.observeVisibility(section, (v) => { visible = v; });
+
+      const state = {
+        yaw: orbitYaw,
+        pitch: orbitPitch,
+        dist: 17.5,
+        explode: 0,
+        keyTravel: zeroKeys,
+        chassisCol: [0.16, 0.17, 0.20],
+        weightCol: [0.80, 0.62, 0.34],
+        weightMetallic: 0.92,
+        alphaCol: [0.18, 0.19, 0.22],
+        modCol: [0.11, 0.12, 0.14],
+        accentCol: [1.0, 0.30, 0.0],
+        focusLayer: 3.0
+      };
+
+      function updateScroll() {
+        const rect = section.getBoundingClientRect();
+        const scrollable = Math.max(1, section.offsetHeight - window.innerHeight);
+        const progress = Math.min(1, Math.max(0, -rect.top / scrollable));
+        progressFill.style.width = `${(progress * 100).toFixed(1)}%`;
+
+        const stageIdx = Math.min(3, Math.floor(progress * 3.999));
+        setStage(stageIdx);
+
+        // Smoothly explode starting after stage 0, peak at stage 2-3
+        targetExplode = Math.min(1.0, Math.max(0.0, progress * 1.25));
+        if (!dragging) {
+          targetYaw = -0.45 + progress * 0.95;
+          targetPitch = 0.44 + Math.sin(progress * Math.PI) * 0.14;
+        }
+      }
+
+      window.addEventListener("scroll", updateScroll, { passive: true });
+      updateScroll();
+
+      function loop() {
+        requestAnimationFrame(loop);
+        if (!visible) return;
+
+        curExplode += (targetExplode - curExplode) * 0.1;
+        orbitYaw += (targetYaw - orbitYaw) * 0.08;
+        orbitPitch += (targetPitch - orbitPitch) * 0.08;
+
+        state.yaw = orbitYaw;
+        state.pitch = orbitPitch;
+        state.explode = curExplode;
+        state.targetY = curExplode * 2.1;
+        state.camYOffset = curExplode * 2.1;
+        state.dist = 17.5 + curExplode * 3.2;
+        state.focusLayer = stageLayerMap[activeStage];
+        hudSep.textContent = `SEPARATION: ${Math.round(curExplode * 100)}%`;
+
+        renderer.render(state);
+      }
+      requestAnimationFrame(loop);
+    })();
+
+    /* =========================================================================
+       7. BEFORE / AFTER SPLIT SLIDER (HIGH-DPI ARCHITECTURAL CANVAS)
+    ========================================================================= */
+    (() => {
+      const frame = document.getElementById("split-frame");
+      const canvas = document.getElementById("split-canvas");
+      const divider = document.getElementById("split-divider");
+      const handle = document.getElementById("split-handle");
+      const snapBtns = Array.from(document.querySelectorAll(".split-snap"));
+      const btnBefore = document.getElementById("btn-play-before");
+      const btnAfter = document.getElementById("btn-play-after");
+
+      const ctx = canvas.getContext("2d");
+      let splitPct = 50;
+      let targetPct = 50;
+      let dragging = false;
+      let animTime = 0;
+      let visible = false;
+
+      GL.observeVisibility(frame, (v) => { visible = v; });
+
+      function setSplit(pct) {
+        targetPct = Math.min(94, Math.max(6, pct));
+        handle.setAttribute("aria-valuenow", Math.round(targetPct));
+        snapBtns.forEach((b) => b.classList.toggle("active", Math.abs(Number(b.dataset.pct) - targetPct) < 2));
+      }
+
+      function pointerToPct(clientX) {
+        const rect = frame.getBoundingClientRect();
+        return ((clientX - rect.left) / Math.max(rect.width, 1)) * 100;
+      }
+
+      frame.addEventListener("pointerdown", (e) => {
+        dragging = true;
+        setSplit(pointerToPct(e.clientX));
+        frame.setPointerCapture(e.pointerId);
+      });
+      frame.addEventListener("pointermove", (e) => {
+        if (dragging) setSplit(pointerToPct(e.clientX));
+      });
+      frame.addEventListener("pointerup", () => { dragging = false; });
+
+      handle.addEventListener("keydown", (e) => {
+        if (e.key === "ArrowLeft") setSplit(targetPct - 5);
+        if (e.key === "ArrowRight") setSplit(targetPct + 5);
+      });
+
+      snapBtns.forEach((b) => b.addEventListener("click", () => setSplit(Number(b.dataset.pct))));
+
+      btnBefore.addEventListener("click", () => {
+        btnBefore.classList.add("playing");
+        AudioEngine.playBurst("raw_ping", 6, 95);
+        setTimeout(() => btnBefore.classList.remove("playing"), 650);
+      });
+
+      btnAfter.addEventListener("click", () => {
+        btnAfter.classList.add("playing");
+        AudioEngine.playBurst("linear", 6, 95);
+        setTimeout(() => btnAfter.classList.remove("playing"), 650);
+      });
+
+      function drawScene(w, h, dpr) {
+        ctx.save();
+        ctx.scale(dpr, dpr);
+
+        const splitX = (splitPct / 100) * w;
+
+        // Helper to draw the architectural keyboard geometry in either Raw CNC mode or Tuned Obsidian mode
+        function renderSide(isAfter) {
+          // Background
+          const grad = ctx.createLinearGradient(0, 0, w, h);
+          if (isAfter) {
+            grad.addColorStop(0, "#101218");
+            grad.addColorStop(1, "#090a0d");
+          } else {
+            grad.addColorStop(0, "#1d2027");
+            grad.addColorStop(1, "#121419");
+          }
+          ctx.fillStyle = grad;
+          ctx.fillRect(0, 0, w, h);
+
+          // Technical blueprint grid
+          ctx.strokeStyle = isAfter ? "rgba(255,77,0,0.06)" : "rgba(255,255,255,0.05)";
+          ctx.lineWidth = 1;
+          const step = 36;
+          ctx.beginPath();
+          for (let x = 0; x < w; x += step) { ctx.moveTo(x, 0); ctx.lineTo(x, h); }
+          for (let y = 0; y < h; y += step) { ctx.moveTo(0, y); ctx.lineTo(w, y); }
+          ctx.stroke();
+
+          // Keyboard outer frame centered
+          const kbW = Math.min(w * 0.72, 760);
+          const kbH = kbW * 0.355;
+          const kx = (w - kbW) * 0.5;
+          const ky = (h - kbH) * 0.44;
+
+          // Chassis shadow
+          ctx.fillStyle = "rgba(0,0,0,0.48)";
+          roundRect(ctx, kx + 8, ky + 18, kbW, kbH, 14);
+          ctx.fill();
+
+          if (!isAfter) {
+            // BEFORE: Raw milled aluminum billet with CNC spiral toolpaths & exposed rigid screw standoffs
+            const metalGrad = ctx.createLinearGradient(kx, ky, kx + kbW, ky + kbH);
+            metalGrad.addColorStop(0, "#7b828e");
+            metalGrad.addColorStop(0.5, "#9ea5b0");
+            metalGrad.addColorStop(1, "#626873");
+            ctx.fillStyle = metalGrad;
+            roundRect(ctx, kx, ky, kbW, kbH, 12);
+            ctx.fill();
+
+            // CNC Spiral Milling Toolpath Arcs
+            ctx.save();
+            roundRect(ctx, kx + 10, ky + 10, kbW - 20, kbH - 20, 8);
+            ctx.clip();
+            ctx.strokeStyle = "rgba(255,255,255,0.22)";
+            ctx.lineWidth = 1;
+            for (let gx = kx; gx < kx + kbW; gx += 42) {
+              for (let gy = ky; gy < ky + kbH; gy += 42) {
+                ctx.beginPath();
+                ctx.arc(gx + 20, gy + 20, 26, 0, Math.PI * 1.45);
+                ctx.stroke();
+              }
+            }
+            // Inner milled pocket
+            ctx.fillStyle = "rgba(20, 22, 28, 0.72)";
+            roundRect(ctx, kx + 20, ky + 20, kbW - 40, kbH - 40, 6);
+            ctx.fill();
+
+            // Rigid brass tray-mount standoffs (ringing points)
+            const standoffs = [
+              [kx + 44, ky + 44], [kx + kbW * 0.5, ky + 44], [kx + kbW - 44, ky + 44],
+              [kx + 44, ky + kbH - 44], [kx + kbW * 0.5, ky + kbH - 44], [kx + kbW - 44, ky + kbH - 44]
+            ];
+            for (const [sx, sy] of standoffs) {
+              ctx.strokeStyle = "rgba(255, 190, 90, 0.7)";
+              ctx.beginPath();
+              ctx.arc(sx, sy, 9 + Math.sin(animTime * 4) * 2, 0, Math.PI * 2);
+              ctx.stroke();
+              ctx.fillStyle = "#d9a24c";
+              ctx.beginPath();
+              ctx.arc(sx, sy, 4, 0, Math.PI * 2);
+              ctx.fill();
+            }
+
+            // Ghost wireframe key grid
+            ctx.strokeStyle = "rgba(255,255,255,0.16)";
+            const cols = 15, rows = 5;
+            const cw = (kbW - 52) / cols, ch = (kbH - 52) / rows;
+            for (let r = 0; r < rows; r++) {
+              for (let c = 0; c < cols; c++) {
+                ctx.strokeRect(kx + 26 + c * cw + 2, ky + 26 + r * ch + 2, cw - 4, ch - 4);
+              }
+            }
+            ctx.restore();
+          } else {
+            // AFTER: Bead-blasted Type-III Obsidian Anodized + Sculpted Keycaps + Cutaway Acoustic Layer
+            const obsGrad = ctx.createLinearGradient(kx, ky, kx, ky + kbH);
+            obsGrad.addColorStop(0, "#242730");
+            obsGrad.addColorStop(1, "#121419");
+            ctx.fillStyle = obsGrad;
+            ctx.strokeStyle = "rgba(255,255,255,0.18)";
+            ctx.lineWidth = 1.5;
+            roundRect(ctx, kx, ky, kbW, kbH, 12);
+            ctx.fill();
+            ctx.stroke();
+
+            // Key well recess
+            ctx.fillStyle = "#08090c";
+            roundRect(ctx, kx + 18, ky + 18, kbW - 36, kbH - 36, 7);
+            ctx.fill();
+
+            // Draw keycaps cleanly
+            const rowWidths = [
+              [1,1,1,1,1,1,1,1,1,1,1,1,1,2,1],
+              [1.5,1,1,1,1,1,1,1,1,1,1,1,1,1.5,1],
+              [1.75,1,1,1,1,1,1,1,1,1,1,1,2.25,1],
+              [2.25,1,1,1,1,1,1,1,1,1,1,1.75,1,1],
+              [1.25,1.25,1.25,6.25,1.25,1.25,0.5,1,1,1]
+            ];
+            const innerW = kbW - 44;
+            const innerH = kbH - 44;
+            const unitW = innerW / 16;
+            const unitH = innerH / 5;
+
+            for (let r = 0; r < rowWidths.length; r++) {
+              let cx = kx + 22;
+              const cy = ky + 22 + r * unitH;
+              for (let i = 0; i < rowWidths[r].length; i++) {
+                const u = rowWidths[r][i];
+                const kw = u * unitW;
+                if (r === 4 && u === 0.5) {
+                  cx += kw;
+                  continue; // 0.5u blocker
+                }
+                const isAccent = (r === 0 && i === 0) || (r === 2 && i === 12);
+                const isMod = r === 4 ? (i !== 3) : (i === 0 || i >= rowWidths[r].length - 2);
+                ctx.fillStyle = isAccent ? "#ff4d00" : isMod ? "#1b1d24" : "#2b2f3a";
+                roundRect(ctx, cx + 2, cy + 2, kw - 4, unitH - 4, 4);
+                ctx.fill();
+
+                // Top key dish highlight
+                ctx.fillStyle = isAccent ? "rgba(255,140,80,0.45)" : "rgba(255,255,255,0.06)";
+                roundRect(ctx, cx + 5, cy + 4, kw - 10, unitH - 10, 3);
+                ctx.fill();
+                cx += kw;
+              }
+            }
+
+            // Silicone leaf-spring gasket indicators around perimeter
+            ctx.fillStyle = "#ff4d00";
+            for (const frac of [0.16, 0.38, 0.62, 0.84]) {
+              ctx.fillRect(kx + kbW * frac - 12, ky + 10, 24, 3);
+              ctx.fillRect(kx + kbW * frac - 12, ky + kbH - 13, 24, 3);
+            }
+          }
+
+          // Bottom Acoustic Frequency Response Curve Overlay
+          const waveY = ky + kbH + 44;
+          const waveW = kbW;
+          ctx.strokeStyle = isAfter ? "#ff6a28" : "#8e96a3";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          for (let i = 0; i <= 140; i++) {
+            const t = i / 140;
+            const px = kx + t * waveW;
+            let amp;
+            if (!isAfter) {
+              // Sharp, resonant ringing wave
+              amp = Math.sin(t * 42 + animTime * 5) * 18 * Math.exp(-Math.abs(t - 0.55) * 2.4)
+                  + Math.cos(t * 95 - animTime * 8) * 6;
+            } else {
+              // Smooth, damped low-frequency thock curve
+              amp = Math.sin(t * 10 - animTime * 3) * 14 * Math.exp(-Math.pow((t - 0.35) * 2.5, 2));
+            }
+            const py = waveY + amp;
+            if (i === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+          }
+          ctx.stroke();
+
+          ctx.fillStyle = isAfter ? "#ff8a3d" : "#9aa1ad";
+          ctx.font = "500 11px SF Mono, Menlo, monospace";
+          ctx.fillText(
+            isAfter
+              ? "SURFACE: Ra 0.4 μm HARDCOAT  |  ACOUSTIC PEAK: 340 HZ (DAMPED)"
+              : "SURFACE: Ra 3.2 μm RAW MILL  |  ACOUSTIC PEAK: 1,820 HZ RING",
+            kx,
+            waveY + 34
+          );
+        }
+
+        // Left clip: BEFORE
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(0, 0, splitX, h);
+        ctx.clip();
+        renderSide(false);
+        ctx.restore();
+
+        // Right clip: AFTER
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(splitX, 0, w - splitX, h);
+        ctx.clip();
+        renderSide(true);
+        ctx.restore();
+
+        ctx.restore();
+      }
+
+      function roundRect(c, x, y, w, h, r) {
+        c.beginPath();
+        c.moveTo(x + r, y);
+        c.arcTo(x + w, y, x + w, y + h, r);
+        c.arcTo(x + w, y + h, x, y + h, r);
+        c.arcTo(x, y + h, x, y, r);
+        c.arcTo(x, y, x + w, y, r);
+        c.closePath();
+      }
+
+      function loop() {
+        requestAnimationFrame(loop);
+        if (!visible) return;
+        animTime += 0.016;
+        splitPct += (targetPct - splitPct) * 0.22;
+
+        divider.style.left = `${splitPct}%`;
+        handle.style.left = `${splitPct}%`;
+
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const w = frame.clientWidth;
+        const h = frame.clientHeight;
+        if (canvas.width !== Math.floor(w * dpr) || canvas.height !== Math.floor(h * dpr)) {
+          canvas.width = Math.floor(w * dpr);
+          canvas.height = Math.floor(h * dpr);
+        }
+        drawScene(w, h, dpr);
+      }
+      requestAnimationFrame(loop);
+    })();
+
+    /* =========================================================================
+       8. 3D WIREFRAME SPEC CARD (TILT + WEBGL2 CAD LINES)
+    ========================================================================= */
+    (() => {
+      const card = document.getElementById("wireframe-card");
+      const canvas = document.getElementById("wireframe-canvas");
+      const tabs = Array.from(document.querySelectorAll(".wf-tab"));
+      const wfSub = document.getElementById("wf-sub");
+      const wfDim = document.getElementById("wf-dim");
+      const wfAngle = document.getElementById("wf-angle");
+      const wfMass = document.getElementById("wf-mass");
+
+      const gl = canvas.getContext("webgl2", { antialias: true, alpha: true });
+      if (!gl) return;
+
+      const vs = `#version 300 es
+        layout(location = 0) in vec3 a_pos;
+        layout(location = 1) in float a_part;
+        layout(location = 2) in float a_layer;
+        uniform mat4 u_vp;
+        out float v_part;
+        out float v_layer;
+        void main() {
+          v_part = a_part;
+          v_layer = a_layer;
+          gl_Position = u_vp * vec4(a_pos, 1.0);
+        }
+      `;
+
+      const fs = `#version 300 es
+        precision highp float;
+        in float v_part;
+        in float v_layer;
+        out vec4 fragColor;
+        uniform float u_mode; // 0: all, 1: chassis, 2: plate/gasket, 3: pcb
+
+        void main() {
+          vec3 baseCol = vec3(0.32, 0.36, 0.44);
+          float alpha = 0.48;
+
+          if (v_part > 90.0) {
+            // CAD Bounding cage
+            fragColor = vec4(0.28, 0.30, 0.36, 0.25);
+            return;
+          }
+
+          bool isChassis = (v_part < 2.5);
+          bool isPlate = (abs(v_part - 3.0) < 0.3 || abs(v_part - 4.0) < 0.3);
+          bool isPcb = (abs(v_part - 5.0) < 0.3);
+          bool isKey = (v_part >= 9.5);
+
+          if (u_mode < 0.5) {
+            if (isChassis) { baseCol = vec3(0.75, 0.78, 0.84); alpha = 0.55; }
+            if (v_part > 11.5) { baseCol = vec3(1.0, 0.35, 0.05); alpha = 0.95; }
+            else if (isKey) { baseCol = vec3(0.42, 0.46, 0.55); alpha = 0.35; }
+          } else if (u_mode < 1.5) {
+            if (isChassis) { baseCol = vec3(1.0, 0.38, 0.08); alpha = 0.92; }
+            else { alpha = 0.14; }
+          } else if (u_mode < 2.5) {
+            if (isPlate) { baseCol = vec3(1.0, 0.38, 0.08); alpha = 0.96; }
+            else { alpha = 0.14; }
+          } else {
+            if (isPcb) { baseCol = vec3(1.0, 0.38, 0.08); alpha = 0.96; }
+            else { alpha = 0.14; }
+          }
+
+          fragColor = vec4(baseCol, alpha);
+        }
+      `;
+
+      const prog = GL.program(gl, vs, fs);
+      const vao = gl.createVertexArray();
+      gl.bindVertexArray(vao);
+      const vbo = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+      gl.bufferData(gl.ARRAY_BUFFER, KB_MESH.wireData, gl.STATIC_DRAW);
+
+      const stride = 5 * 4;
+      gl.enableVertexAttribArray(0);
+      gl.vertexAttribPointer(0, 3, gl.FLOAT, false, stride, 0);
+      gl.enableVertexAttribArray(1);
+      gl.vertexAttribPointer(1, 1, gl.FLOAT, false, stride, 3 * 4);
+      gl.enableVertexAttribArray(2);
+      gl.vertexAttribPointer(2, 1, gl.FLOAT, false, stride, 4 * 4);
+
+      const uVp = gl.getUniformLocation(prog, "u_vp");
+      const uMode = gl.getUniformLocation(prog, "u_mode");
+
+      let wfMode = 0.0;
+      let yaw = 0.55, pitch = 0.45;
+      let dragging = false, lx = 0, ly = 0;
+      let visible = false;
+      GL.observeVisibility(card, (v) => { visible = v; });
+
+      // 3D Tilt on Card Hover
+      card.addEventListener("pointermove", (e) => {
+        const rect = card.getBoundingClientRect();
+        const rx = (e.clientX - rect.left) / rect.width;
+        const ry = (e.clientY - rect.top) / rect.height;
+        card.style.setProperty("--mx", `${(rx * 100).toFixed(1)}%`);
+        card.style.setProperty("--my", `${(ry * 100).toFixed(1)}%`);
+        if (!dragging) {
+          const rotY = (rx - 0.5) * 9;
+          const rotX = (0.5 - ry) * 7;
+          card.style.transform = `rotateX(${rotX.toFixed(2)}deg) rotateY(${rotY.toFixed(2)}deg)`;
+        }
+      });
+      card.addEventListener("pointerleave", () => {
+        card.style.transform = "rotateX(0deg) rotateY(0deg)";
+      });
+
+      canvas.addEventListener("pointerdown", (e) => {
+        dragging = true;
+        lx = e.clientX;
+        ly = e.clientY;
+        canvas.setPointerCapture(e.pointerId);
+      });
+      canvas.addEventListener("pointermove", (e) => {
+        if (!dragging) return;
+        yaw -= (e.clientX - lx) * 0.01;
+        pitch = Math.max(0.08, Math.min(1.3, pitch + (e.clientY - ly) * 0.008));
+        lx = e.clientX;
+        ly = e.clientY;
+      });
+      canvas.addEventListener("pointerup", () => { dragging = false; });
+
+      const tabInfo = {
+        all: { mode: 0, sub: "FULL ASSEMBLY", dim: "312.4 × 114.2 MM", angle: "6.5° ERGONOMIC", mass: "1,840 GRAMS" },
+        chassis: { mode: 1, sub: "6063-T6 BILLET", dim: "WALL: 4.30 MM", angle: "31.8 MM REAR", mass: "1,420 GRAMS" },
+        plate: { mode: 2, sub: "GASKET + PORON", dim: "3.5 MM CORE", angle: "40A SILICONE", mass: "165 GRAMS" },
+        pcb: { mode: 3, sub: "8 KHZ FLEX PCB", dim: "1.2 MM ENIG", angle: "ARM CORTEX-M4", mass: "88 GRAMS" }
+      };
+
+      tabs.forEach((t) => {
+        t.addEventListener("click", () => {
+          tabs.forEach((b) => b.classList.remove("active"));
+          t.classList.add("active");
+          const info = tabInfo[t.dataset.wf];
+          wfMode = info.mode;
+          wfSub.textContent = info.sub;
+          wfDim.textContent = info.dim;
+          wfAngle.textContent = info.angle;
+          wfMass.textContent = info.mass;
+        });
+      });
+
+      function loop() {
+        requestAnimationFrame(loop);
+        if (!visible) return;
+        if (!dragging) yaw += 0.004;
+
+        GL.resize(canvas, 2);
+        gl.viewport(0, 0, canvas.width, canvas.height);
+        gl.clearColor(0, 0, 0, 0);
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+        const aspect = canvas.width / Math.max(canvas.height, 1);
+        const proj = Mat4.perspective(0.55, aspect, 0.5, 100.0);
+        const dist = 18.8;
+        const eye = [
+          Math.sin(yaw) * Math.cos(pitch) * dist,
+          Math.sin(pitch) * dist,
+          Math.cos(yaw) * Math.cos(pitch) * dist
+        ];
+        const view = Mat4.lookAt(eye, [0, 0, 0], [0, 1, 0]);
+        const vp = Mat4.mul(proj, view);
+
+        gl.useProgram(prog);
+        gl.bindVertexArray(vao);
+        gl.uniformMatrix4fv(uVp, false, vp);
+        gl.uniform1f(uMode, wfMode);
+        gl.drawArrays(gl.LINES, 0, KB_MESH.wireCount);
+      }
+      requestAnimationFrame(loop);
+    })();
+
+    /* =========================================================================
+       9. LIVE COLOR CONFIGURATOR + RESERVATION CART + REAL-TIME TYPING
+    ========================================================================= */
+    (() => {
+      const canvas = document.getElementById("config-canvas");
+      const renderer = createSolidKeyboardRenderer(canvas);
+      if (!renderer) return;
+
+      const CHASSIS = {
+        obsidian:   { name: "Obsidian Matte",   sku: "OBS", price: 0,  col: [0.11, 0.12, 0.145] },
+        titanium:   { name: "Raw Titanium",     sku: "TIT", price: 0,  col: [0.56, 0.59, 0.63] },
+        sage:       { name: "Nordic Sage",      sku: "SAG", price: 0,  col: [0.27, 0.35, 0.29] },
+        terracotta: { name: "Terracotta Oxide", sku: "TER", price: 0,  col: [0.64, 0.27, 0.19] },
+        cobalt:     { name: "Cobalt Slate",     sku: "COB", price: 0,  col: [0.16, 0.24, 0.36] },
+        chalk:      { name: "Chalk Ceramic",    sku: "CHK", price: 20, col: [0.89, 0.88, 0.84] }
+      };
+
+      const KEYCAPS = {
+        graphite: { name: "Graphite Mono",    sku: "GRP", alpha: [0.17, 0.18, 0.21], mod: [0.10, 0.11, 0.13], accent: [1.0, 0.30, 0.0] },
+        bauhaus:  { name: "Bauhaus Bone",     sku: "BAU", alpha: [0.86, 0.84, 0.79], mod: [0.22, 0.24, 0.28], accent: [0.95, 0.25, 0.08] },
+        amber:    { name: "Industrial Amber", sku: "AMB", alpha: [0.13, 0.14, 0.16], mod: [0.09, 0.09, 0.11], accent: [0.96, 0.65, 0.16] },
+        dolch:    { name: "Dolch Heritage",   sku: "DOL", alpha: [0.46, 0.48, 0.51], mod: [0.18, 0.19, 0.22], accent: [0.12, 0.68, 0.64] }
+      };
+
+      const WEIGHTS = {
+        brass:     { name: "Sandblasted Brass",  sku: "BRS", price: 0,  grams: 1840, col: [0.82, 0.64, 0.32], metal: 0.92 },
+        copper:    { name: "PVD Mirror Copper",  sku: "COP", price: 45, grams: 1840, col: [0.90, 0.47, 0.31], metal: 0.98 },
+        stainless: { name: "Bead-Blasted Steel", sku: "STL", price: 35, grams: 1810, col: [0.74, 0.77, 0.81], metal: 0.94 },
+        carbon:    { name: "Forged Carbon",      sku: "CRB", price: 25, grams: 1240, col: [0.11, 0.115, 0.13], metal: 0.18 }
+      };
+
+      const SWITCHES = {
+        linear:   { name: "Obsidian Linear (45g)", sku: "LIN", price: 0 },
+        tactile:  { name: "Amber Tactile (58g)",   sku: "TAC", price: 15 },
+        silent:   { name: "Whisper Linear (42g)",  sku: "SIL", price: 20 },
+        barebone: { name: "Barebones Kit",         sku: "BAR", price: -30 }
+      };
+
+      const CAMERAS = {
+        iso:  { yaw: -0.42, pitch: 0.58, dist: 16.2 },
+        top:  { yaw: 0.0,   pitch: 1.46, dist: 15.8 },
+        side: { yaw: 1.54,  pitch: 0.18, dist: 15.0 },
+        rear: { yaw: 3.12,  pitch: -0.26, dist: 16.0 }
+      };
+
+      const current = {
+        chassis: "obsidian",
+        keycaps: "graphite",
+        weight: "brass",
+        switchType: "linear"
+      };
+
+      const keyTravel = new Float32Array(67);
+      const keyTarget = new Float32Array(67);
+      let yaw = CAMERAS.iso.yaw, pitch = CAMERAS.iso.pitch, dist = CAMERAS.iso.dist;
+      let tYaw = yaw, tPitch = pitch, tDist = dist;
+      let dragging = false, lx = 0, ly = 0;
+      let visible = false;
+
+      GL.observeVisibility(canvas, (v) => { visible = v; });
+
+      // DOM elements
+      const lblChassis = document.getElementById("lbl-chassis");
+      const lblKeycaps = document.getElementById("lbl-keycaps");
+      const lblWeight = document.getElementById("lbl-weight");
+      const lblSwitch = document.getElementById("lbl-switch");
+      const cfgPrice = document.getElementById("cfg-price");
+      const cfgSku = document.getElementById("cfg-sku");
+      const cfgWeightBadge = document.getElementById("cfg-weight-badge");
+      const lastKeyBadge = document.getElementById("last-key-badge");
+
+      function syncSummary() {
+        const ch = CHASSIS[current.chassis];
+        const kc = KEYCAPS[current.keycaps];
+        const wt = WEIGHTS[current.weight];
+        const sw = SWITCHES[current.switchType];
+
+        lblChassis.textContent = ch.name;
+        lblKeycaps.textContent = kc.name;
+        lblWeight.textContent = wt.name;
+        lblSwitch.textContent = sw.name;
+
+        const total = 380 + ch.price + wt.price + sw.price;
+        cfgPrice.textContent = `$${total}`;
+        cfgSku.textContent = `SKU // STR65-${ch.sku}-${kc.sku}-${wt.sku}-${sw.sku}`;
+        cfgWeightBadge.textContent = `WEIGHT: ${wt.grams.toLocaleString()} G`;
+      }
+
+      document.querySelectorAll("#swatch-chassis .swatch").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          document.querySelectorAll("#swatch-chassis .swatch").forEach((b) => b.classList.remove("active"));
+          btn.classList.add("active");
+          current.chassis = btn.dataset.chassis;
+          syncSummary();
+        });
+      });
+
+      document.querySelectorAll("#opt-keycaps .opt-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          document.querySelectorAll("#opt-keycaps .opt-btn").forEach((b) => b.classList.remove("active"));
+          btn.classList.add("active");
+          current.keycaps = btn.dataset.keycaps;
+          syncSummary();
+        });
+      });
+
+      document.querySelectorAll("#opt-weight .opt-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          document.querySelectorAll("#opt-weight .opt-btn").forEach((b) => b.classList.remove("active"));
+          btn.classList.add("active");
+          current.weight = btn.dataset.weight;
+          syncSummary();
+        });
+      });
+
+      document.querySelectorAll("#opt-switch .opt-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          document.querySelectorAll("#opt-switch .opt-btn").forEach((b) => b.classList.remove("active"));
+          btn.classList.add("active");
+          current.switchType = btn.dataset.switch;
+          syncSummary();
+          AudioEngine.playKeystroke(current.switchType === "barebone" ? "linear" : current.switchType, 1.0);
+        });
+      });
+
+      document.querySelectorAll(".cam-pill").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          document.querySelectorAll(".cam-pill").forEach((b) => b.classList.remove("active"));
+          btn.classList.add("active");
+          const c = CAMERAS[btn.dataset.cam];
+          tYaw = c.yaw;
+          tPitch = c.pitch;
+          tDist = c.dist;
+        });
+      });
+
+      // Orbit drag
+      canvas.addEventListener("pointerdown", (e) => {
+        dragging = true;
+        lx = e.clientX;
+        ly = e.clientY;
+        canvas.setPointerCapture(e.pointerId);
+      });
+      canvas.addEventListener("pointermove", (e) => {
+        if (!dragging) return;
+        tYaw -= (e.clientX - lx) * 0.008;
+        tPitch = Math.max(-0.65, Math.min(1.48, tPitch + (e.clientY - ly) * 0.006));
+        lx = e.clientX;
+        ly = e.clientY;
+      });
+      canvas.addEventListener("pointerup", () => { dragging = false; });
+
+      // Live Physical Keyboard Typing -> 3D Key Actuation + Audio Synth
+      window.addEventListener("keydown", (e) => {
+        if (e.repeat || e.metaKey || e.ctrlKey) return;
+        const idx = KB_MESH.keyCodeMap.get(e.code);
+        if (idx !== undefined) {
+          keyTarget[idx] = 1.0;
+          lastKeyBadge.textContent = e.code.toUpperCase();
+          if (visible) {
+            const prof = current.switchType === "barebone" ? "linear" : current.switchType;
+            AudioEngine.playKeystroke(prof, 0.94 + Math.random() * 0.12);
+          }
+        }
+      });
+      window.addEventListener("keyup", (e) => {
+        const idx = KB_MESH.keyCodeMap.get(e.code);
+        if (idx !== undefined) keyTarget[idx] = 0.0;
+      });
+
+      // Automated Keystroke Wave Demo
+      document.getElementById("btn-type-demo").addEventListener("click", () => {
+        const prof = current.switchType === "barebone" ? "linear" : current.switchType;
+        for (let i = 0; i < 67; i++) {
+          setTimeout(() => {
+            keyTarget[i] = 1.0;
+            if (i % 4 === 0) AudioEngine.playKeystroke(prof, 0.9 + Math.random() * 0.2);
+            setTimeout(() => { keyTarget[i] = 0.0; }, 120);
+          }, i * 20);
+        }
+      });
+
+      syncSummary();
+
+      // Render loop
+      const renderState = {
+        yaw, pitch, dist,
+        explode: 0,
+        keyTravel,
+        chassisCol: CHASSIS.obsidian.col,
+        weightCol: WEIGHTS.brass.col,
+        weightMetallic: WEIGHTS.brass.metal,
+        alphaCol: KEYCAPS.graphite.alpha,
+        modCol: KEYCAPS.graphite.mod,
+        accentCol: KEYCAPS.graphite.accent,
+        focusLayer: -1.0
+      };
+
+      function loop() {
+        requestAnimationFrame(loop);
+        if (!visible) return;
+
+        yaw += (tYaw - yaw) * 0.1;
+        pitch += (tPitch - pitch) * 0.1;
+        dist += (tDist - dist) * 0.1;
+
+        for (let i = 0; i < 67; i++) {
+          keyTravel[i] += (keyTarget[i] - keyTravel[i]) * 0.38;
+        }
+
+        const ch = CHASSIS[current.chassis];
+        const kc = KEYCAPS[current.keycaps];
+        const wt = WEIGHTS[current.weight];
+
+        renderState.yaw = yaw;
+        renderState.pitch = pitch;
+        renderState.dist = dist;
+        renderState.chassisCol = ch.col;
+        renderState.weightCol = wt.col;
+        renderState.weightMetallic = wt.metal;
+        renderState.alphaCol = kc.alpha;
+        renderState.modCol = kc.mod;
+        renderState.accentCol = kc.accent;
+
+        renderer.render(renderState);
+      }
+      requestAnimationFrame(loop);
+
+      /* ---------------- RESERVATION DRAWER & AUDIO TOGGLE ---------------- */
+      const cart = [];
+      const drawer = document.getElementById("drawer");
+      const backdrop = document.getElementById("drawer-backdrop");
+      const drawerBody = document.getElementById("drawer-body");
+      const drawerTotal = document.getElementById("drawer-total");
+      const cartCount = document.getElementById("cart-count");
+      const toast = document.getElementById("toast");
+
+      function showToast(msg) {
+        toast.textContent = msg;
+        toast.classList.add("show");
+        setTimeout(() => toast.classList.remove("show"), 2600);
+      }
+
+      function toggleDrawer(open) {
+        drawer.classList.toggle("open", open);
+        backdrop.classList.toggle("open", open);
+      }
+
+      function renderCart() {
+        cartCount.textContent = `(${cart.length})`;
+        if (cart.length === 0) {
+          drawerBody.innerHTML = `<div style="color:var(--text-muted);font-size:14px;padding:32px 0;text-align:center;">No builds reserved yet. Configure a STRATA—65 to lock your serialized slot.</div>`;
+          drawerTotal.textContent = "$0";
+          return;
+        }
+        let sum = 0;
+        drawerBody.innerHTML = cart.map((item, idx) => {
+          sum += item.price;
+          return `
+            <div class="cart-item">
+              <div class="cart-item-top">
+                <div>
+                  <strong style="font-size:14px;">STRATA—65 // ${item.chassisName}</strong>
+                  <div class="mono" style="font-size:10px;color:var(--accent-warm);margin-top:2px;">${item.sku}</div>
+                </div>
+                <strong>$${item.price}</strong>
+              </div>
+              <div class="cart-specs">
+                KEYCAPS: ${item.keycapsName}<br/>
+                WEIGHT: ${item.weightName} (${item.grams}g)<br/>
+                SWITCHES: ${item.switchName}
+              </div>
+              <button class="btn-ghost" data-remove="${idx}" style="margin-top:10px;padding:4px 10px;font-size:10px;" type="button">REMOVE</button>
+            </div>
+          `;
+        }).join("");
+        drawerTotal.textContent = `$${sum}`;
+
+        drawerBody.querySelectorAll("[data-remove]").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            cart.splice(Number(btn.dataset.remove), 1);
+            renderCart();
+          });
+        });
+      }
+
+      document.getElementById("btn-add-build").addEventListener("click", () => {
+        const ch = CHASSIS[current.chassis];
+        const kc = KEYCAPS[current.keycaps];
+        const wt = WEIGHTS[current.weight];
+        const sw = SWITCHES[current.switchType];
+        const total = 380 + ch.price + wt.price + sw.price;
+        cart.push({
+          chassisName: ch.name,
+          keycapsName: kc.name,
+          weightName: wt.name,
+          switchName: sw.name,
+          grams: wt.grams,
+          sku: `STR65-${ch.sku}-${kc.sku}-${wt.sku}-${sw.sku}`,
+          price: total
+        });
+        renderCart();
+        toggleDrawer(true);
+        AudioEngine.playKeystroke("tactile", 1.05);
+      });
+
+      document.getElementById("btn-open-drawer").addEventListener("click", () => toggleDrawer(true));
+      document.getElementById("btn-close-drawer").addEventListener("click", () => toggleDrawer(false));
+      backdrop.addEventListener("click", () => toggleDrawer(false));
+
+      document.getElementById("btn-confirm-order").addEventListener("click", () => {
+        if (cart.length === 0) {
+          showToast("Configure at least one build before locking a slot.");
+          return;
+        }
+        const serial = 104 + Math.floor(Math.random() * 380);
+        cart.length = 0;
+        renderCart();
+        toggleDrawer(false);
+        showToast(`SLOT LOCKED // BATCH 01 UNIT #${serial}/500 RESERVED`);
+      });
+
+      const soundLabel = document.getElementById("sound-label");
+      document.getElementById("btn-sound-toggle").addEventListener("click", () => {
+        const on = AudioEngine.toggle();
+        soundLabel.textContent = on ? "AUDIO: ON" : "AUDIO: MUTED";
+        if (on) AudioEngine.playKeystroke("linear", 1.0);
+      });
+    })();
+  })();
+  </script>
+</body>
+</html>

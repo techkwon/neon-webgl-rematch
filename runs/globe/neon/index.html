@@ -1,0 +1,2813 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+<title>Aether Storm — Interactive 3D Lightning Globe & Ambient Engine</title>
+<style>
+  *, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  :root {
+    --bg: #03060d;
+    --panel: rgba(8, 14, 28, 0.56);
+    --panel-border: rgba(120, 195, 255, 0.18);
+    --text: #e6f2ff;
+    --muted: rgba(186, 214, 245, 0.64);
+    --accent: #56dcff;
+    --accent-2: #a78bfa;
+    --warm: #fbbf24;
+  }
+
+  html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: radial-gradient(circle at 50% 48%, #091429 0%, #03060d 68%, #010206 100%);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Inter, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  #glCanvas {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    cursor: grab;
+    touch-action: none;
+  }
+
+  #glCanvas.dragging {
+    cursor: grabbing;
+  }
+
+  /* HUD Layout */
+  .hud {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 22px 26px;
+    z-index: 10;
+  }
+
+  .top-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .brand {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    text-shadow: 0 2px 18px rgba(0, 0, 0, 0.8);
+  }
+
+  .brand-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: #f0f9ff;
+  }
+
+  .pulse-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 12px var(--accent), 0 0 22px rgba(86, 220, 255, 0.6);
+    animation: dotPulse 2.4s ease-in-out infinite;
+  }
+
+  @keyframes dotPulse {
+    0%, 100% { transform: scale(1); opacity: 0.85; }
+    50% { transform: scale(1.35); opacity: 1; }
+  }
+
+  .brand-sub {
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    padding-left: 18px;
+  }
+
+  /* Telemetry Pill */
+  .telemetry {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-radius: 14px;
+    padding: 10px 14px;
+    min-width: 248px;
+    max-width: 340px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    transition: border-color 0.35s ease, box-shadow 0.35s ease;
+  }
+
+  .telemetry.flash {
+    border-color: rgba(110, 232, 255, 0.58);
+    box-shadow: 0 10px 32px rgba(56, 200, 255, 0.18);
+  }
+
+  .telemetry-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .telemetry-chord {
+    color: var(--accent-2);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .telemetry-main {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+  }
+
+  .telemetry-loc {
+    font-size: 13px;
+    font-weight: 500;
+    color: #f1f8ff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .telemetry-note {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
+  }
+
+  .telemetry-coords {
+    font-size: 11px;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  /* Bottom Dock */
+  .bottom-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .start-banner {
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 24px;
+    border-radius: 999px;
+    border: 1px solid rgba(115, 226, 255, 0.52);
+    background: linear-gradient(135deg, rgba(20, 68, 118, 0.78), rgba(62, 34, 118, 0.72));
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    color: #f6fbff;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    box-shadow: 0 0 0 0 rgba(86, 220, 255, 0.45), 0 14px 36px rgba(0, 0, 0, 0.5);
+    transition: transform 0.2s ease, box-shadow 0.25s ease, border-color 0.25s ease, opacity 0.35s ease;
+    animation: ctaGlow 2.8s ease-in-out infinite;
+  }
+
+  @keyframes ctaGlow {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(86, 220, 255, 0.38), 0 14px 36px rgba(0, 0, 0, 0.5); }
+    50% { box-shadow: 0 0 0 11px rgba(86, 220, 255, 0), 0 14px 40px rgba(86, 220, 255, 0.25); }
+  }
+
+  .start-banner:hover {
+    transform: translateY(-2px) scale(1.02);
+    border-color: rgba(168, 240, 255, 0.85);
+  }
+
+  .start-banner:active {
+    transform: translateY(0) scale(0.99);
+  }
+
+  .start-banner.hidden {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(8px) scale(0.96);
+    height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    margin: 0;
+    border-width: 0;
+    overflow: hidden;
+    animation: none;
+  }
+
+  .dock {
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    justify-content: center;
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-radius: 18px;
+    padding: 9px 14px;
+    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.48);
+  }
+
+  .btn {
+    appearance: none;
+    border: 1px solid rgba(140, 210, 255, 0.24);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    padding: 7px 13px;
+    border-radius: 11px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: background 0.18s ease, border-color 0.18s ease, transform 0.15s ease, color 0.18s ease;
+  }
+
+  .btn:hover {
+    background: rgba(100, 210, 255, 0.14);
+    border-color: rgba(125, 224, 255, 0.5);
+  }
+
+  .btn:active {
+    transform: scale(0.97);
+  }
+
+  .btn.active {
+    background: rgba(86, 220, 255, 0.18);
+    border-color: rgba(86, 220, 255, 0.62);
+    color: #ffffff;
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, rgba(46, 152, 220, 0.34), rgba(132, 92, 232, 0.32));
+    border-color: rgba(112, 220, 255, 0.52);
+    color: #ffffff;
+    font-weight: 600;
+  }
+
+  .btn-primary:hover {
+    background: linear-gradient(135deg, rgba(56, 178, 245, 0.46), rgba(148, 108, 246, 0.44));
+    border-color: rgba(152, 236, 255, 0.85);
+  }
+
+  .divider {
+    width: 1px;
+    height: 22px;
+    background: rgba(160, 210, 255, 0.16);
+  }
+
+  .control-group {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .control-value {
+    color: #e2f3ff;
+    font-weight: 600;
+    min-width: 58px;
+    text-align: left;
+    font-variant-numeric: tabular-nums;
+  }
+
+  input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 108px;
+    height: 4px;
+    border-radius: 999px;
+    background: rgba(145, 200, 255, 0.22);
+    outline: none;
+    cursor: pointer;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #8be8ff;
+    border: 2px solid #09182e;
+    box-shadow: 0 0 10px rgba(86, 220, 255, 0.75);
+    transition: transform 0.15s ease;
+  }
+
+  input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.18);
+  }
+
+  input[type="range"]::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #8be8ff;
+    border: 2px solid #09182e;
+    box-shadow: 0 0 10px rgba(86, 220, 255, 0.75);
+  }
+
+  /* Mini audio visualizer inside button */
+  .eq-bars {
+    display: inline-flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 13px;
+    width: 16px;
+  }
+
+  .eq-bars span {
+    display: block;
+    width: 3px;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--accent);
+    transition: height 0.08s ease;
+  }
+
+  .hint {
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    color: rgba(190, 218, 248, 0.5);
+    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.9);
+    text-align: center;
+  }
+
+  .error-overlay {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(3, 6, 13, 0.94);
+    z-index: 100;
+    padding: 24px;
+    text-align: center;
+  }
+
+  .error-card {
+    max-width: 440px;
+    background: rgba(12, 20, 38, 0.92);
+    border: 1px solid rgba(255, 110, 120, 0.35);
+    border-radius: 16px;
+    padding: 24px;
+    line-height: 1.6;
+  }
+
+  @media (max-width: 640px) {
+    .hud { padding: 14px 14px; }
+    .telemetry { min-width: 190px; padding: 8px 11px; }
+    .dock { gap: 8px; padding: 8px 10px; }
+    .divider { display: none; }
+    .brand-sub { display: none; }
+  }
+</style>
+</head>
+<body>
+<canvas id="glCanvas"></canvas>
+
+<div class="hud">
+  <div class="top-row">
+    <div class="brand">
+      <div class="brand-title">
+        <span class="pulse-dot"></span>
+        Aether Storm
+      </div>
+      <div class="brand-sub">Global Lightning Telemetry &amp; Generative Ambient Resonance</div>
+    </div>
+
+    <div class="telemetry" id="telemetryBox">
+      <div class="telemetry-top">
+        <span>Latest Discharge</span>
+        <span class="telemetry-chord" id="chordLabel">Dm9 · Dormant</span>
+      </div>
+      <div class="telemetry-main">
+        <div class="telemetry-loc" id="strikeLoc">Scanning ionosphere…</div>
+        <div class="telemetry-note" id="strikeNote">—</div>
+      </div>
+      <div class="telemetry-coords">
+        <span id="strikeCoords">00.0°N  000.0°E</span>
+        <span id="strikeRate">0 strikes/min</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom-area">
+    <button id="startBanner" class="start-banner" type="button" aria-label="Start Audio">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M8 5.14v14l11-7-11-7z"/>
+      </svg>
+      <span>Start Audio Engine</span>
+    </button>
+
+    <div class="dock">
+      <button id="audioBtn" class="btn btn-primary" type="button">
+        <span class="eq-bars" id="eqBars" aria-hidden="true">
+          <span></span><span></span><span></span><span></span>
+        </span>
+        <span id="audioBtnLabel">Start Audio</span>
+      </button>
+
+      <div class="divider"></div>
+
+      <div class="control-group">
+        <label for="stormSlider">Storm</label>
+        <input id="stormSlider" type="range" min="0" max="100" value="48" />
+        <span class="control-value" id="stormValue">Active</span>
+      </div>
+
+      <div class="divider"></div>
+
+      <button id="summonBtn" class="btn" type="button" title="Trigger a lightning superbolt on the visible hemisphere">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z"/>
+        </svg>
+        <span>Superbolt</span>
+      </button>
+
+      <button id="spinBtn" class="btn active" type="button" title="Toggle gentle globe rotation">
+        <span>Auto-Spin</span>
+      </button>
+    </div>
+
+    <div class="hint">Drag to rotate · Scroll to zoom · Click anywhere on Earth to summon lightning</div>
+  </div>
+</div>
+
+<div class="error-overlay" id="errorOverlay">
+  <div class="error-card">
+    <h2 style="margin-bottom:8px;font-size:18px;">WebGL2 Unavailable</h2>
+    <p id="errorMessage" style="font-size:13px;color:var(--muted);">
+      This experience requires a browser and GPU with WebGL2 support.
+    </p>
+  </div>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  // =========================================================================
+  // 1. CONSTANTS, MATH & GEOGRAPHY DATA
+  // =========================================================================
+  const MAX_STRIKES = 28;
+  const DEG2RAD = Math.PI / 180;
+  const RAD2DEG = 180 / Math.PI;
+
+  function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
+  function lerp(a, b, t) { return a + (b - a) * t; }
+  function smoothstep(e0, e1, x) {
+    const t = clamp((x - e0) / (e1 - e0), 0, 1);
+    return t * t * (3 - 2 * t);
+  }
+
+  // Right-handed sphere mapping:
+  // lat in [-90, 90] (+Y North), lon in [-180, 180] (+Z at lon=0, +X at lon=+90E)
+  function latLonToXYZ(latDeg, lonDeg) {
+    const lat = latDeg * DEG2RAD;
+    const lon = lonDeg * DEG2RAD;
+    const cl = Math.cos(lat);
+    return [cl * Math.sin(lon), Math.sin(lat), cl * Math.cos(lon)];
+  }
+
+  function xyzToLatLon(x, y, z) {
+    const lat = Math.asin(clamp(y, -1, 1)) * RAD2DEG;
+    const lon = Math.atan2(x, z) * RAD2DEG;
+    return [lat, lon];
+  }
+
+  function formatCoords(lat, lon) {
+    const ns = lat >= 0 ? 'N' : 'S';
+    const ew = lon >= 0 ? 'E' : 'W';
+    return `${Math.abs(lat).toFixed(1)}°${ns}  ${Math.abs(lon).toFixed(1)}°${ew}`;
+  }
+
+  // Minimal 4x4 matrix utilities (column-major for WebGL)
+  const Mat4 = {
+    perspective(fovY, aspect, near, far) {
+      const f = 1.0 / Math.tan(fovY * 0.5);
+      const nf = 1.0 / (near - far);
+      return new Float32Array([
+        f / aspect, 0, 0, 0,
+        0, f, 0, 0,
+        0, 0, (far + near) * nf, -1,
+        0, 0, 2 * far * near * nf, 0
+      ]);
+    },
+    multiply(a, b) {
+      const out = new Float32Array(16);
+      for (let c = 0; c < 4; c++) {
+        for (let r = 0; r < 4; r++) {
+          out[c * 4 + r] =
+            a[0 * 4 + r] * b[c * 4 + 0] +
+            a[1 * 4 + r] * b[c * 4 + 1] +
+            a[2 * 4 + r] * b[c * 4 + 2] +
+            a[3 * 4 + r] * b[c * 4 + 3];
+        }
+      }
+      return out;
+    },
+    translate(x, y, z) {
+      return new Float32Array([
+        1, 0, 0, 0,
+        0, 1, 0, 0,
+        0, 0, 1, 0,
+        x, y, z, 1
+      ]);
+    },
+    rotateX(a) {
+      const c = Math.cos(a), s = Math.sin(a);
+      return new Float32Array([
+        1, 0, 0, 0,
+        0, c, s, 0,
+        0, -s, c, 0,
+        0, 0, 0, 1
+      ]);
+    },
+    rotateY(a) {
+      const c = Math.cos(a), s = Math.sin(a);
+      return new Float32Array([
+        c, 0, -s, 0,
+        0, 1, 0, 0,
+        s, 0, c, 0,
+        0, 0, 0, 1
+      ]);
+    },
+    scale(s) {
+      return new Float32Array([
+        s, 0, 0, 0,
+        0, s, 0, 0,
+        0, 0, s, 0,
+        0, 0, 0, 1
+      ]);
+    },
+    transformVec3(m, v) {
+      return [
+        m[0] * v[0] + m[4] * v[1] + m[8] * v[2],
+        m[1] * v[0] + m[5] * v[1] + m[9] * v[2],
+        m[2] * v[0] + m[6] * v[1] + m[10] * v[2]
+      ];
+    }
+  };
+
+  // Real-world simplified continent polygons [lon, lat]
+  const LAND_POLYGONS = [
+    // North America
+    [[-168,66],[-162,70],[-150,71],[-136,69],[-126,70],[-112,68],[-96,69],[-85,66],[-82,63],[-92,60],[-94,56],[-88,52],[-80,52],[-78,57],[-76,62],[-68,60],[-63,56],[-56,52],[-55,47],[-62,45],[-67,44],[-70,41],[-75,38],[-76,34],[-81,31],[-80,25],[-83,26],[-83,30],[-89,30],[-95,29],[-97,25],[-96,20],[-90,21],[-87,21],[-88,16],[-83,15],[-83,10],[-79,8],[-84,9],[-89,13],[-94,15],[-102,18],[-106,22],[-110,24],[-114,31],[-117,32],[-121,35],[-124,41],[-124,48],[-130,54],[-138,59],[-148,60],[-154,58],[-162,55],[-166,60]],
+    // Greenland
+    [[-52,60],[-43,60],[-34,67],[-22,71],[-18,77],[-22,82],[-38,83],[-55,81],[-68,77],[-62,72],[-54,67]],
+    // Cuba & Hispaniola
+    [[-85,22],[-80,23],[-75,20],[-78,20],[-83,21]],
+    [[-74,19],[-69,19],[-69,18],[-73,18]],
+    // Iceland
+    [[-24,65],[-18,66],[-14,65],[-16,63],[-23,64]],
+    // South America
+    [[-78,9],[-74,11],[-68,11],[-62,10],[-54,6],[-49,0],[-41,-3],[-35,-6],[-35,-10],[-39,-14],[-40,-21],[-45,-24],[-49,-28],[-53,-34],[-58,-38],[-64,-41],[-65,-46],[-68,-52],[-66,-55],[-71,-55],[-75,-48],[-73,-41],[-72,-33],[-71,-22],[-71,-18],[-77,-12],[-81,-5],[-80,0],[-78,5]],
+    // Europe (Mainland + Scandinavia)
+    [[-9,37],[-9,43],[-2,43],[-4,48],[2,51],[6,53],[9,54],[8,57],[12,56],[16,54],[20,55],[24,57],[25,60],[29,60],[22,63],[24,66],[18,69],[26,71],[31,70],[38,68],[44,67],[55,68],[60,62],[52,52],[44,46],[38,45],[33,46],[29,45],[28,41],[24,41],[23,37],[20,39],[18,42],[14,45],[12,44],[16,41],[18,40],[15,38],[12,41],[9,44],[5,43],[3,42],[0,38],[-5,36]],
+    // Scandinavia West coast refinement
+    [[5,59],[5,62],[10,64],[14,67],[18,69],[16,64],[12,59],[9,58]],
+    // Great Britain & Ireland
+    [[-5,50],[-3,53],[-5,56],[-3,58],[0,56],[1,52],[-1,50]],
+    [[-10,52],[-9,55],[-6,55],[-6,52]],
+    // Africa
+    [[-17,15],[-16,21],[-13,28],[-9,32],[-6,36],[3,37],[10,37],[11,33],[16,31],[20,33],[25,31],[32,31],[34,27],[37,21],[40,15],[43,12],[51,11],[49,6],[44,2],[40,-4],[40,-11],[40,-16],[35,-20],[33,-26],[28,-33],[20,-35],[18,-33],[15,-26],[12,-17],[12,-7],[9,-1],[9,4],[3,6],[-5,5],[-11,6],[-16,11]],
+    // Madagascar
+    [[44,-25],[46,-16],[49,-12],[50,-16],[48,-24]],
+    // Asia
+    [[27,41],[35,42],[41,42],[44,46],[52,47],[60,55],[60,67],[72,72],[88,74],[105,77],[125,73],[142,72],[165,69],[179,66],[170,61],[162,59],[161,54],[156,51],[156,57],[142,59],[136,54],[140,48],[135,43],[130,42],[129,35],[126,35],[126,39],[122,40],[118,39],[122,37],[120,34],[122,31],[120,25],[114,22],[109,21],[108,16],[109,12],[105,9],[101,13],[103,6],[104,1],[100,4],[98,10],[97,16],[94,16],[92,22],[87,22],[84,18],[80,14],[78,8],[75,12],[72,20],[68,24],[62,25],[57,26],[51,29],[56,24],[59,22],[54,17],[45,13],[43,13],[39,21],[35,29],[36,34],[35,37],[27,37]],
+    // Japan
+    [[130,32],[133,34],[137,35],[141,38],[141,41],[145,44],[141,45],[140,42],[139,38],[135,36],[131,34]],
+    // Sri Lanka & Taiwan
+    [[80,9],[82,7],[80,6],[79,8]],
+    [[121,25],[122,24],[121,22],[120,23]],
+    // Philippines
+    [[120,18],[122,18],[123,14],[126,9],[124,6],[122,7],[122,13],[120,15]],
+    // Borneo, Sumatra, Java, Sulawesi, New Guinea
+    [[109,2],[115,5],[118,5],[117,1],[116,-3],[111,-3],[109,-1]],
+    [[95,5],[99,3],[104,-2],[105,-6],[102,-4],[98,1]],
+    [[105,-6],[114,-8],[114,-9],[106,-7]],
+    [[119,1],[123,1],[122,-4],[119,-5]],
+    [[131,-1],[136,-2],[141,-3],[147,-7],[150,-10],[146,-9],[141,-8],[135,-4]],
+    // Australia & Tasmania
+    [[114,-22],[122,-18],[129,-14],[136,-12],[137,-15],[141,-16],[142,-11],[146,-17],[150,-22],[153,-28],[151,-34],[148,-38],[141,-38],[137,-35],[131,-32],[124,-33],[115,-34],[114,-27]],
+    [[145,-41],[148,-41],[147,-43],[145,-43]],
+    // New Zealand
+    [[173,-35],[178,-38],[175,-41],[173,-39]],
+    [[172,-41],[171,-44],[167,-46],[166,-45],[170,-42]],
+    // Antarctica
+    [[-180,-73],[-150,-75],[-120,-73],[-90,-72],[-64,-64],[-56,-64],[-45,-75],[-20,-72],[10,-70],[45,-68],[75,-69],[110,-66],[140,-67],[168,-72],[180,-73],[180,-90],[-180,-90]]
+  ];
+
+  // Major world metropolitan hubs for night-side city lights [lon, lat, radius, intensity]
+  const CITY_HUBS = [
+    [-74.0, 40.7, 3.2, 1.0], [-87.6, 41.9, 2.5, 0.85], [-118.2, 34.0, 2.8, 0.95], [-122.4, 37.8, 2.1, 0.8],
+    [-95.4, 29.8, 2.4, 0.8], [-80.2, 25.8, 2.0, 0.78], [-79.4, 43.7, 2.2, 0.8], [-99.1, 19.4, 2.6, 0.92],
+    [-46.6, -23.5, 2.9, 0.95], [-43.2, -22.9, 2.1, 0.82], [-58.4, -34.6, 2.5, 0.88], [-70.6, -33.4, 1.8, 0.72],
+    [-74.1, 4.6, 1.9, 0.72], [-77.0, -12.0, 1.7, 0.68],
+    [-0.1, 51.5, 3.0, 1.0], [2.3, 48.9, 3.0, 0.96], [4.9, 52.4, 2.5, 0.92], [13.4, 52.5, 2.6, 0.88],
+    [9.2, 45.5, 2.8, 0.92], [12.5, 41.9, 2.2, 0.82], [-3.7, 40.4, 2.2, 0.82], [2.2, 41.4, 1.9, 0.75],
+    [21.0, 52.2, 2.3, 0.78], [37.6, 55.8, 2.8, 0.92], [30.3, 59.9, 1.9, 0.72], [29.0, 41.0, 2.6, 0.9],
+    [31.2, 30.0, 2.9, 1.0], [32.0, 26.8, 1.7, 0.75], [3.4, 6.5, 2.3, 0.8], [28.0, -26.2, 2.2, 0.82],
+    [18.4, -33.9, 1.5, 0.65], [-7.6, 33.6, 1.9, 0.72], [36.8, -1.3, 1.7, 0.65],
+    [55.3, 25.2, 2.2, 0.88], [46.7, 24.7, 2.0, 0.78], [51.4, 35.7, 2.3, 0.82],
+    [77.2, 28.6, 3.6, 1.0], [72.9, 19.1, 3.0, 0.95], [88.4, 22.6, 3.0, 0.92], [77.6, 13.0, 2.4, 0.84],
+    [80.3, 13.1, 2.2, 0.8], [67.0, 24.9, 2.2, 0.8], [90.4, 23.8, 2.4, 0.82],
+    [100.5, 13.8, 2.5, 0.88], [103.8, 1.3, 2.2, 0.9], [106.8, -6.2, 2.8, 0.92], [121.0, 14.6, 2.3, 0.85],
+    [106.7, 10.8, 2.1, 0.78], [114.2, 22.3, 3.1, 1.0], [121.5, 31.2, 3.5, 1.0], [116.4, 39.9, 3.4, 1.0],
+    [104.1, 30.7, 2.6, 0.85], [114.3, 30.6, 2.5, 0.82], [121.5, 25.0, 2.0, 0.88],
+    [127.0, 37.6, 2.6, 0.98], [129.0, 35.2, 1.9, 0.82], [139.7, 35.7, 3.1, 1.0], [135.5, 34.7, 2.6, 0.95],
+    [151.2, -33.9, 2.0, 0.85], [145.0, -37.8, 1.9, 0.8], [153.0, -27.5, 1.6, 0.7], [174.8, -36.8, 1.4, 0.65]
+  ];
+
+  // Real-world global lightning hotspots [name, lat, lon, spreadDeg, weight]
+  const STORM_HOTSPOTS = [
+    { name: 'Lake Maracaibo', lat: 9.8, lon: -71.6, spread: 4.5, weight: 1.55 },
+    { name: 'Congo Basin', lat: -1.8, lon: 23.5, spread: 8.5, weight: 1.65 },
+    { name: 'Amazon Basin', lat: -5.2, lon: -62.4, spread: 9.5, weight: 1.25 },
+    { name: 'Florida & Gulf', lat: 27.6, lon: -81.8, spread: 5.5, weight: 1.15 },
+    { name: 'Great Plains', lat: 36.2, lon: -98.0, spread: 7.0, weight: 0.95 },
+    { name: 'Himalayan Foothills', lat: 28.4, lon: 81.2, spread: 6.5, weight: 1.2 },
+    { name: 'Maritime Continent', lat: -1.2, lon: 112.5, spread: 9.0, weight: 1.35 },
+    { name: 'Bay of Bengal', lat: 18.5, lon: 89.2, spread: 6.0, weight: 1.1 },
+    { name: 'South China Sea', lat: 16.5, lon: 115.8, spread: 7.5, weight: 1.05 },
+    { name: 'Lake Victoria', lat: -1.1, lon: 33.0, spread: 5.0, weight: 1.25 },
+    { name: 'Northern Australia', lat: -13.5, lon: 132.5, spread: 6.5, weight: 1.05 },
+    { name: 'Río de la Plata', lat: -31.5, lon: -58.5, spread: 6.5, weight: 1.0 },
+    { name: 'Central Mediterranean', lat: 39.2, lon: 15.6, spread: 5.5, weight: 0.88 },
+    { name: 'East China Sea', lat: 29.8, lon: 127.5, spread: 6.0, weight: 0.9 },
+    { name: 'West African Sahel', lat: 11.4, lon: -2.5, spread: 7.5, weight: 1.0 },
+    { name: 'Sierra Madre', lat: 21.5, lon: -103.5, spread: 5.5, weight: 0.92 },
+    { name: 'Central Alps', lat: 46.2, lon: 10.4, spread: 4.5, weight: 0.72 },
+    { name: 'Coral Sea', lat: -16.8, lon: 152.0, spread: 7.0, weight: 0.85 }
+  ];
+
+  function findNearestRegion(lat, lon) {
+    let best = null;
+    let bestDist = Infinity;
+    for (let i = 0; i < STORM_HOTSPOTS.length; i++) {
+      const h = STORM_HOTSPOTS[i];
+      const dLat = lat - h.lat;
+      let dLon = lon - h.lon;
+      if (dLon > 180) dLon -= 360;
+      if (dLon < -180) dLon += 360;
+      const d = Math.hypot(dLat, dLon * Math.cos(lat * DEG2RAD));
+      if (d < bestDist) {
+        bestDist = d;
+        best = h;
+      }
+    }
+    if (best && bestDist < 19) return best.name;
+    // Broad oceanic/continental fallback naming
+    if (lat > 66) return 'Arctic Circle';
+    if (lat < -62) return 'Southern Ocean';
+    if (lon > -165 && lon < -105) return lat >= 0 ? 'North Pacific' : 'South Pacific';
+    if (lon >= -105 && lon < -55) return lat >= 12 ? 'North America' : 'South America';
+    if (lon >= -55 && lon < -15) return lat >= 0 ? 'North Atlantic' : 'South Atlantic';
+    if (lon >= -15 && lon < 45) return lat >= 36 ? 'Europe' : 'Africa';
+    if (lon >= 45 && lon < 105) return lat >= 6 ? 'Central & South Asia' : 'Indian Ocean';
+    if (lon >= 105 && lon < 155) return lat >= 8 ? 'East Asia & Pacific' : 'Australasia';
+    return 'Pacific Rim';
+  }
+
+  // =========================================================================
+  // 2. PROCEDURAL EARTH TEXTURE GENERATOR (OFFSCREEN CANVAS)
+  // =========================================================================
+  function hash2(ix, iy) {
+    let n = (ix * 374761393 + iy * 668265263) | 0;
+    n = (n ^ (n >>> 13)) * 1274126177;
+    return ((n ^ (n >>> 16)) >>> 0) / 4294967296;
+  }
+
+  // Seamless horizontally tiled value noise for spherical wrapping (periodX)
+  function valueNoiseWrap(x, y, periodX) {
+    const ix0 = Math.floor(x);
+    const iy0 = Math.floor(y);
+    const fx = x - ix0;
+    const fy = y - iy0;
+    const ux = fx * fx * (3 - 2 * fx);
+    const uy = fy * fy * (3 - 2 * fy);
+    const px0 = ((ix0 % periodX) + periodX) % periodX;
+    const px1 = (px0 + 1) % periodX;
+    const a = hash2(px0, iy0);
+    const b = hash2(px1, iy0);
+    const c = hash2(px0, iy0 + 1);
+    const d = hash2(px1, iy0 + 1);
+    return lerp(lerp(a, b, ux), lerp(c, d, ux), uy);
+  }
+
+  function fbmWrap(u, v, baseFreqX, baseFreqY, octaves) {
+    let sum = 0, amp = 0.5, norm = 0;
+    let fx = baseFreqX, fy = baseFreqY;
+    for (let o = 0; o < octaves; o++) {
+      sum += amp * valueNoiseWrap(u * fx, v * fy, fx);
+      norm += amp;
+      fx *= 2;
+      fy *= 2;
+      amp *= 0.5;
+    }
+    return sum / norm;
+  }
+
+  function generateEarthTextures() {
+    const W = 1024;
+    const H = 512;
+
+    // Step 1: Rasterize real-world continent polygons onto a blurred land-mask canvas
+    const maskCanvas = document.createElement('canvas');
+    maskCanvas.width = W;
+    maskCanvas.height = H;
+    const mctx = maskCanvas.getContext('2d');
+    mctx.fillStyle = '#000';
+    mctx.fillRect(0, 0, W, H);
+    mctx.fillStyle = '#fff';
+    mctx.filter = 'blur(4px)';
+
+    for (const poly of LAND_POLYGONS) {
+      mctx.beginPath();
+      for (let i = 0; i < poly.length; i++) {
+        const x = ((poly[i][0] + 180) / 360) * W;
+        const y = ((90 - poly[i][1]) / 180) * H;
+        if (i === 0) mctx.moveTo(x, y);
+        else mctx.lineTo(x, y);
+      }
+      mctx.closePath();
+      mctx.fill();
+    }
+    mctx.filter = 'none';
+    const maskData = mctx.getImageData(0, 0, W, H).data;
+
+    // Step 2: Rasterize city night light glow map
+    const cityCanvas = document.createElement('canvas');
+    cityCanvas.width = W;
+    cityCanvas.height = H;
+    const cctx = cityCanvas.getContext('2d');
+    cctx.fillStyle = '#000';
+    cctx.fillRect(0, 0, W, H);
+    cctx.globalCompositeOperation = 'lighter';
+    for (const [lon, lat, radDeg, inten] of CITY_HUBS) {
+      const cx = ((lon + 180) / 360) * W;
+      const cy = ((90 - lat) / 180) * H;
+      const rPx = (radDeg / 360) * W * 2.6;
+      const grad = cctx.createRadialGradient(cx, cy, 0, cx, cy, rPx);
+      grad.addColorStop(0, `rgba(255,255,255,${inten})`);
+      grad.addColorStop(0.38, `rgba(255,255,255,${inten * 0.45})`);
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
+      cctx.fillStyle = grad;
+      cctx.beginPath();
+      cctx.arc(cx, cy, rPx, 0, Math.PI * 2);
+      cctx.fill();
+    }
+    const cityData = cctx.getImageData(0, 0, W, H).data;
+
+    // Step 3: Build Day Albedo + Elevation (RGBA) and Night/Clouds/Ocean (RGBA)
+    const dayBuf = new Uint8Array(W * H * 4);
+    const auxBuf = new Uint8Array(W * H * 4);
+
+    for (let y = 0; y < H; y++) {
+      const v = (y + 0.5) / H;
+      const lat = 90 - v * 180;
+      const absLat = Math.abs(lat);
+
+      for (let x = 0; x < W; x++) {
+        const u = (x + 0.5) / W;
+        const lon = u * 360 - 180;
+        const idx = (y * W + x) * 4;
+
+        const rawMask = maskData[idx] / 255;
+        const coastNoise = fbmWrap(u, v, 24, 12, 4);
+        const detailNoise = fbmWrap(u, v, 64, 32, 3);
+        const mountainNoise = fbmWrap(u + 0.31, v + 0.17, 16, 8, 4);
+
+        // Organic perturbed land threshold
+        const landVal = rawMask + (coastNoise - 0.5) * 0.34;
+        const isLand = landVal > 0.48;
+
+        let r, g, b, elev = 0;
+
+        if (!isLand) {
+          // Ocean bathymetry: deep abyssal blue to luminous teal continental shelf
+          const shelf = smoothstep(0.18, 0.48, landVal);
+          const abyss = fbmWrap(u + 0.11, v + 0.41, 12, 6, 3);
+          r = lerp(5, 18, shelf) + abyss * 4;
+          g = lerp(18, 58, shelf) + abyss * 8;
+          b = lerp(48, 102, shelf) + abyss * 14;
+          // Polar sea ice near Antarctica / Arctic
+          if (absLat > 78) {
+            const ice = smoothstep(78, 86, absLat + (coastNoise - 0.5) * 7);
+            r = lerp(r, 200, ice);
+            g = lerp(g, 218, ice);
+            b = lerp(b, 232, ice);
+          }
+          elev = 0;
+        } else {
+          const inland = smoothstep(0.48, 0.78, landVal);
+          const ridge = Math.pow(clamp(mountainNoise * 1.15 - 0.15, 0, 1), 1.7);
+          elev = clamp(0.12 + inland * 0.45 + ridge * 0.43, 0.08, 1.0);
+
+          // Climate biome estimation
+          const aridityBand = Math.exp(-Math.pow((absLat - 24) / 13, 2));
+          // Boost Sahara / Arabia / Outback dryness
+          const sahara = (lon > -16 && lon < 62 && lat > 12 && lat < 35) ? 0.55 : 0;
+          const outback = (lon > 116 && lon < 143 && lat > -32 && lat < -18) ? 0.48 : 0;
+          const gobi = (lon > 75 && lon < 112 && lat > 34 && lat < 47) ? 0.35 : 0;
+          const desert = clamp(aridityBand * 0.55 + sahara + outback + gobi + (detailNoise - 0.5) * 0.35, 0, 1);
+
+          // Tropical rainforest vs temperate forest vs tundra
+          const tropic = smoothstep(26, 4, absLat);
+          const borea = smoothstep(42, 66, absLat);
+
+          // Base vegetation color
+          let lr = lerp(34, 24, tropic);
+          let lg = lerp(74, 82, tropic);
+          let lb = lerp(42, 36, tropic);
+
+          // Temperate / boreal variation
+          lr = lerp(lr, 56, borea * 0.6);
+          lg = lerp(lg, 72, borea * 0.5);
+          lb = lerp(lb, 50, borea * 0.6);
+
+          // Blend desert ochre/sand
+          lr = lerp(lr, 168, desert * 0.85);
+          lg = lerp(lg, 140, desert * 0.85);
+          lb = lerp(lb, 96, desert * 0.85);
+
+          // Highland stone / mountain snow
+          const rock = smoothstep(0.55, 0.84, elev);
+          lr = lerp(lr, 118, rock * 0.7);
+          lg = lerp(lg, 112, rock * 0.7);
+          lb = lerp(lb, 106, rock * 0.7);
+
+          const snow = clamp(
+            smoothstep(65, 76, absLat + (coastNoise - 0.5) * 10) +
+            smoothstep(0.76, 0.94, elev) * 0.85,
+            0, 1
+          );
+          r = lerp(lr, 224, snow);
+          g = lerp(lg, 234, snow);
+          b = lerp(lb, 244, snow);
+
+          // Subtle micro texture variation
+          const shade = 0.86 + detailNoise * 0.28;
+          r *= shade; g *= shade; b *= shade;
+        }
+
+        dayBuf[idx] = clamp(Math.round(r), 0, 255);
+        dayBuf[idx + 1] = clamp(Math.round(g), 0, 255);
+        dayBuf[idx + 2] = clamp(Math.round(b), 0, 255);
+        dayBuf[idx + 3] = clamp(Math.round(elev * 255), 0, 255);
+
+        // Night city lights (masked strictly to land + fine sparkling speckle)
+        const hubGlow = cityData[idx] / 255;
+        const urbanSpeckle = hash2(x, y) * 0.55 + detailNoise * 0.45;
+        let cityLight = 0;
+        if (isLand && absLat < 64) {
+          const coastPop = smoothstep(0.48, 0.62, landVal) * (1 - smoothstep(0.62, 0.88, landVal)) * 0.22;
+          const basePop = hubGlow * 1.15 + coastPop * smoothstep(0.55, 0.82, coastNoise);
+          cityLight = clamp(basePop * (0.45 + urbanSpeckle * 0.85), 0, 1);
+          cityLight = Math.pow(cityLight, 1.15);
+        }
+
+        // Swirling global cloud bands (domain-warped FBM)
+        const swirlU = u + 0.045 * Math.sin(v * Math.PI * 5.0 + coastNoise * 4.2);
+        const swirlV = v + 0.03 * Math.cos(u * Math.PI * 6.0 + mountainNoise * 3.8);
+        const c1 = fbmWrap(swirlU, swirlV, 10, 5, 4);
+        const c2 = fbmWrap(swirlU + 0.23, swirlV - 0.14, 24, 12, 3);
+        // Stronger cloud belts near ITCZ (equator) and mid-latitude storm tracks (~45 deg)
+        const itcz = Math.exp(-Math.pow(absLat / 14, 2)) * 0.22;
+        const stormTrack = Math.exp(-Math.pow((absLat - 48) / 14, 2)) * 0.2;
+        const cloudA = smoothstep(0.47, 0.78, c1 * 0.72 + c2 * 0.28 + itcz + stormTrack - 0.07);
+        const cloudB = smoothstep(0.52, 0.85, c2 * 0.65 + c1 * 0.35);
+
+        auxBuf[idx] = clamp(Math.round(cityLight * 255), 0, 255);
+        auxBuf[idx + 1] = clamp(Math.round(cloudA * 255), 0, 255);
+        auxBuf[idx + 2] = clamp(Math.round(cloudB * 255), 0, 255);
+        auxBuf[idx + 3] = isLand ? 255 : 0;
+      }
+    }
+
+    return { width: W, height: H, dayBuf, auxBuf };
+  }
+
+  // =========================================================================
+  // 3. WEB AUDIO STORM-REACTIVE AMBIENT MUSIC ENGINE
+  // =========================================================================
+  class StormAudioEngine {
+    constructor() {
+      this.ctx = null;
+      this.started = false;
+      this.muted = false;
+      this.masterGain = null;
+      this.compressor = null;
+      this.analyser = null;
+      this.freqData = null;
+
+      this.reverbSend = null;
+      this.delaySend = null;
+      this.padFilter = null;
+      this.padGain = null;
+      this.padOscs = [];
+      this.rainGain = null;
+      this.rainFilter = null;
+      this.noiseBuffer = null;
+
+      this.stormEnergy = 0.25;
+      this.chordIndex = 0;
+      this.lastChordShift = 0;
+      this.activeVoices = 0;
+
+      // Rich lush modal voicings (frequencies in Hz)
+      this.chords = [
+        {
+          name: 'Dm9',
+          pad: [73.42, 110.00, 164.81, 174.61, 261.63], // D2 A2 E3 F3 C4
+          scale: [
+            { f: 146.83, n: 'D3' }, { f: 174.61, n: 'F3' }, { f: 220.00, n: 'A3' },
+            { f: 261.63, n: 'C4' }, { f: 293.66, n: 'D4' }, { f: 329.63, n: 'E4' },
+            { f: 349.23, n: 'F4' }, { f: 440.00, n: 'A4' }, { f: 523.25, n: 'C5' },
+            { f: 587.33, n: 'D5' }, { f: 659.25, n: 'E5' }, { f: 698.46, n: 'F5' },
+            { f: 880.00, n: 'A5' }, { f: 1046.50, n: 'C6' }
+          ]
+        },
+        {
+          name: 'Bbmaj7#11',
+          pad: [58.27, 116.54, 174.61, 220.00, 329.63], // Bb1 Bb2 F3 A3 E4
+          scale: [
+            { f: 116.54, n: 'Bb2' }, { f: 174.61, n: 'F3' }, { f: 220.00, n: 'A3' },
+            { f: 233.08, n: 'Bb3' }, { f: 293.66, n: 'D4' }, { f: 329.63, n: 'E4' },
+            { f: 349.23, n: 'F4' }, { f: 440.00, n: 'A4' }, { f: 466.16, n: 'Bb4' },
+            { f: 587.33, n: 'D5' }, { f: 659.25, n: 'E5' }, { f: 698.46, n: 'F5' },
+            { f: 880.00, n: 'A5' }, { f: 1174.66, n: 'D6' }
+          ]
+        },
+        {
+          name: 'Fmaj9',
+          pad: [87.31, 130.81, 196.00, 220.00, 329.63], // F2 C3 G3 A3 E4
+          scale: [
+            { f: 174.61, n: 'F3' }, { f: 196.00, n: 'G3' }, { f: 220.00, n: 'A3' },
+            { f: 261.63, n: 'C4' }, { f: 329.63, n: 'E4' }, { f: 349.23, n: 'F4' },
+            { f: 392.00, n: 'G4' }, { f: 440.00, n: 'A4' }, { f: 523.25, n: 'C5' },
+            { f: 659.25, n: 'E5' }, { f: 698.46, n: 'F5' }, { f: 783.99, n: 'G5' },
+            { f: 880.00, n: 'A5' }, { f: 1046.50, n: 'C6' }
+          ]
+        },
+        {
+          name: 'Am11',
+          pad: [55.00, 110.00, 146.83, 196.00, 246.94], // A1 A2 D3 G3 B3
+          scale: [
+            { f: 146.83, n: 'D3' }, { f: 164.81, n: 'E3' }, { f: 196.00, n: 'G3' },
+            { f: 220.00, n: 'A3' }, { f: 246.94, n: 'B3' }, { f: 293.66, n: 'D4' },
+            { f: 329.63, n: 'E4' }, { f: 392.00, n: 'G4' }, { f: 440.00, n: 'A4' },
+            { f: 493.88, n: 'B4' }, { f: 587.33, n: 'D5' }, { f: 659.25, n: 'E5' },
+            { f: 783.99, n: 'G5' }, { f: 987.77, n: 'B5' }
+          ]
+        }
+      ];
+    }
+
+    start() {
+      if (this.started) {
+        if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+        this.setMuted(false);
+        return;
+      }
+
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      this.ctx = new AudioCtx();
+      const ctx = this.ctx;
+      const now = ctx.currentTime;
+
+      // Master dynamics & output chain
+      this.compressor = ctx.createDynamicsCompressor();
+      this.compressor.threshold.value = -14;
+      this.compressor.knee.value = 18;
+      this.compressor.ratio.value = 4.5;
+      this.compressor.attack.value = 0.008;
+      this.compressor.release.value = 0.25;
+
+      this.masterGain = ctx.createGain();
+      this.masterGain.gain.setValueAtTime(0.0001, now);
+      this.masterGain.gain.exponentialRampToValueAtTime(0.82, now + 1.8);
+
+      this.analyser = ctx.createAnalyser();
+      this.analyser.fftSize = 128;
+      this.analyser.smoothingTimeConstant = 0.82;
+      this.freqData = new Uint8Array(this.analyser.frequencyBinCount);
+
+      this.compressor.connect(this.masterGain);
+      this.masterGain.connect(this.analyser);
+      this.analyser.connect(ctx.destination);
+
+      // Shared procedural noise buffer (4 seconds of pink/brownish noise)
+      this.noiseBuffer = this._createNoiseBuffer(4.0);
+
+      // Lush Algorithmic Convolution Reverb (4.4s ethereal space hall)
+      const convolver = ctx.createConvolver();
+      convolver.buffer = this._createReverbIR(4.4, 2.7);
+      const revReturn = ctx.createGain();
+      revReturn.gain.value = 0.62;
+      this.reverbSend = ctx.createGain();
+      this.reverbSend.gain.value = 1.0;
+      this.reverbSend.connect(convolver);
+      convolver.connect(revReturn);
+      revReturn.connect(this.compressor);
+
+      // Stereo Ping-Pong Delay for expanding ripple echoes
+      this.delaySend = ctx.createGain();
+      this.delaySend.gain.value = 0.42;
+
+      const delayL = ctx.createDelay(2.0);
+      const delayR = ctx.createDelay(2.0);
+      delayL.delayTime.value = 0.38;
+      delayR.delayTime.value = 0.52;
+
+      const fbFilter = ctx.createBiquadFilter();
+      fbFilter.type = 'lowpass';
+      fbFilter.frequency.value = 2400;
+
+      const fbGain = ctx.createGain();
+      fbGain.gain.value = 0.42;
+
+      const panL = ctx.createStereoPanner();
+      panL.pan.value = -0.68;
+      const panR = ctx.createStereoPanner();
+      panR.pan.value = 0.68;
+
+      this.delaySend.connect(delayL);
+      delayL.connect(panL);
+      delayL.connect(delayR);
+      delayR.connect(panR);
+      delayR.connect(fbFilter);
+      fbFilter.connect(fbGain);
+      fbGain.connect(delayL);
+
+      panL.connect(this.compressor);
+      panR.connect(this.compressor);
+      panL.connect(this.reverbSend);
+      panR.connect(this.reverbSend);
+
+      // Continuous Storm-Modulated Ambient Pad Bed
+      this.padFilter = ctx.createBiquadFilter();
+      this.padFilter.type = 'lowpass';
+      this.padFilter.frequency.value = 340;
+      this.padFilter.Q.value = 1.6;
+
+      this.padGain = ctx.createGain();
+      this.padGain.gain.value = 0.16;
+
+      this.padFilter.connect(this.padGain);
+      this.padGain.connect(this.compressor);
+      this.padGain.connect(this.reverbSend);
+
+      // Slow breathing LFO on pad filter
+      const lfo = ctx.createOscillator();
+      lfo.type = 'sine';
+      lfo.frequency.value = 0.085;
+      const lfoGain = ctx.createGain();
+      lfoGain.gain.value = 85;
+      lfo.connect(lfoGain);
+      lfoGain.connect(this.padFilter.frequency);
+      lfo.start(now);
+
+      const initialChord = this.chords[0].pad;
+      for (let i = 0; i < initialChord.length; i++) {
+        const freq = initialChord[i];
+        const oscA = ctx.createOscillator();
+        const oscB = ctx.createOscillator();
+        oscA.type = i === 0 ? 'sine' : 'triangle';
+        oscB.type = i < 2 ? 'triangle' : 'sawtooth';
+        oscA.frequency.value = freq;
+        oscB.frequency.value = freq * 1.0035;
+        oscA.detune.value = -4 + i * 1.5;
+        oscB.detune.value = 5 - i * 1.2;
+
+        const vGain = ctx.createGain();
+        vGain.gain.value = i === 0 ? 0.34 : (i < 3 ? 0.18 : 0.12);
+
+        const panner = ctx.createStereoPanner();
+        panner.pan.value = (i / (initialChord.length - 1) - 0.5) * 0.7;
+
+        oscA.connect(vGain);
+        oscB.connect(vGain);
+        vGain.connect(panner);
+        panner.connect(this.padFilter);
+
+        oscA.start(now);
+        oscB.start(now);
+        this.padOscs.push({ oscA, oscB });
+      }
+
+      // Soft Atmospheric Rain / Ionospheric Wind Texture
+      const rainSrc = ctx.createBufferSource();
+      rainSrc.buffer = this.noiseBuffer;
+      rainSrc.loop = true;
+
+      this.rainFilter = ctx.createBiquadFilter();
+      this.rainFilter.type = 'bandpass';
+      this.rainFilter.frequency.value = 520;
+      this.rainFilter.Q.value = 0.7;
+
+      this.rainGain = ctx.createGain();
+      this.rainGain.gain.value = 0.025;
+
+      rainSrc.connect(this.rainFilter);
+      this.rainFilter.connect(this.rainGain);
+      this.rainGain.connect(this.compressor);
+      this.rainGain.connect(this.reverbSend);
+      rainSrc.start(now);
+
+      this.lastChordShift = now;
+      this.started = true;
+      this.muted = false;
+    }
+
+    setMuted(mute) {
+      this.muted = mute;
+      if (!this.ctx || !this.masterGain) return;
+      const now = this.ctx.currentTime;
+      this.masterGain.gain.cancelScheduledValues(now);
+      this.masterGain.gain.setTargetAtTime(mute ? 0.0001 : 0.82, now, 0.14);
+    }
+
+    _createNoiseBuffer(durationSec) {
+      const sr = this.ctx.sampleRate;
+      const len = Math.floor(sr * durationSec);
+      const buf = this.ctx.createBuffer(2, len, sr);
+      for (let ch = 0; ch < 2; ch++) {
+        const data = buf.getChannelData(ch);
+        let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0;
+        for (let i = 0; i < len; i++) {
+          const w = Math.random() * 2 - 1;
+          b0 = 0.99886 * b0 + w * 0.0555179;
+          b1 = 0.99332 * b1 + w * 0.0750759;
+          b2 = 0.96900 * b2 + w * 0.1538520;
+          b3 = 0.86650 * b3 + w * 0.3104856;
+          b4 = 0.55000 * b4 + w * 0.5329522;
+          b5 = -0.7616 * b5 - w * 0.0168980;
+          data[i] = (b0 + b1 + b2 + b3 + b4 + b5 + w * 0.5362) * 0.08;
+        }
+      }
+      return buf;
+    }
+
+    _createReverbIR(durationSec, decay) {
+      const sr = this.ctx.sampleRate;
+      const len = Math.floor(sr * durationSec);
+      const ir = this.ctx.createBuffer(2, len, sr);
+      for (let ch = 0; ch < 2; ch++) {
+        const data = ir.getChannelData(ch);
+        let lp = 0;
+        for (let i = 0; i < len; i++) {
+          const t = i / len;
+          const env = Math.pow(1 - t, decay) * (1 - Math.exp(-i / (sr * 0.018)));
+          const n = Math.random() * 2 - 1;
+          // Progressive high-frequency absorption over reverb tail
+          const alpha = 0.08 + 0.35 * (1 - t);
+          lp += alpha * (n - lp);
+          data[i] = lp * env * 0.95;
+        }
+      }
+      return ir;
+    }
+
+    getCurrentChordName() {
+      return this.chords[this.chordIndex].name;
+    }
+
+    update(dt, targetStormIntensity) {
+      // Smoothly decay storm energy back toward ambient baseline
+      const baseline = 0.15 + targetStormIntensity * 0.32;
+      this.stormEnergy += (baseline - this.stormEnergy) * Math.min(1, dt * 0.55);
+
+      if (!this.started || !this.ctx) return;
+      const now = this.ctx.currentTime;
+
+      // Modulate continuous pad filter and atmospheric rain from storm energy
+      const energy = clamp(this.stormEnergy, 0, 1.35);
+      const targetCutoff = 250 + energy * 1080;
+      this.padFilter.frequency.setTargetAtTime(targetCutoff, now, 0.35);
+      this.padGain.gain.setTargetAtTime(0.13 + energy * 0.10, now, 0.4);
+      this.rainGain.gain.setTargetAtTime(0.018 + energy * 0.075, now, 0.45);
+      this.rainFilter.frequency.setTargetAtTime(360 + energy * 920, now, 0.45);
+
+      // Evolving harmonic progression (shifts slightly faster during high storm energy)
+      const shiftInterval = lerp(24, 14, clamp(energy, 0, 1));
+      if (now - this.lastChordShift > shiftInterval) {
+        this.lastChordShift = now;
+        this.chordIndex = (this.chordIndex + 1) % this.chords.length;
+        const nextPad = this.chords[this.chordIndex].pad;
+        for (let i = 0; i < this.padOscs.length; i++) {
+          const f = nextPad[i];
+          this.padOscs[i].oscA.frequency.setTargetAtTime(f, now, 1.6);
+          this.padOscs[i].oscB.frequency.setTargetAtTime(f * 1.0035, now, 1.6);
+        }
+      }
+    }
+
+    // Trigger coordinated musical chime + shimmer + rolling thunder for each lightning strike
+    triggerStrike(lat, intensity, pan, frontFactor, isUserTriggered) {
+      const chord = this.chords[this.chordIndex];
+      // Latitude maps to register: poles sparkle high, equator resonates rich mid/low
+      const latNorm = clamp((lat + 70) / 140, 0, 1);
+      const jitter = (Math.random() - 0.5) * 0.24;
+      const scaleIdx = clamp(
+        Math.floor((latNorm * 0.72 + (1 - intensity) * 0.16 + 0.08 + jitter) * chord.scale.length),
+        0,
+        chord.scale.length - 1
+      );
+      const noteObj = chord.scale[scaleIdx];
+
+      // Feed energy even if muted so visual/harmonic state stays alive
+      this.stormEnergy = clamp(this.stormEnergy + 0.14 * intensity, 0, 1.35);
+
+      if (!this.started || !this.ctx || this.muted) {
+        return noteObj.n;
+      }
+
+      if (this.activeVoices >= 14 && !isUserTriggered) {
+        return noteObj.n;
+      }
+
+      const ctx = this.ctx;
+      const now = ctx.currentTime;
+      const presence = clamp(frontFactor, 0.38, 1.0);
+      const velocity = clamp(0.28 + intensity * 0.65, 0.25, 1.0) * presence;
+      const safePan = clamp(pan, -0.92, 0.92);
+
+      this.activeVoices++;
+
+      // --- Voice 1: Crystalline Electric Bell / Harmonic Pluck (FM Synthesis) ---
+      const carrier = ctx.createOscillator();
+      const mod = ctx.createOscillator();
+      const modGain = ctx.createGain();
+      const env = ctx.createGain();
+      const voiceFilter = ctx.createBiquadFilter();
+      const panner = ctx.createStereoPanner();
+
+      carrier.type = 'sine';
+      carrier.frequency.setValueAtTime(noteObj.f, now);
+
+      mod.type = 'sine';
+      // Pure harmonic ratio (2.0 or 3.0) for glassy electric overtones
+      const fmRatio = intensity > 0.72 ? 3.0 : 2.0;
+      mod.frequency.setValueAtTime(noteObj.f * fmRatio, now);
+
+      modGain.gain.setValueAtTime(noteObj.f * (0.45 + intensity * 1.15), now);
+      modGain.gain.exponentialRampToValueAtTime(0.5, now + 0.42 + intensity * 0.35);
+
+      voiceFilter.type = 'lowpass';
+      voiceFilter.frequency.setValueAtTime(1600 + presence * 4200, now);
+      voiceFilter.frequency.exponentialRampToValueAtTime(650 + presence * 900, now + 2.4);
+
+      const dur = 2.1 + intensity * 2.1;
+      env.gain.setValueAtTime(0.0001, now);
+      env.gain.linearRampToValueAtTime(0.16 * velocity, now + 0.012);
+      env.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+
+      panner.pan.setValueAtTime(safePan, now);
+
+      mod.connect(modGain);
+      modGain.connect(carrier.frequency);
+      carrier.connect(voiceFilter);
+      voiceFilter.connect(env);
+      env.connect(panner);
+
+      panner.connect(this.compressor);
+      panner.connect(this.reverbSend);
+      panner.connect(this.delaySend);
+
+      carrier.start(now);
+      mod.start(now);
+      carrier.stop(now + dur + 0.05);
+      mod.stop(now + dur + 0.05);
+
+      carrier.onended = () => {
+        this.activeVoices = Math.max(0, this.activeVoices - 1);
+        carrier.disconnect();
+        mod.disconnect();
+        panner.disconnect();
+      };
+
+      // --- Voice 2: Expanding Ripple Shimmer Harmonic (delayed bloom) ---
+      if (intensity > 0.42 || isUserTriggered) {
+        const shim = ctx.createOscillator();
+        const shimEnv = ctx.createGain();
+        const shimPan = ctx.createStereoPanner();
+        const shimFreq = noteObj.f * (noteObj.f < 480 ? 1.5 : 2.0); // fifth or octave shimmer
+        const shimDelay = 0.14;
+        const shimDur = 2.6;
+
+        shim.type = 'sine';
+        shim.frequency.setValueAtTime(shimFreq, now + shimDelay);
+        shimPan.pan.setValueAtTime(clamp(-safePan * 0.55, -0.85, 0.85), now + shimDelay);
+
+        shimEnv.gain.setValueAtTime(0.0001, now + shimDelay);
+        shimEnv.gain.linearRampToValueAtTime(0.055 * velocity, now + shimDelay + 0.28);
+        shimEnv.gain.exponentialRampToValueAtTime(0.0001, now + shimDelay + shimDur);
+
+        shim.connect(shimEnv);
+        shimEnv.connect(shimPan);
+        shimPan.connect(this.reverbSend);
+        shimPan.connect(this.delaySend);
+
+        shim.start(now + shimDelay);
+        shim.stop(now + shimDelay + shimDur + 0.05);
+      }
+
+      // --- Voice 3: Electric Spark Transient (crisp micro-arc on close strong strikes) ---
+      if (frontFactor > 0.65 && (intensity > 0.58 || isUserTriggered)) {
+        const spark = ctx.createBufferSource();
+        spark.buffer = this.noiseBuffer;
+        const hp = ctx.createBiquadFilter();
+        hp.type = 'bandpass';
+        hp.frequency.setValueAtTime(3600 + Math.random() * 2400, now);
+        hp.Q.value = 1.8;
+
+        const spEnv = ctx.createGain();
+        spEnv.gain.setValueAtTime(0.0001, now);
+        spEnv.gain.linearRampToValueAtTime(0.05 * velocity, now + 0.004);
+        spEnv.gain.exponentialRampToValueAtTime(0.0001, now + 0.055);
+
+        const spPan = ctx.createStereoPanner();
+        spPan.pan.setValueAtTime(safePan, now);
+
+        spark.connect(hp);
+        hp.connect(spEnv);
+        spEnv.connect(spPan);
+        spPan.connect(this.compressor);
+        spPan.connect(this.reverbSend);
+
+        spark.start(now, Math.random() * 2.5, 0.07);
+      }
+
+      // --- Voice 4: Distant Rolling Thunder & Sub-Bass Swell ---
+      if (intensity > 0.45 || isUserTriggered) {
+        const thunderDelay = 0.08 + (1 - presence) * 0.28;
+        const t0 = now + thunderDelay;
+
+        // Warm sub-bass pitch drop
+        const sub = ctx.createOscillator();
+        const subEnv = ctx.createGain();
+        sub.type = 'sine';
+        const baseSub = 68 + intensity * 14;
+        sub.frequency.setValueAtTime(baseSub, t0);
+        sub.frequency.exponentialRampToValueAtTime(34, t0 + 1.45);
+
+        subEnv.gain.setValueAtTime(0.0001, t0);
+        subEnv.gain.linearRampToValueAtTime(0.18 * velocity * intensity, t0 + 0.14);
+        subEnv.gain.exponentialRampToValueAtTime(0.0001, t0 + 2.1);
+
+        sub.connect(subEnv);
+        subEnv.connect(this.compressor);
+        sub.start(t0);
+        sub.stop(t0 + 2.2);
+
+        // Filtered noise thunder rumble
+        const rumble = ctx.createBufferSource();
+        rumble.buffer = this.noiseBuffer;
+        const lp = ctx.createBiquadFilter();
+        lp.type = 'lowpass';
+        lp.frequency.setValueAtTime(175 + intensity * 120, t0);
+        lp.frequency.exponentialRampToValueAtTime(62, t0 + 2.6);
+
+        const rEnv = ctx.createGain();
+        rEnv.gain.setValueAtTime(0.0001, t0);
+        rEnv.gain.linearRampToValueAtTime(0.24 * velocity * intensity, t0 + 0.26);
+        rEnv.gain.exponentialRampToValueAtTime(0.0001, t0 + 2.9);
+
+        const rPan = ctx.createStereoPanner();
+        rPan.pan.setValueAtTime(safePan * 0.5, t0);
+
+        rumble.connect(lp);
+        lp.connect(rEnv);
+        rEnv.connect(rPan);
+        rPan.connect(this.compressor);
+        rPan.connect(this.reverbSend);
+
+        rumble.start(t0, Math.random() * 1.0, 3.0);
+      }
+
+      return noteObj.n;
+    }
+
+    getAudioLevel() {
+      if (!this.started || !this.analyser || this.muted) return { level: 0, bars: [0.1, 0.1, 0.1, 0.1] };
+      this.analyser.getByteFrequencyData(this.freqData);
+      let sum = 0;
+      for (let i = 0; i < 24; i++) sum += this.freqData[i];
+      const level = sum / (24 * 255);
+      const bars = [
+        this.freqData[1] / 255,
+        this.freqData[4] / 255,
+        this.freqData[9] / 255,
+        this.freqData[16] / 255
+      ];
+      return { level, bars };
+    }
+  }
+
+  // =========================================================================
+  // 4. WEBGL2 SHADERS & GEOMETRY HELPERS
+  // =========================================================================
+  function compileShader(gl, type, src) {
+    const sh = gl.createShader(type);
+    gl.shaderSource(sh, src);
+    gl.compileShader(sh);
+    if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) {
+      const err = gl.getShaderInfoLog(sh);
+      gl.deleteShader(sh);
+      throw new Error('Shader compile failed: ' + err);
+    }
+    return sh;
+  }
+
+  function createProgram(gl, vsSrc, fsSrc) {
+    const vs = compileShader(gl, gl.VERTEX_SHADER, vsSrc);
+    const fs = compileShader(gl, gl.FRAGMENT_SHADER, fsSrc);
+    const prog = gl.createProgram();
+    gl.attachShader(prog, vs);
+    gl.attachShader(prog, fs);
+    gl.linkProgram(prog);
+    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+      const err = gl.getProgramInfoLog(prog);
+      gl.deleteProgram(prog);
+      throw new Error('Program link failed: ' + err);
+    }
+    gl.deleteShader(vs);
+    gl.deleteShader(fs);
+    return prog;
+  }
+
+  function createSphereMesh(gl, latBands, lonBands, radius) {
+    const positions = [];
+    const normals = [];
+    const uvs = [];
+    const indices = [];
+
+    for (let i = 0; i <= latBands; i++) {
+      const v = i / latBands;
+      const lat = (0.5 - v) * Math.PI; // +PI/2 North to -PI/2 South
+      const sinLat = Math.sin(lat);
+      const cosLat = Math.cos(lat);
+
+      for (let j = 0; j <= lonBands; j++) {
+        const u = j / lonBands;
+        const lon = (u - 0.5) * Math.PI * 2; // -PI to +PI
+        const nx = cosLat * Math.sin(lon);
+        const ny = sinLat;
+        const nz = cosLat * Math.cos(lon);
+
+        positions.push(nx * radius, ny * radius, nz * radius);
+        normals.push(nx, ny, nz);
+        uvs.push(u, v);
+      }
+    }
+
+    const stride = lonBands + 1;
+    for (let i = 0; i < latBands; i++) {
+      for (let j = 0; j < lonBands; j++) {
+        const a = i * stride + j;
+        const b = (i + 1) * stride + j;
+        const c = (i + 1) * stride + (j + 1);
+        const d = i * stride + (j + 1);
+        indices.push(a, b, d);
+        indices.push(b, c, d);
+      }
+    }
+
+    const vao = gl.createVertexArray();
+    gl.bindVertexArray(vao);
+
+    const posBuf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, posBuf);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+    gl.enableVertexAttribArray(0);
+    gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
+
+    const normBuf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, normBuf);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(normals), gl.STATIC_DRAW);
+    gl.enableVertexAttribArray(1);
+    gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 0, 0);
+
+    const uvBuf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, uvBuf);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(uvs), gl.STATIC_DRAW);
+    gl.enableVertexAttribArray(2);
+    gl.vertexAttribPointer(2, 2, gl.FLOAT, false, 0, 0);
+
+    const idxBuf = gl.createBuffer();
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, idxBuf);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint32Array(indices), gl.STATIC_DRAW);
+
+    gl.bindVertexArray(null);
+    return { vao, count: indices.length };
+  }
+
+  // --- GLSL ES 3.00 SHADERS ---
+
+  // 1) Earth Globe Shader (Day/Night, City Lights, Swirling Clouds, Ocean Specular, Geodesic Lightning Ripples)
+  const EARTH_VS = `#version 300 es
+precision highp float;
+
+layout(location = 0) in vec3 aPos;
+layout(location = 1) in vec3 aNormal;
+layout(location = 2) in vec2 aUV;
+
+uniform mat4 uModel;
+uniform mat4 uView;
+uniform mat4 uProj;
+
+out vec3 vLocalNormal;
+out vec3 vWorldNormal;
+out vec3 vWorldPos;
+out vec2 vUV;
+
+void main() {
+  vec4 worldPos = uModel * vec4(aPos, 1.0);
+  vWorldPos = worldPos.xyz;
+  vLocalNormal = normalize(aNormal);
+  vWorldNormal = normalize(mat3(uModel) * aNormal);
+  vUV = aUV;
+  gl_Position = uProj * uView * worldPos;
+}
+`;
+
+  const EARTH_FS = `#version 300 es
+precision highp float;
+
+#define MAX_STRIKES 28
+
+in vec3 vLocalNormal;
+in vec3 vWorldNormal;
+in vec3 vWorldPos;
+in vec2 vUV;
+
+uniform sampler2D uDayTex;
+uniform sampler2D uAuxTex;
+uniform vec3 uSunDir;
+uniform vec3 uCamPos;
+uniform float uTime;
+uniform float uAudioPulse;
+uniform vec4 uStrikePosAge[MAX_STRIKES];
+uniform vec4 uStrikeData[MAX_STRIKES];
+
+out vec4 fragColor;
+
+vec3 acesToneMap(vec3 x) {
+  const float a = 2.51;
+  const float b = 0.03;
+  const float c = 2.43;
+  const float d = 0.59;
+  const float e = 0.14;
+  return clamp((x * (a * x + b)) / (x * (c * x + d) + e), 0.0, 1.0);
+}
+
+void main() {
+  vec3 N = normalize(vWorldNormal);
+  vec3 Nlocal = normalize(vLocalNormal);
+  vec3 V = normalize(uCamPos - vWorldPos);
+  vec3 L = normalize(uSunDir);
+
+  vec4 daySample = texture(uDayTex, vUV);
+  vec4 auxSample = texture(uAuxTex, vUV);
+
+  vec3 albedo = daySample.rgb;
+  float elev = daySample.a;
+  float isLand = auxSample.a;
+  float cityMask = auxSample.r;
+
+  // Dual drifting cloud layers (no fract so GL_REPEAT keeps continuous mipmap derivatives)
+  vec2 cloudUV1 = vec2(vUV.x - uTime * 0.0022, vUV.y);
+  vec2 cloudUV2 = vec2(vUV.x - uTime * 0.0036 + 0.17, clamp(vUV.y + 0.012 * sin(uTime * 0.06 + vUV.x * 6.283), 0.001, 0.999));
+  float cloud1 = texture(uAuxTex, cloudUV1).g;
+  float cloud2 = texture(uAuxTex, cloudUV2).b;
+  float clouds = clamp(cloud1 * 0.72 + cloud2 * 0.42, 0.0, 1.0);
+
+  // Subtle topographic relief lighting from elevation gradient
+  vec2 texel = vec2(1.0 / 1024.0, 1.0 / 512.0);
+  float eR = texture(uDayTex, vec2(vUV.x + texel.x, vUV.y)).a;
+  float eD = texture(uDayTex, vec2(vUV.x, min(0.999, vUV.y + texel.y))).a;
+  float bumpStrength = isLand * 1.45;
+  vec3 T = normalize(cross(vec3(0.0, 1.0, 0.0001), N));
+  vec3 B = cross(N, T);
+  vec3 Nbumped = normalize(N + (T * (elev - eR) + B * (elev - eD)) * bumpStrength * 4.5);
+
+  float ndl = dot(Nbumped, L);
+  float ndlSmooth = dot(N, L);
+  float dayFactor = smoothstep(-0.18, 0.28, ndlSmooth);
+  float twilight = exp(-pow((ndlSmooth + 0.02) * 5.2, 2.0));
+  float nightFactor = 1.0 - smoothstep(-0.22, 0.16, ndlSmooth);
+
+  // Day surface shading
+  float diffuse = max(ndl, 0.0);
+  vec3 dayColor = albedo * (0.14 + 0.95 * diffuse);
+
+  // Warm golden-amber sunset scattering along the terminator
+  dayColor += vec3(0.45, 0.19, 0.08) * twilight * (0.4 + 0.6 * clouds);
+
+  // Crisp ocean sun specular glint
+  vec3 H = normalize(L + V);
+  float spec = pow(max(dot(N, H), 0.0), 42.0) * (1.0 - isLand) * (1.0 - clouds * 0.75) * dayFactor;
+  dayColor += vec3(0.65, 0.84, 1.0) * spec * 0.52;
+
+  // Night-side base + glowing golden metropolitan city lights
+  vec3 nightBase = albedo * vec3(0.055, 0.075, 0.125);
+  float cityTwinkle = 0.88 + 0.12 * sin(uTime * 3.1 + vUV.x * 220.0 + vUV.y * 140.0);
+  vec3 cityColor = vec3(1.0, 0.76, 0.42) * cityMask * nightFactor * (1.0 - clouds * 0.58) * 1.45 * cityTwinkle;
+
+  vec3 surface = mix(nightBase, dayColor, dayFactor) + cityColor;
+
+  // Cloud layer shading (bright white by day, cool moonlit indigo by night)
+  vec3 cloudDay = vec3(0.92, 0.96, 1.0) * (0.28 + 0.82 * max(ndlSmooth, 0.0)) + vec3(0.42, 0.18, 0.10) * twilight * 0.6;
+  vec3 cloudNight = vec3(0.05, 0.08, 0.15);
+  vec3 cloudCol = mix(cloudNight, cloudDay, dayFactor);
+  surface = mix(surface, cloudCol, clouds * 0.62);
+
+  // Subtle inner atmospheric Fresnel sheen
+  float fresnel = pow(1.0 - max(dot(N, V), 0.0), 3.2);
+  vec3 atmoTint = mix(vec3(0.12, 0.32, 0.72), vec3(0.32, 0.68, 1.0), dayFactor);
+  surface += atmoTint * fresnel * (0.58 + uAudioPulse * 0.22);
+
+  // =========================================================================
+  // REAL-TIME GEODESIC LIGHTNING FLASHES & GLOWING RIPPLES
+  // =========================================================================
+  vec3 lightningAccum = vec3(0.0);
+
+  for (int i = 0; i < MAX_STRIKES; i++) {
+    vec4 sp = uStrikePosAge[i];
+    float age = sp.w;
+    if (age < 0.0 || age > 5.2) continue;
+
+    vec4 sd = uStrikeData[i];
+    float intensity = sd.x;
+    float maxRadius = sd.y;
+    float colorPhase = sd.z;
+    float seed = sd.w;
+
+    // Exact great-circle angular distance on the unit sphere
+    float cosD = clamp(dot(Nlocal, sp.xyz), -1.0, 1.0);
+    // Quick angular reject for performance
+    if (cosD < 0.55) continue;
+    float dist = acos(cosD);
+
+    // Local tangent azimuth angle around the strike center for subtle plasma shimmer
+    vec3 refAxis = abs(sp.y) < 0.9 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
+    vec3 stT = normalize(cross(refAxis, sp.xyz));
+    vec3 stB = cross(sp.xyz, stT);
+    vec3 delta = Nlocal - sp.xyz;
+    float xAng = dot(delta, stT);
+    float yAng = dot(delta, stB);
+    float ang = (abs(xAng) + abs(yAng) > 1e-5) ? atan(yAng, xAng) : 0.0;
+
+    // Strike palette: electric cyan -> ion violet -> rare amber superbolt
+    vec3 colCore = vec3(0.88, 0.98, 1.0);
+    vec3 colPrimary = mix(vec3(0.22, 0.88, 1.0), vec3(0.64, 0.45, 1.0), colorPhase);
+    if (colorPhase > 0.84) {
+      colPrimary = mix(colPrimary, vec3(1.0, 0.76, 0.34), (colorPhase - 0.84) * 5.0);
+    }
+    vec3 colOuter = mix(vec3(0.45, 0.34, 1.0), vec3(0.18, 0.92, 0.88), colorPhase);
+
+    // 1) Multi-stroke electric core flash & cloud sheet-lightning illumination
+    if (age < 0.75) {
+      float stroke1 = exp(-age * 15.0);
+      float stroke2 = 0.72 * exp(-pow((age - 0.11) / 0.032, 2.0));
+      float stroke3 = 0.35 * exp(-pow((age - 0.24) / 0.045, 2.0));
+      float flashEnv = (stroke1 + stroke2 + stroke3) * intensity;
+
+      float core = exp(-dist * 46.0);
+      float cloudGlow = exp(-dist * 11.5) * (0.42 + 0.95 * clouds);
+
+      lightningAccum += colCore * core * flashEnv * 3.4;
+      lightningAccum += colPrimary * cloudGlow * flashEnv * 1.45;
+    }
+
+    // 2) Primary expanding glowing ripple
+    float life1 = clamp(1.0 - age / 4.2, 0.0, 1.0);
+    float r1 = maxRadius * (1.0 - exp(-age * 1.55));
+    float w1 = 0.009 + age * 0.0045;
+    float ring1 = exp(-pow((dist - r1) / w1, 2.0));
+    float shimmer1 = 0.82 + 0.18 * sin(ang * 8.0 + seed * 31.4 - age * 5.2);
+    float fade1 = pow(life1, 1.75) * smoothstep(0.0, 0.06, age);
+
+    // Subtle luminous wake trailing just behind the ripple crest
+    float wake = exp(-max(0.0, r1 - dist) * 24.0) * smoothstep(r1 + w1, r1 - w1 * 0.4, dist) * 0.22;
+
+    vec3 ring1Col = mix(colPrimary, colOuter, clamp(age * 0.32, 0.0, 1.0));
+    lightningAccum += ring1Col * (ring1 * shimmer1 + wake) * fade1 * intensity * 1.55;
+
+    // 3) Secondary harmonic echo ripple
+    float age2 = age - 0.32;
+    if (age2 > 0.0) {
+      float life2 = clamp(1.0 - age2 / 3.8, 0.0, 1.0);
+      float r2 = maxRadius * 0.74 * (1.0 - exp(-age2 * 1.38));
+      float w2 = 0.0075 + age2 * 0.0038;
+      float ring2 = exp(-pow((dist - r2) / w2, 2.0));
+      float shimmer2 = 0.85 + 0.15 * sin(ang * 5.0 - seed * 19.0 + age2 * 3.8);
+      float fade2 = pow(life2, 1.85) * smoothstep(0.0, 0.08, age2);
+      lightningAccum += mix(colOuter, colCore, 0.25) * ring2 * shimmer2 * fade2 * intensity * 0.92;
+    }
+
+    // 4) Soft tertiary resonance ring on strong strikes
+    float age3 = age - 0.68;
+    if (age3 > 0.0 && intensity > 0.55) {
+      float life3 = clamp(1.0 - age3 / 3.4, 0.0, 1.0);
+      float r3 = maxRadius * 0.48 * (1.0 - exp(-age3 * 1.25));
+      float w3 = 0.0065 + age3 * 0.003;
+      float ring3 = exp(-pow((dist - r3) / w3, 2.0));
+      float fade3 = pow(life3, 2.0) * smoothstep(0.0, 0.1, age3);
+      lightningAccum += colCore * ring3 * fade3 * intensity * 0.55;
+    }
+
+    // Residual warm ionized hotspot at epicenter
+    float ember = exp(-dist * 32.0) * exp(-age * 1.35) * intensity * 0.55;
+    lightningAccum += colPrimary * ember;
+  }
+
+  vec3 finalCol = surface + lightningAccum;
+  finalCol = acesToneMap(finalCol);
+  // Subtle gamma lift for luminous display
+  finalCol = pow(finalCol, vec3(0.95));
+  fragColor = vec4(finalCol, 1.0);
+}
+`;
+
+  // 2) Outer Atmospheric Scattering Halo Shader (Back-face limb glow + lightning reactivity)
+  const ATMO_VS = `#version 300 es
+precision highp float;
+
+layout(location = 0) in vec3 aPos;
+layout(location = 1) in vec3 aNormal;
+
+uniform mat4 uModel;
+uniform mat4 uView;
+uniform mat4 uProj;
+
+out vec3 vWorldNormal;
+out vec3 vWorldPos;
+out vec3 vLocalNormal;
+
+void main() {
+  vec4 wp = uModel * vec4(aPos, 1.0);
+  vWorldPos = wp.xyz;
+  vWorldNormal = normalize(mat3(uModel) * aNormal);
+  vLocalNormal = normalize(aNormal);
+  gl_Position = uProj * uView * wp;
+}
+`;
+
+  const ATMO_FS = `#version 300 es
+precision highp float;
+
+#define MAX_STRIKES 28
+
+in vec3 vWorldNormal;
+in vec3 vWorldPos;
+in vec3 vLocalNormal;
+
+uniform vec3 uSunDir;
+uniform vec3 uCamPos;
+uniform float uAudioPulse;
+uniform vec4 uStrikePosAge[MAX_STRIKES];
+uniform vec4 uStrikeData[MAX_STRIKES];
+
+out vec4 fragColor;
+
+void main() {
+  vec3 N = normalize(vWorldNormal);
+  vec3 Nlocal = normalize(vLocalNormal);
+  vec3 V = normalize(uCamPos - vWorldPos);
+  vec3 L = normalize(uSunDir);
+
+  // Back-face rendered outer shell: ndv is 0.0 at outer edge (r=1.095) and ~0.407 at Earth horizon (r=1.0)
+  float ndv = clamp(-dot(N, V), 0.0, 1.0);
+  float t = clamp(ndv / 0.4074, 0.0, 1.0);
+  float glow = pow(t, 2.5) * smoothstep(0.0, 0.24, t);
+
+  float sunSide = smoothstep(-0.35, 0.55, dot(N, L));
+  vec3 nightAtmo = vec3(0.11, 0.27, 0.72);
+  vec3 dayAtmo = vec3(0.32, 0.72, 1.0);
+  vec3 col = mix(nightAtmo, dayAtmo, sunSide) * glow * (0.95 + uAudioPulse * 0.35);
+
+  // Subtle limb illumination when lightning flashes near the horizon
+  vec3 flash = vec3(0.0);
+  for (int i = 0; i < MAX_STRIKES; i++) {
+    vec4 sp = uStrikePosAge[i];
+    float age = sp.w;
+    if (age < 0.0 || age > 1.2) continue;
+    float d = dot(Nlocal, sp.xyz);
+    if (d < 0.85) continue;
+    float inten = uStrikeData[i].x;
+    float env = exp(-age * 5.0) * inten;
+    float prox = pow(clamp((d - 0.85) / 0.15, 0.0, 1.0), 2.0);
+    flash += vec3(0.45, 0.90, 1.0) * prox * env * glow * 1.5;
+  }
+
+  fragColor = vec4(col + flash, 1.0);
+}
+`;
+
+  // 3) 3D Deep Space Starfield Shader
+  const STAR_VS = `#version 300 es
+precision highp float;
+
+layout(location = 0) in vec3 aPos;
+layout(location = 1) in vec3 aColor;
+layout(location = 2) in float aSize;
+layout(location = 3) in float aPhase;
+
+uniform mat4 uViewRot;
+uniform mat4 uProj;
+uniform float uTime;
+uniform float uDpr;
+
+out vec3 vColor;
+out float vTwinkle;
+
+void main() {
+  vec4 clip = uProj * uViewRot * vec4(aPos, 1.0);
+  gl_Position = clip;
+  float tw = 0.72 + 0.28 * sin(uTime * (1.2 + mod(aPhase, 2.3)) + aPhase * 6.283);
+  vTwinkle = tw;
+  vColor = aColor;
+  gl_PointSize = aSize * uDpr * (0.85 + 0.25 * tw);
+}
+`;
+
+  const STAR_FS = `#version 300 es
+precision highp float;
+
+in vec3 vColor;
+in float vTwinkle;
+out vec4 fragColor;
+
+void main() {
+  vec2 p = gl_PointCoord - 0.5;
+  float r = length(p);
+  if (r > 0.5) discard;
+  float core = exp(-r * r * 26.0);
+  float soft = smoothstep(0.5, 0.0, r) * 0.45;
+  fragColor = vec4(vColor * (core + soft) * vTwinkle, 1.0);
+}
+`;
+
+  // 4) 3D Jagged Lightning Bolts & Ion Sparks Shader
+  const BOLT_VS = `#version 300 es
+precision highp float;
+
+layout(location = 0) in vec3 aPos;
+layout(location = 1) in vec4 aColor;
+
+uniform mat4 uModel;
+uniform mat4 uView;
+uniform mat4 uProj;
+
+out vec4 vColor;
+
+void main() {
+  vColor = aColor;
+  gl_Position = uProj * uView * uModel * vec4(aPos, 1.0);
+}
+`;
+
+  const BOLT_FS = `#version 300 es
+precision highp float;
+
+in vec4 vColor;
+out vec4 fragColor;
+
+void main() {
+  fragColor = vec4(vColor.rgb * vColor.a, vColor.a);
+}
+`;
+
+  const SPARK_VS = `#version 300 es
+precision highp float;
+
+layout(location = 0) in vec3 aPos;
+layout(location = 1) in vec4 aColor;
+layout(location = 2) in float aSize;
+
+uniform mat4 uModel;
+uniform mat4 uView;
+uniform mat4 uProj;
+uniform float uDpr;
+
+out vec4 vColor;
+
+void main() {
+  vColor = aColor;
+  vec4 viewPos = uView * uModel * vec4(aPos, 1.0);
+  gl_Position = uProj * viewPos;
+  gl_PointSize = aSize * uDpr * (3.2 / max(0.8, -viewPos.z));
+}
+`;
+
+  const SPARK_FS = `#version 300 es
+precision highp float;
+
+in vec4 vColor;
+out vec4 fragColor;
+
+void main() {
+  vec2 p = gl_PointCoord - 0.5;
+  float r = length(p);
+  if (r > 0.5) discard;
+  float glow = exp(-r * r * 18.0);
+  fragColor = vec4(vColor.rgb * glow * vColor.a, glow * vColor.a);
+}
+`;
+
+  // =========================================================================
+  // 5. MAIN APPLICATION INITIALIZATION
+  // =========================================================================
+  const canvas = document.getElementById('glCanvas');
+  const gl = canvas.getContext('webgl2', {
+    antialias: true,
+    alpha: true,
+    powerPreference: 'high-performance'
+  });
+
+  if (!gl) {
+    document.getElementById('errorOverlay').style.display = 'flex';
+    return;
+  }
+
+  let earthProg, atmoProg, starProg, boltProg, sparkProg;
+  try {
+    earthProg = createProgram(gl, EARTH_VS, EARTH_FS);
+    atmoProg = createProgram(gl, ATMO_VS, ATMO_FS);
+    starProg = createProgram(gl, STAR_VS, STAR_FS);
+    boltProg = createProgram(gl, BOLT_VS, BOLT_FS);
+    sparkProg = createProgram(gl, SPARK_VS, SPARK_FS);
+  } catch (err) {
+    document.getElementById('errorOverlay').style.display = 'flex';
+    document.getElementById('errorMessage').textContent = err.message;
+    return;
+  }
+
+  // Build Meshes
+  const earthMesh = createSphereMesh(gl, 84, 128, 1.0);
+  const atmoMesh = createSphereMesh(gl, 48, 72, 1.095);
+
+  // Build Starfield
+  const STAR_COUNT = 2200;
+  const starVao = gl.createVertexArray();
+  gl.bindVertexArray(starVao);
+  {
+    const sPos = new Float32Array(STAR_COUNT * 3);
+    const sCol = new Float32Array(STAR_COUNT * 3);
+    const sSize = new Float32Array(STAR_COUNT);
+    const sPhase = new Float32Array(STAR_COUNT);
+    const palette = [
+      [0.72, 0.86, 1.0],
+      [0.95, 0.97, 1.0],
+      [1.0, 0.92, 0.78],
+      [0.65, 0.78, 1.0],
+      [0.88, 0.80, 1.0]
+    ];
+    for (let i = 0; i < STAR_COUNT; i++) {
+      const u = Math.random();
+      const v = Math.random();
+      const theta = u * Math.PI * 2;
+      const phi = Math.acos(2 * v - 1);
+      const r = 38 + Math.random() * 24;
+      sPos[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+      sPos[i * 3 + 1] = r * Math.cos(phi);
+      sPos[i * 3 + 2] = r * Math.sin(phi) * Math.sin(theta);
+
+      const c = palette[Math.floor(Math.random() * palette.length)];
+      const bright = 0.35 + Math.pow(Math.random(), 2.2) * 0.9;
+      sCol[i * 3] = c[0] * bright;
+      sCol[i * 3 + 1] = c[1] * bright;
+      sCol[i * 3 + 2] = c[2] * bright;
+
+      sSize[i] = 1.0 + Math.pow(Math.random(), 3.2) * 3.4;
+      sPhase[i] = Math.random() * 10.0;
+    }
+
+    const bindAttr = (loc, data, size) => {
+      const b = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, b);
+      gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
+      gl.enableVertexAttribArray(loc);
+      gl.vertexAttribPointer(loc, size, gl.FLOAT, false, 0, 0);
+    };
+    bindAttr(0, sPos, 3);
+    bindAttr(1, sCol, 3);
+    bindAttr(2, sSize, 1);
+    bindAttr(3, sPhase, 1);
+  }
+  gl.bindVertexArray(null);
+
+  // Generate & upload procedural Earth textures
+  const earthTexData = generateEarthTextures();
+
+  function createRGBATexture(w, h, data) {
+    const tex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, data);
+    gl.generateMipmap(gl.TEXTURE_2D);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    return tex;
+  }
+
+  const dayTexture = createRGBATexture(earthTexData.width, earthTexData.height, earthTexData.dayBuf);
+  const auxTexture = createRGBATexture(earthTexData.width, earthTexData.height, earthTexData.auxBuf);
+
+  // Dynamic Buffers for 3D Lightning Bolts & Ion Sparks
+  const MAX_BOLT_VERTS = 1800;
+  const boltPosArr = new Float32Array(MAX_BOLT_VERTS * 3);
+  const boltColArr = new Float32Array(MAX_BOLT_VERTS * 4);
+  const boltVao = gl.createVertexArray();
+  gl.bindVertexArray(boltVao);
+  const boltPosBuf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, boltPosBuf);
+  gl.bufferData(gl.ARRAY_BUFFER, boltPosArr.byteLength, gl.DYNAMIC_DRAW);
+  gl.enableVertexAttribArray(0);
+  gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
+  const boltColBuf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, boltColBuf);
+  gl.bufferData(gl.ARRAY_BUFFER, boltColArr.byteLength, gl.DYNAMIC_DRAW);
+  gl.enableVertexAttribArray(1);
+  gl.vertexAttribPointer(1, 4, gl.FLOAT, false, 0, 0);
+  gl.bindVertexArray(null);
+
+  const MAX_SPARKS = 420;
+  const sparkPosArr = new Float32Array(MAX_SPARKS * 3);
+  const sparkColArr = new Float32Array(MAX_SPARKS * 4);
+  const sparkSizeArr = new Float32Array(MAX_SPARKS);
+  const sparkVao = gl.createVertexArray();
+  gl.bindVertexArray(sparkVao);
+  const sparkPosBuf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, sparkPosBuf);
+  gl.bufferData(gl.ARRAY_BUFFER, sparkPosArr.byteLength, gl.DYNAMIC_DRAW);
+  gl.enableVertexAttribArray(0);
+  gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
+  const sparkColBuf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, sparkColBuf);
+  gl.bufferData(gl.ARRAY_BUFFER, sparkColArr.byteLength, gl.DYNAMIC_DRAW);
+  gl.enableVertexAttribArray(1);
+  gl.vertexAttribPointer(1, 4, gl.FLOAT, false, 0, 0);
+  const sparkSizeBuf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, sparkSizeBuf);
+  gl.bufferData(gl.ARRAY_BUFFER, sparkSizeArr.byteLength, gl.DYNAMIC_DRAW);
+  gl.enableVertexAttribArray(2);
+  gl.vertexAttribPointer(2, 1, gl.FLOAT, false, 0, 0);
+  gl.bindVertexArray(null);
+
+  // Cache uniform locations
+  const uEarth = {
+    uModel: gl.getUniformLocation(earthProg, 'uModel'),
+    uView: gl.getUniformLocation(earthProg, 'uView'),
+    uProj: gl.getUniformLocation(earthProg, 'uProj'),
+    uDayTex: gl.getUniformLocation(earthProg, 'uDayTex'),
+    uAuxTex: gl.getUniformLocation(earthProg, 'uAuxTex'),
+    uSunDir: gl.getUniformLocation(earthProg, 'uSunDir'),
+    uCamPos: gl.getUniformLocation(earthProg, 'uCamPos'),
+    uTime: gl.getUniformLocation(earthProg, 'uTime'),
+    uAudioPulse: gl.getUniformLocation(earthProg, 'uAudioPulse'),
+    uStrikePosAge: gl.getUniformLocation(earthProg, 'uStrikePosAge'),
+    uStrikeData: gl.getUniformLocation(earthProg, 'uStrikeData')
+  };
+
+  const uAtmo = {
+    uModel: gl.getUniformLocation(atmoProg, 'uModel'),
+    uView: gl.getUniformLocation(atmoProg, 'uView'),
+    uProj: gl.getUniformLocation(atmoProg, 'uProj'),
+    uSunDir: gl.getUniformLocation(atmoProg, 'uSunDir'),
+    uCamPos: gl.getUniformLocation(atmoProg, 'uCamPos'),
+    uAudioPulse: gl.getUniformLocation(atmoProg, 'uAudioPulse'),
+    uStrikePosAge: gl.getUniformLocation(atmoProg, 'uStrikePosAge'),
+    uStrikeData: gl.getUniformLocation(atmoProg, 'uStrikeData')
+  };
+
+  const uStar = {
+    uViewRot: gl.getUniformLocation(starProg, 'uViewRot'),
+    uProj: gl.getUniformLocation(starProg, 'uProj'),
+    uTime: gl.getUniformLocation(starProg, 'uTime'),
+    uDpr: gl.getUniformLocation(starProg, 'uDpr')
+  };
+
+  const uBolt = {
+    uModel: gl.getUniformLocation(boltProg, 'uModel'),
+    uView: gl.getUniformLocation(boltProg, 'uView'),
+    uProj: gl.getUniformLocation(boltProg, 'uProj')
+  };
+
+  const uSpark = {
+    uModel: gl.getUniformLocation(sparkProg, 'uModel'),
+    uView: gl.getUniformLocation(sparkProg, 'uView'),
+    uProj: gl.getUniformLocation(sparkProg, 'uProj'),
+    uDpr: gl.getUniformLocation(sparkProg, 'uDpr')
+  };
+
+  // =========================================================================
+  // 6. LIGHTNING STORM SIMULATION & 3D BOLT / SPARK GENERATOR
+  // =========================================================================
+  const audio = new StormAudioEngine();
+  const strikes = [];
+  const sparks = [];
+  const strikeTimestamps = [];
+  const strikePosAgeUniform = new Float32Array(MAX_STRIKES * 4);
+  const strikeDataUniform = new Float32Array(MAX_STRIKES * 4);
+
+  // Camera & Globe orientation state
+  let rotY = -0.35;  // Start showing Atlantic / Europe / Africa / Americas twilight
+  let rotX = 0.24;
+  let velY = 0;
+  let velX = 0;
+  let camDist = 2.95;
+  let targetCamDist = 2.95;
+  let autoSpin = true;
+  let stormIntensity = 0.48; // 0..1 from slider
+
+  const FOV_Y = 42 * DEG2RAD;
+  let currentModelMat = Mat4.multiply(Mat4.rotateX(rotX), Mat4.rotateY(rotY));
+
+  // Build jagged 3D lightning fork segments above a unit normal on the globe
+  function buildBoltSegments(nx, ny, nz, intensity, colorPhase) {
+    const ref = Math.abs(ny) < 0.9 ? [0, 1, 0] : [1, 0, 0];
+    // Tangent basis
+    let tx = ref[1] * nz - ref[2] * ny;
+    let ty = ref[2] * nx - ref[0] * nz;
+    let tz = ref[0] * ny - ref[1] * nx;
+    const tl = Math.hypot(tx, ty, tz) || 1;
+    tx /= tl; ty /= tl; tz /= tl;
+
+    const bx = ny * tz - nz * ty;
+    const by = nz * tx - nx * tz;
+    const bz = nx * ty - ny * tx;
+
+    const segs = [];
+    const steps = 6;
+    const maxAlt = 0.035 + intensity * 0.055;
+    let prev = [nx * 1.002, ny * 1.002, nz * 1.002];
+
+    for (let s = 1; s <= steps; s++) {
+      const f = s / steps;
+      const alt = 1.002 + f * maxAlt;
+      const jitter = (1 - Math.abs(f - 0.5) * 1.4) * (0.012 + intensity * 0.014);
+      const jT = (Math.random() - 0.5) * 2 * jitter;
+      const jB = (Math.random() - 0.5) * 2 * jitter;
+      const cur = [
+        nx * alt + tx * jT + bx * jB,
+        ny * alt + ty * jT + by * jB,
+        nz * alt + tz * jT + bz * jB
+      ];
+      segs.push([prev, cur, 1.0]);
+
+      // Occasional branching fork
+      if (s >= 2 && s <= 4 && Math.random() < 0.65) {
+        const bAlt = alt + maxAlt * 0.28;
+        const ang = Math.random() * Math.PI * 2;
+        const spread = 0.014 + intensity * 0.014;
+        const branchEnd = [
+          nx * bAlt + (tx * Math.cos(ang) + bx * Math.sin(ang)) * spread,
+          ny * bAlt + (ty * Math.cos(ang) + by * Math.sin(ang)) * spread,
+          nz * bAlt + (tz * Math.cos(ang) + bz * Math.sin(ang)) * spread
+        ];
+        segs.push([cur, branchEnd, 0.58]);
+      }
+      prev = cur;
+    }
+
+    const r = colorPhase > 0.84 ? 1.0 : lerp(0.68, 0.88, colorPhase);
+    const g = colorPhase > 0.84 ? 0.90 : lerp(0.96, 0.78, colorPhase);
+    const b = colorPhase > 0.84 ? 0.65 : 1.0;
+    return { segs, color: [r, g, b], basis: { tx, ty, tz, bx, by, bz } };
+  }
+
+  // UI refs
+  const telemetryBox = document.getElementById('telemetryBox');
+  const chordLabel = document.getElementById('chordLabel');
+  const strikeLocEl = document.getElementById('strikeLoc');
+  const strikeNoteEl = document.getElementById('strikeNote');
+  const strikeCoordsEl = document.getElementById('strikeCoords');
+  const strikeRateEl = document.getElementById('strikeRate');
+  let telemetryFlashTimer = 0;
+
+  function spawnStrike(lat, lon, opts = {}) {
+    const [nx, ny, nz] = latLonToXYZ(lat, lon);
+    const intensity = opts.intensity ?? clamp(0.45 + Math.random() * 0.55, 0.35, 1.0);
+    const maxRadius = (0.14 + intensity * 0.22) * (opts.superbolt ? 1.32 : 1.0);
+    const colorPhase = opts.superbolt ? 0.92 : Math.random() * 0.88;
+    const seed = Math.random();
+    const bolt = buildBoltSegments(nx, ny, nz, intensity, colorPhase);
+
+    const strike = {
+      nx, ny, nz,
+      lat, lon,
+      age: 0,
+      intensity,
+      maxRadius,
+      colorPhase,
+      seed,
+      bolt
+    };
+
+    strikes.push(strike);
+    if (strikes.length > MAX_STRIKES) {
+      strikes.shift();
+    }
+
+    // Spawn rising luminescent ion sparks
+    const sparkCount = opts.superbolt ? 20 : Math.floor(6 + intensity * 8);
+    const { tx, ty, tz, bx, by, bz } = bolt.basis;
+    for (let i = 0; i < sparkCount; i++) {
+      const ang = Math.random() * Math.PI * 2;
+      const spd = 0.025 + Math.random() * 0.065;
+      const lift = 0.03 + Math.random() * 0.08;
+      sparks.push({
+        x: nx * 1.006,
+        y: ny * 1.006,
+        z: nz * 1.006,
+        vx: (tx * Math.cos(ang) + bx * Math.sin(ang)) * spd + nx * lift,
+        vy: (ty * Math.cos(ang) + by * Math.sin(ang)) * spd + ny * lift,
+        vz: (tz * Math.cos(ang) + bz * Math.sin(ang)) * spd + nz * lift,
+        age: 0,
+        life: 0.7 + Math.random() * 1.15,
+        size: 2.2 + Math.random() * 3.8 * intensity,
+        color: bolt.color
+      });
+    }
+    if (sparks.length > MAX_SPARKS) {
+      sparks.splice(0, sparks.length - MAX_SPARKS);
+    }
+
+    // Compute camera/view-space position for 3D stereo audio panning & front attenuation
+    const viewPos = Mat4.transformVec3(currentModelMat, [nx, ny, nz]);
+    const pan = clamp(viewPos[0] * 0.95, -0.92, 0.92);
+    const frontFactor = 0.45 + 0.55 * smoothstep(-0.45, 0.45, viewPos[2]);
+
+    const noteName = audio.triggerStrike(lat, intensity, pan, frontFactor, !!opts.user);
+
+    // Update telemetry HUD
+    const nowMs = performance.now();
+    strikeTimestamps.push(nowMs);
+    while (strikeTimestamps.length && nowMs - strikeTimestamps[0] > 60000) {
+      strikeTimestamps.shift();
+    }
+
+    const region = opts.regionName || findNearestRegion(lat, lon);
+    strikeLocEl.textContent = region;
+    strikeNoteEl.textContent = noteName;
+    strikeCoordsEl.textContent = formatCoords(lat, lon);
+    strikeRateEl.textContent = `${strikeTimestamps.length} strikes/min`;
+    telemetryBox.classList.add('flash');
+    telemetryFlashTimer = 0.32;
+  }
+
+  // Weighted random storm hotspot picker with active storm-cell clustering
+  let activeStormCells = [0, 1, 6];
+  let stormCellTimer = 0;
+
+  function pickNaturalStrikeLocation() {
+    // 68% chance from currently pulsing global storm cells, 22% any hotspot, 10% random mid-latitude
+    const roll = Math.random();
+    let spot = null;
+    if (roll < 0.68) {
+      const idx = activeStormCells[Math.floor(Math.random() * activeStormCells.length)];
+      spot = STORM_HOTSPOTS[idx];
+    } else if (roll < 0.92) {
+      let totalW = 0;
+      for (const h of STORM_HOTSPOTS) totalW += h.weight;
+      let r = Math.random() * totalW;
+      for (const h of STORM_HOTSPOTS) {
+        r -= h.weight;
+        if (r <= 0) { spot = h; break; }
+      }
+    }
+
+    if (spot) {
+      // Gaussian-like spread around storm center
+      const g1 = (Math.random() + Math.random() - 1) * spot.spread;
+      const g2 = (Math.random() + Math.random() - 1) * spot.spread * 1.25;
+      const lat = clamp(spot.lat + g1, -72, 72);
+      let lon = spot.lon + g2;
+      if (lon > 180) lon -= 360;
+      if (lon < -180) lon += 360;
+      return { lat, lon, regionName: spot.name };
+    }
+
+    const lat = (Math.random() - 0.5) * 116;
+    const lon = (Math.random() - 0.5) * 360;
+    return { lat, lon, regionName: findNearestRegion(lat, lon) };
+  }
+
+  function summonFrontSuperbolt() {
+    // Pick a point near the visible face of the globe (facing camera)
+    const rx = (Math.random() - 0.5) * 0.72;
+    const ry = (Math.random() - 0.5) * 0.68;
+    const rz = Math.sqrt(Math.max(0.05, 1 - rx * rx - ry * ry));
+    const invModel = Mat4.multiply(Mat4.rotateY(-rotY), Mat4.rotateX(-rotX));
+    const local = Mat4.transformVec3(invModel, [rx, ry, rz]);
+    const [lat, lon] = xyzToLatLon(local[0], local[1], local[2]);
+    spawnStrike(lat, lon, { intensity: 1.0, superbolt: true, user: true });
+  }
+
+  // =========================================================================
+  // 7. POINTER INTERACTION (DRAG ROTATE, ZOOM, CLICK-TO-STRIKE)
+  // =========================================================================
+  let isDragging = false;
+  let pointerId = null;
+  let lastX = 0, lastY = 0;
+  let downX = 0, downY = 0;
+  let dragDist = 0;
+
+  canvas.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0 && e.pointerType === 'mouse') return;
+    isDragging = true;
+    pointerId = e.pointerId;
+    lastX = downX = e.clientX;
+    lastY = downY = e.clientY;
+    dragDist = 0;
+    velX = 0;
+    velY = 0;
+    canvas.classList.add('dragging');
+    canvas.setPointerCapture(e.pointerId);
+  });
+
+  canvas.addEventListener('pointermove', (e) => {
+    if (!isDragging || e.pointerId !== pointerId) return;
+    const dx = e.clientX - lastX;
+    const dy = e.clientY - lastY;
+    lastX = e.clientX;
+    lastY = e.clientY;
+    dragDist += Math.hypot(dx, dy);
+
+    const sens = 0.0056 * (camDist / 2.95);
+    rotY += dx * sens;
+    rotX = clamp(rotX + dy * sens, -1.28, 1.28);
+    velY = dx * sens;
+    velX = dy * sens;
+  });
+
+  function endDrag(e) {
+    if (!isDragging || e.pointerId !== pointerId) return;
+    isDragging = false;
+    canvas.classList.remove('dragging');
+    try { canvas.releasePointerCapture(e.pointerId); } catch (_) {}
+
+    // If user clicked/tapped without dragging, raycast onto the globe and summon lightning!
+    if (dragDist < 6) {
+      const rect = canvas.getBoundingClientRect();
+      const ndcX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      const ndcY = 1 - ((e.clientY - rect.top) / rect.height) * 2;
+      const aspect = rect.width / rect.height;
+      const tanHalf = Math.tan(FOV_Y * 0.5);
+
+      let rdx = ndcX * aspect * tanHalf;
+      let rdy = ndcY * tanHalf;
+      let rdz = -1.0;
+      const rLen = Math.hypot(rdx, rdy, rdz);
+      rdx /= rLen; rdy /= rLen; rdz /= rLen;
+
+      // Ray origin (0, 0, camDist), sphere center (0, 0, 0), radius 1
+      const b = camDist * rdz;
+      const c = camDist * camDist - 1.0;
+      const disc = b * b - c;
+      if (disc >= 0) {
+        const t = -b - Math.sqrt(disc);
+        if (t > 0) {
+          const hitWorld = [rdx * t, rdy * t, camDist + rdz * t];
+          const invModel = Mat4.multiply(Mat4.rotateY(-rotY), Mat4.rotateX(-rotX));
+          const hitLocal = Mat4.transformVec3(invModel, hitWorld);
+          const [lat, lon] = xyzToLatLon(hitLocal[0], hitLocal[1], hitLocal[2]);
+          spawnStrike(lat, lon, { intensity: 0.92, user: true });
+        }
+      }
+    }
+  }
+
+  canvas.addEventListener('pointerup', endDrag);
+  canvas.addEventListener('pointercancel', endDrag);
+
+  canvas.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    targetCamDist = clamp(targetCamDist + e.deltaY * 0.0018, 1.82, 4.7);
+  }, { passive: false });
+
+  // =========================================================================
+  // 8. HUD CONTROLS & AUDIO BUTTON WIRING
+  // =========================================================================
+  const startBanner = document.getElementById('startBanner');
+  const audioBtn = document.getElementById('audioBtn');
+  const audioBtnLabel = document.getElementById('audioBtnLabel');
+  const eqSpans = Array.from(document.querySelectorAll('#eqBars span'));
+  const stormSlider = document.getElementById('stormSlider');
+  const stormValue = document.getElementById('stormValue');
+  const summonBtn = document.getElementById('summonBtn');
+  const spinBtn = document.getElementById('spinBtn');
+
+  function updateAudioUI() {
+    if (!audio.started) {
+      audioBtnLabel.textContent = 'Start Audio';
+      audioBtn.classList.add('btn-primary');
+      audioBtn.classList.remove('active');
+    } else if (audio.muted) {
+      audioBtnLabel.textContent = 'Audio Muted';
+      audioBtn.classList.remove('btn-primary', 'active');
+    } else {
+      audioBtnLabel.textContent = 'Audio Live';
+      audioBtn.classList.remove('btn-primary');
+      audioBtn.classList.add('active');
+      startBanner.classList.add('hidden');
+    }
+  }
+
+  function handleStartOrToggleAudio() {
+    if (!audio.started) {
+      audio.start();
+      updateAudioUI();
+      // Greet the user with a gentle luminous welcome strike on the visible globe
+      summonFrontSuperbolt();
+    } else {
+      audio.setMuted(!audio.muted);
+      updateAudioUI();
+    }
+  }
+
+  startBanner.addEventListener('click', handleStartOrToggleAudio);
+  audioBtn.addEventListener('click', handleStartOrToggleAudio);
+
+  function updateStormLabel(v) {
+    if (v < 0.22) stormValue.textContent = 'Calm';
+    else if (v < 0.45) stormValue.textContent = 'Breeze';
+    else if (v < 0.72) stormValue.textContent = 'Active';
+    else if (v < 0.9) stormValue.textContent = 'Tempest';
+    else stormValue.textContent = 'Supercell';
+  }
+
+  stormSlider.addEventListener('input', () => {
+    stormIntensity = Number(stormSlider.value) / 100;
+    updateStormLabel(stormIntensity);
+  });
+  updateStormLabel(stormIntensity);
+
+  summonBtn.addEventListener('click', () => {
+    summonFrontSuperbolt();
+  });
+
+  spinBtn.addEventListener('click', () => {
+    autoSpin = !autoSpin;
+    spinBtn.classList.toggle('active', autoSpin);
+  });
+
+  // =========================================================================
+  // 9. RESIZE & MAIN RENDER LOOP
+  // =========================================================================
+  let dpr = 1;
+  let projMat = Mat4.perspective(FOV_Y, 1, 0.1, 120);
+
+  function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const w = Math.max(1, Math.floor(window.innerWidth * dpr));
+    const h = Math.max(1, Math.floor(window.innerHeight * dpr));
+    if (canvas.width !== w || canvas.height !== h) {
+      canvas.width = w;
+      canvas.height = h;
+      gl.viewport(0, 0, w, h);
+      projMat = Mat4.perspective(FOV_Y, w / h, 0.1, 120);
+    }
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  // Seed initial subtle strikes so the globe is alive immediately on load
+  setTimeout(() => {
+    const s1 = pickNaturalStrikeLocation();
+    spawnStrike(s1.lat, s1.lon, { intensity: 0.75, regionName: s1.regionName });
+  }, 350);
+  setTimeout(() => {
+    spawnStrike(9.8, -71.6, { intensity: 0.85, regionName: 'Lake Maracaibo' });
+  }, 1150);
+
+  let prevTime = performance.now() * 0.001;
+  let nextStrikeCooldown = 1.2;
+
+  function render(nowMs) {
+    requestAnimationFrame(render);
+    const now = nowMs * 0.001;
+    const dt = Math.min(0.05, Math.max(0.001, now - prevTime));
+    prevTime = now;
+
+    // 1) Update globe physics & camera
+    if (!isDragging) {
+      rotY += velY;
+      rotX = clamp(rotX + velX, -1.28, 1.28);
+      velY *= Math.pow(0.92, dt * 60);
+      velX *= Math.pow(0.90, dt * 60);
+      if (autoSpin) {
+        rotY += dt * 0.058;
+      }
+    }
+    camDist += (targetCamDist - camDist) * Math.min(1, dt * 8);
+
+    const rotXMat = Mat4.rotateX(rotX);
+    const rotYMat = Mat4.rotateY(rotY);
+    currentModelMat = Mat4.multiply(rotXMat, rotYMat);
+    const viewMat = Mat4.translate(0, 0, -camDist);
+
+    // 2) Update storm cells & spawn procedural lightning strikes
+    stormCellTimer += dt;
+    if (stormCellTimer > 14) {
+      stormCellTimer = 0;
+      const replaceIdx = Math.floor(Math.random() * activeStormCells.length);
+      activeStormCells[replaceIdx] = Math.floor(Math.random() * STORM_HOTSPOTS.length);
+    }
+
+    nextStrikeCooldown -= dt;
+    if (nextStrikeCooldown <= 0) {
+      const loc = pickNaturalStrikeLocation();
+      const baseInt = clamp(0.32 + stormIntensity * 0.35 + Math.random() * 0.45, 0.3, 1.0);
+      spawnStrike(loc.lat, loc.lon, { intensity: baseInt, regionName: loc.regionName });
+
+      // Strike interval adapts smoothly to Storm Intensity slider
+      const meanInterval = lerp(2.85, 0.24, Math.pow(stormIntensity, 0.82));
+      nextStrikeCooldown = meanInterval * (0.45 + Math.random() * 1.15);
+    }
+
+    // 3) Advance strikes, sparks, and audio engine
+    audio.update(dt, stormIntensity);
+    const { level: audioLevel, bars } = audio.getAudioLevel();
+
+    // Update HUD mini-EQ & chord telemetry
+    for (let i = 0; i < eqSpans.length; i++) {
+      const hPx = audio.started && !audio.muted
+        ? Math.max(3, Math.round(3 + bars[i] * 11))
+        : 3;
+      eqSpans[i].style.height = `${hPx}px`;
+    }
+    chordLabel.textContent = audio.started
+      ? (audio.muted ? `${audio.getCurrentChordName()} · Muted` : `${audio.getCurrentChordName()} · Live`)
+      : `${audio.getCurrentChordName()} · Ready`;
+
+    if (telemetryFlashTimer > 0) {
+      telemetryFlashTimer -= dt;
+      if (telemetryFlashTimer <= 0) telemetryBox.classList.remove('flash');
+    }
+
+    // Age strikes & pack shader uniforms
+    for (let i = strikes.length - 1; i >= 0; i--) {
+      strikes[i].age += dt;
+      if (strikes[i].age > 5.2) {
+        strikes.splice(i, 1);
+      }
+    }
+
+    for (let i = 0; i < MAX_STRIKES; i++) {
+      const o = i * 4;
+      if (i < strikes.length) {
+        const s = strikes[i];
+        strikePosAgeUniform[o] = s.nx;
+        strikePosAgeUniform[o + 1] = s.ny;
+        strikePosAgeUniform[o + 2] = s.nz;
+        strikePosAgeUniform[o + 3] = s.age;
+
+        strikeDataUniform[o] = s.intensity;
+        strikeDataUniform[o + 1] = s.maxRadius;
+        strikeDataUniform[o + 2] = s.colorPhase;
+        strikeDataUniform[o + 3] = s.seed;
+      } else {
+        strikePosAgeUniform[o + 3] = -1.0;
+      }
+    }
+
+    // Update dynamic 3D lightning bolts
+    let boltVertCount = 0;
+    for (let i = 0; i < strikes.length; i++) {
+      const s = strikes[i];
+      if (s.age > 0.58) continue;
+      const flicker =
+        Math.exp(-s.age * 11.5) +
+        0.75 * Math.exp(-Math.pow((s.age - 0.11) / 0.032, 2)) +
+        0.35 * Math.exp(-Math.pow((s.age - 0.23) / 0.04, 2));
+      const alphaBase = clamp(flicker * s.intensity, 0, 1);
+      if (alphaBase < 0.02) continue;
+
+      const [cr, cg, cb] = s.bolt.color;
+      for (const [p0, p1, w] of s.bolt.segs) {
+        if (boltVertCount + 2 > MAX_BOLT_VERTS) break;
+        const pOff = boltVertCount * 3;
+        const cOff = boltVertCount * 4;
+        const a = alphaBase * w;
+
+        boltPosArr[pOff] = p0[0];
+        boltPosArr[pOff + 1] = p0[1];
+        boltPosArr[pOff + 2] = p0[2];
+        boltPosArr[pOff + 3] = p1[0];
+        boltPosArr[pOff + 4] = p1[1];
+        boltPosArr[pOff + 5] = p1[2];
+
+        boltColArr[cOff] = cr; boltColArr[cOff + 1] = cg; boltColArr[cOff + 2] = cb; boltColArr[cOff + 3] = a;
+        boltColArr[cOff + 4] = cr; boltColArr[cOff + 5] = cg; boltColArr[cOff + 6] = cb; boltColArr[cOff + 7] = a * 0.72;
+        boltVertCount += 2;
+      }
+    }
+
+    // Update rising ion sparks
+    let sparkCount = 0;
+    for (let i = sparks.length - 1; i >= 0; i--) {
+      const sp = sparks[i];
+      sp.age += dt;
+      if (sp.age >= sp.life) {
+        sparks.splice(i, 1);
+        continue;
+      }
+      sp.x += sp.vx * dt;
+      sp.y += sp.vy * dt;
+      sp.z += sp.vz * dt;
+      sp.vx *= 0.96;
+      sp.vy *= 0.96;
+      sp.vz *= 0.96;
+
+      if (sparkCount < MAX_SPARKS) {
+        const lifeT = 1 - sp.age / sp.life;
+        const pOff = sparkCount * 3;
+        const cOff = sparkCount * 4;
+        sparkPosArr[pOff] = sp.x;
+        sparkPosArr[pOff + 1] = sp.y;
+        sparkPosArr[pOff + 2] = sp.z;
+
+        sparkColArr[cOff] = sp.color[0];
+        sparkColArr[cOff + 1] = sp.color[1];
+        sparkColArr[cOff + 2] = sp.color[2];
+        sparkColArr[cOff + 3] = lifeT * lifeT;
+        sparkSizeArr[sparkCount] = sp.size * (0.45 + 0.55 * lifeT);
+        sparkCount++;
+      }
+    }
+
+    // Sun direction: dramatic twilight crescent, drifting very gently
+    const sunAngle = 0.72 + now * 0.008;
+    const sunX = Math.cos(sunAngle) * 0.92;
+    const sunY = 0.34;
+    const sunZ = Math.sin(sunAngle) * 0.92;
+    const sunLen = Math.hypot(sunX, sunY, sunZ);
+    const sunDir = [sunX / sunLen, sunY / sunLen, sunZ / sunLen];
+
+    // =========================================================================
+    // 10. WEBGL2 MULTI-PASS RENDER
+    // =========================================================================
+    gl.clearColor(0.0, 0.0, 0.0, 0.0);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+    // --- Pass 1: Deep Space Starfield (subtle parallax rotation) ---
+    gl.disable(gl.DEPTH_TEST);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+    gl.useProgram(starProg);
+    const starRot = Mat4.multiply(Mat4.rotateX(rotX * 0.25), Mat4.rotateY(rotY * 0.25 + now * 0.003));
+    gl.uniformMatrix4fv(uStar.uViewRot, false, starRot);
+    gl.uniformMatrix4fv(uStar.uProj, false, projMat);
+    gl.uniform1f(uStar.uTime, now);
+    gl.uniform1f(uStar.uDpr, dpr);
+    gl.bindVertexArray(starVao);
+    gl.drawArrays(gl.POINTS, 0, STAR_COUNT);
+
+    // --- Pass 2: 3D Earth Globe with Real-Time Geodesic Lightning Ripples ---
+    gl.enable(gl.DEPTH_TEST);
+    gl.depthMask(true);
+    gl.disable(gl.BLEND);
+    gl.enable(gl.CULL_FACE);
+    gl.cullFace(gl.BACK);
+
+    gl.useProgram(earthProg);
+    gl.uniformMatrix4fv(uEarth.uModel, false, currentModelMat);
+    gl.uniformMatrix4fv(uEarth.uView, false, viewMat);
+    gl.uniformMatrix4fv(uEarth.uProj, false, projMat);
+    gl.uniform3fv(uEarth.uSunDir, sunDir);
+    gl.uniform3f(uEarth.uCamPos, 0, 0, camDist);
+    gl.uniform1f(uEarth.uTime, now);
+    gl.uniform1f(uEarth.uAudioPulse, audioLevel);
+    gl.uniform4fv(uEarth.uStrikePosAge, strikePosAgeUniform);
+    gl.uniform4fv(uEarth.uStrikeData, strikeDataUniform);
+
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, dayTexture);
+    gl.uniform1i(uEarth.uDayTex, 0);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, auxTexture);
+    gl.uniform1i(uEarth.uAuxTex, 1);
+
+    gl.bindVertexArray(earthMesh.vao);
+    gl.drawElements(gl.TRIANGLES, earthMesh.count, gl.UNSIGNED_INT, 0);
+
+    // --- Pass 3: Outer Atmospheric Scattering Halo (Back-face Additive) ---
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.ONE, gl.ONE);
+    gl.depthMask(false);
+    gl.cullFace(gl.FRONT);
+
+    gl.useProgram(atmoProg);
+    gl.uniformMatrix4fv(uAtmo.uModel, false, currentModelMat);
+    gl.uniformMatrix4fv(uAtmo.uView, false, viewMat);
+    gl.uniformMatrix4fv(uAtmo.uProj, false, projMat);
+    gl.uniform3fv(uAtmo.uSunDir, sunDir);
+    gl.uniform3f(uAtmo.uCamPos, 0, 0, camDist);
+    gl.uniform1f(uAtmo.uAudioPulse, audioLevel);
+    gl.uniform4fv(uAtmo.uStrikePosAge, strikePosAgeUniform);
+    gl.uniform4fv(uAtmo.uStrikeData, strikeDataUniform);
+
+    gl.bindVertexArray(atmoMesh.vao);
+    gl.drawElements(gl.TRIANGLES, atmoMesh.count, gl.UNSIGNED_INT, 0);
+
+    // --- Pass 4: 3D Jagged Lightning Bolts ---
+    gl.cullFace(gl.BACK);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+
+    if (boltVertCount > 0) {
+      gl.useProgram(boltProg);
+      gl.uniformMatrix4fv(uBolt.uModel, false, currentModelMat);
+      gl.uniformMatrix4fv(uBolt.uView, false, viewMat);
+      gl.uniformMatrix4fv(uBolt.uProj, false, projMat);
+
+      gl.bindVertexArray(boltVao);
+      gl.bindBuffer(gl.ARRAY_BUFFER, boltPosBuf);
+      gl.bufferSubData(gl.ARRAY_BUFFER, 0, boltPosArr.subarray(0, boltVertCount * 3));
+      gl.bindBuffer(gl.ARRAY_BUFFER, boltColBuf);
+      gl.bufferSubData(gl.ARRAY_BUFFER, 0, boltColArr.subarray(0, boltVertCount * 4));
+      gl.drawArrays(gl.LINES, 0, boltVertCount);
+    }
+
+    // --- Pass 5: Rising Luminescent Ion Sparks ---
+    if (sparkCount > 0) {
+      gl.useProgram(sparkProg);
+      gl.uniformMatrix4fv(uSpark.uModel, false, currentModelMat);
+      gl.uniformMatrix4fv(uSpark.uView, false, viewMat);
+      gl.uniformMatrix4fv(uSpark.uProj, false, projMat);
+      gl.uniform1f(uSpark.uDpr, dpr);
+
+      gl.bindVertexArray(sparkVao);
+      gl.bindBuffer(gl.ARRAY_BUFFER, sparkPosBuf);
+      gl.bufferSubData(gl.ARRAY_BUFFER, 0, sparkPosArr.subarray(0, sparkCount * 3));
+      gl.bindBuffer(gl.ARRAY_BUFFER, sparkColBuf);
+      gl.bufferSubData(gl.ARRAY_BUFFER, 0, sparkColArr.subarray(0, sparkCount * 4));
+      gl.bindBuffer(gl.ARRAY_BUFFER, sparkSizeBuf);
+      gl.bufferSubData(gl.ARRAY_BUFFER, 0, sparkSizeArr.subarray(0, sparkCount));
+      gl.drawArrays(gl.POINTS, 0, sparkCount);
+    }
+
+    gl.bindVertexArray(null);
+    gl.depthMask(true);
+  }
+
+  requestAnimationFrame(render);
+})();
+</script>
+</body>
+</html>

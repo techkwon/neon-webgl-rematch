@@ -1,0 +1,2300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Terra Fulmen — Global Lightning &amp; Ambient Audio Globe</title>
+  <style>
+    :root {
+      --bg: #03060d;
+      --panel: rgba(8, 14, 28, 0.72);
+      --border: rgba(110, 175, 255, 0.22);
+      --text: #e6f0ff;
+      --muted: #8ea6cb;
+      --accent: #5ee7ff;
+      --accent-2: #a58bff;
+      --warm: #ffd479;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: radial-gradient(circle at 50% 45%, #071022 0%, #03060d 72%, #010307 100%);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, Helvetica, Arial, sans-serif;
+    }
+
+    #glCanvas {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: grab;
+      touch-action: none;
+    }
+
+    #glCanvas.dragging {
+      cursor: grabbing;
+    }
+
+    .hud-top {
+      position: fixed;
+      top: 18px;
+      left: 20px;
+      right: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      pointer-events: none;
+      gap: 16px;
+      z-index: 10;
+    }
+
+    .brand {
+      pointer-events: auto;
+      background: var(--panel);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px 16px;
+      box-shadow: 0 10px 35px rgba(0, 0, 0, 0.45);
+      max-width: 340px;
+    }
+
+    .brand-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text);
+    }
+
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 10px var(--accent), 0 0 20px var(--accent-2);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(0.9); opacity: 0.7; }
+      50% { transform: scale(1.25); opacity: 1; }
+    }
+
+    .brand-sub {
+      margin-top: 4px;
+      font-size: 12px;
+      line-height: 1.4;
+      color: var(--muted);
+    }
+
+    .telemetry {
+      pointer-events: auto;
+      background: var(--panel);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 10px 14px;
+      box-shadow: 0 10px 35px rgba(0, 0, 0, 0.45);
+      min-width: 235px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .telemetry-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      font-size: 11.5px;
+      color: var(--muted);
+      padding: 2px 0;
+    }
+
+    .telemetry-val {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .telemetry-val.highlight {
+      color: var(--accent);
+    }
+
+    .energy-bar-wrap {
+      margin-top: 6px;
+      height: 4px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08);
+      overflow: hidden;
+    }
+
+    .energy-bar-fill {
+      height: 100%;
+      width: 0%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #3b82f6, #5ee7ff, #c084fc);
+      box-shadow: 0 0 12px rgba(94, 231, 255, 0.7);
+      transition: width 0.12s linear;
+    }
+
+    #vizCanvas {
+      display: block;
+      width: 100%;
+      height: 26px;
+      margin-top: 7px;
+      border-radius: 6px;
+      background: rgba(0, 0, 0, 0.25);
+    }
+
+    .hud-bottom {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 10px 14px;
+      background: var(--panel);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      box-shadow: 0 14px 40px rgba(0, 0, 0, 0.55);
+      z-index: 10;
+      max-width: calc(100vw - 24px);
+    }
+
+    .btn {
+      appearance: none;
+      border: 1px solid rgba(130, 195, 255, 0.28);
+      background: rgba(20, 34, 64, 0.75);
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 600;
+      padding: 9px 16px;
+      border-radius: 999px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: transform 0.14s ease, background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .btn:hover {
+      background: rgba(34, 58, 106, 0.88);
+      border-color: rgba(94, 231, 255, 0.58);
+      transform: translateY(-1px);
+    }
+
+    .btn:active {
+      transform: translateY(0px) scale(0.98);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, rgba(46, 134, 255, 0.9), rgba(114, 92, 255, 0.88));
+      border-color: rgba(154, 230, 255, 0.65);
+      box-shadow: 0 0 22px rgba(78, 175, 255, 0.42);
+    }
+
+    .btn-primary:hover {
+      background: linear-gradient(135deg, rgba(64, 152, 255, 0.96), rgba(135, 112, 255, 0.95));
+      box-shadow: 0 0 28px rgba(94, 231, 255, 0.6);
+    }
+
+    .btn-primary.active {
+      background: linear-gradient(135deg, rgba(20, 165, 185, 0.85), rgba(65, 118, 255, 0.85));
+      border-color: rgba(94, 231, 255, 0.8);
+      box-shadow: 0 0 20px rgba(94, 231, 255, 0.35);
+    }
+
+    .btn-toggle.off {
+      opacity: 0.62;
+    }
+
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 6px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .control-group input[type="range"] {
+      width: 82px;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    .divider {
+      width: 1px;
+      height: 22px;
+      background: rgba(140, 185, 255, 0.2);
+    }
+
+    @media (max-width: 720px) {
+      .hud-top {
+        flex-direction: column;
+        align-items: stretch;
+        top: 12px;
+        left: 12px;
+        right: 12px;
+      }
+      .brand, .telemetry {
+        max-width: none;
+      }
+      .hud-bottom {
+        border-radius: 18px;
+        bottom: 12px;
+        padding: 9px 12px;
+        gap: 8px;
+      }
+      .divider {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="glCanvas"></canvas>
+
+  <div class="hud-top">
+    <div class="brand">
+      <div class="brand-title">
+        <span class="pulse-dot"></span>
+        <span>Terra Fulmen</span>
+      </div>
+      <div class="brand-sub">
+        Drag to rotate &middot; Scroll to zoom &middot; Click globe to trigger a lightning strike
+      </div>
+    </div>
+
+    <div class="telemetry">
+      <div class="telemetry-row">
+        <span>Storm Energy</span>
+        <span class="telemetry-val highlight" id="energyVal">0%</span>
+      </div>
+      <div class="telemetry-row">
+        <span>Last Strike</span>
+        <span class="telemetry-val" id="coordVal">Awaiting discharge</span>
+      </div>
+      <div class="telemetry-row">
+        <span>Harmonic Voice</span>
+        <span class="telemetry-val" id="noteVal">&mdash;</span>
+      </div>
+      <div class="energy-bar-wrap">
+        <div class="energy-bar-fill" id="energyBar"></div>
+      </div>
+      <canvas id="vizCanvas" width="220" height="26"></canvas>
+    </div>
+  </div>
+
+  <div class="hud-bottom">
+    <button class="btn btn-primary" id="audioBtn" type="button">
+      <span id="audioIcon">&#9654;</span>
+      <span id="audioLabel">Start Audio</span>
+    </button>
+
+    <div class="divider"></div>
+
+    <div class="control-group" title="Adjust global storm frequency">
+      <span>Storm</span>
+      <input id="stormSlider" type="range" min="0.2" max="2.5" step="0.05" value="1.0" />
+    </div>
+
+    <button class="btn" id="strikeBtn" type="button" title="Trigger a random lightning strike now">
+      &#9889; Strike
+    </button>
+
+    <button class="btn btn-toggle" id="orbitBtn" type="button" title="Toggle gentle globe auto-rotation">
+      Auto-Orbit: On
+    </button>
+  </div>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const MAX_STRIKES = 24;
+      const DEG2RAD = Math.PI / 180;
+      const RAD2DEG = 180 / Math.PI;
+
+      // =========================================================================
+      // 1. PROCEDURAL EARTH DATA TEXTURE (Continents, Mountains, Cities, Biomes)
+      // =========================================================================
+      // Approximate [lon, lat] polygons for recognizable Earth landmasses.
+      const CONTINENTS = [
+        // North America & Central America
+        [
+          [-168, 66], [-160, 71], [-140, 70], [-125, 72], [-110, 75], [-92, 74],
+          [-82, 69], [-78, 63], [-64, 60], [-55, 52], [-61, 46], [-67, 45],
+          [-71, 41], [-75, 38], [-76, 35], [-81, 30], [-80, 25], [-82, 26],
+          [-84, 30], [-90, 29], [-97, 26], [-96, 19], [-90, 21], [-87, 21],
+          [-88, 16], [-83, 14], [-83, 10], [-78, 8], [-80, 9], [-85, 11],
+          [-92, 15], [-105, 20], [-110, 24], [-114, 31], [-117, 32], [-122, 37],
+          [-124, 42], [-124, 48], [-131, 55], [-139, 59], [-152, 60], [-162, 55],
+          [-166, 60]
+        ],
+        // Greenland
+        [
+          [-52, 60], [-43, 60], [-36, 65], [-22, 70], [-18, 77], [-28, 82],
+          [-48, 83], [-68, 78], [-70, 76], [-56, 72], [-54, 65]
+        ],
+        // Cuba / Hispaniola
+        [[-84, 22], [-75, 20], [-74, 21], [-80, 23]],
+        [[-74, 19], [-68, 18], [-69, 20], [-73, 20]],
+        // South America
+        [
+          [-78, 9], [-72, 12], [-62, 10], [-52, 5], [-49, 0], [-42, -3],
+          [-35, -6], [-38, -13], [-40, -21], [-48, -26], [-53, -34], [-58, -38],
+          [-64, -41], [-66, -47], [-68, -54], [-73, -54], [-75, -47], [-73, -38],
+          [-71, -30], [-70, -18], [-77, -12], [-81, -5], [-79, 2]
+        ],
+        // UK & Ireland
+        [[-6, 50], [1, 51], [1, 53], [-2, 58], [-6, 58], [-5, 54]],
+        [[-10, 52], [-6, 52], [-6, 55], [-9, 55]],
+        // Iceland
+        [[-24, 64], [-14, 64], [-14, 66], [-23, 66]],
+        // Europe & Asia (Eurasia)
+        [
+          [-9, 37], [-9, 43], [-2, 43], [-4, 48], [2, 51], [8, 54], [9, 57],
+          [5, 60], [10, 64], [18, 69], [28, 71], [40, 67], [46, 68], [58, 69],
+          [70, 73], [88, 74], [104, 77], [122, 73], [142, 72], [168, 69],
+          [179, 66], [170, 60], [160, 55], [156, 51], [142, 54], [140, 48],
+          [135, 44], [129, 40], [129, 35], [126, 35], [126, 38], [122, 39],
+          [120, 35], [122, 30], [118, 24], [109, 20], [109, 12], [104, 8],
+          [101, 13], [104, 2], [101, 2], [98, 10], [96, 16], [91, 22],
+          [85, 19], [80, 12], [78, 8], [73, 15], [68, 23], [62, 25],
+          [56, 26], [51, 25], [49, 29], [57, 22], [54, 17], [44, 13],
+          [39, 20], [34, 28], [32, 31], [35, 36], [27, 37], [26, 41],
+          [23, 37], [19, 40], [14, 45], [16, 40], [12, 42], [9, 44],
+          [3, 42], [-2, 37], [-6, 36]
+        ],
+        // Africa
+        [
+          [-6, 36], [10, 37], [12, 33], [24, 32], [33, 31], [38, 21],
+          [43, 12], [51, 12], [49, 4], [41, -2], [40, -11], [35, -20],
+          [32, -28], [26, -34], [18, -34], [15, -26], [12, -16], [12, -6],
+          [9, 4], [2, 6], [-8, 5], [-16, 12], [-17, 15], [-16, 22],
+          [-10, 30]
+        ],
+        // Madagascar
+        [[44, -25], [47, -25], [50, -15], [49, -12], [44, -17]],
+        // Sri Lanka & Taiwan
+        [[80, 6], [82, 7], [81, 10], [79, 9]],
+        [[120, 22], [122, 23], [122, 25], [120, 24]],
+        // Japan
+        [[130, 31], [134, 33], [139, 35], [141, 39], [141, 41], [138, 39], [136, 36], [131, 34]],
+        [[140, 42], [145, 43], [144, 45], [141, 45]],
+        // Philippines
+        [[120, 14], [123, 13], [122, 18], [120, 18]],
+        [[122, 7], [126, 7], [126, 10], [123, 10]],
+        // Indonesia & New Guinea
+        [[95, 5], [104, -2], [106, -6], [102, -4], [97, 2]],
+        [[106, -7], [114, -8], [114, -7], [106, -6]],
+        [[109, -3], [117, -3], [118, 4], [115, 6], [110, 1]],
+        [[119, -5], [123, -4], [125, 1], [121, 1]],
+        [[132, -2], [141, -3], [149, -9], [143, -8], [136, -5]],
+        // Australia & Tasmania
+        [
+          [114, -22], [122, -17], [130, -12], [136, -12], [136, -15], [141, -16],
+          [143, -11], [146, -16], [151, -23], [153, -28], [150, -37], [144, -38],
+          [138, -35], [132, -32], [123, -34], [115, -34], [114, -27]
+        ],
+        [[145, -41], [148, -41], [147, -43], [145, -43]],
+        // New Zealand
+        [[173, -35], [178, -38], [175, -41], [173, -39]],
+        [[167, -46], [171, -44], [174, -41], [171, -42], [167, -45]],
+        // Antarctica
+        [
+          [-180, -72], [-140, -74], [-100, -72], [-64, -64], [-55, -65],
+          [-40, -76], [-10, -70], [30, -68], [70, -68], [110, -66],
+          [150, -68], [170, -73], [180, -72], [180, -90], [-180, -90]
+        ]
+      ];
+
+      // [lon, lat, radiusDeg, intensity] for mountain belts
+      const MOUNTAINS = [
+        [-70, -18, 12, 0.9], [-71, -33, 9, 0.85], [-76, 2, 10, 0.8], // Andes
+        [-115, 45, 14, 0.8], [-135, 60, 12, 0.75], [-105, 36, 10, 0.7], // Rockies
+        [10, 46, 6, 0.8], [44, 42, 7, 0.75], // Alps / Caucasus
+        [85, 31, 16, 1.0], [74, 36, 11, 0.95], [96, 29, 12, 0.85], // Himalayas & Tibet
+        [37, 2, 9, 0.65], [39, 10, 8, 0.7], // East African Rift & Ethiopia
+        [59, 58, 9, 0.55], [105, 53, 12, 0.6] // Urals & Sayan
+      ];
+
+      // [lon, lat, radiusDeg, intensity] for night-side city light clusters
+      const CITIES = [
+        [-74, 41, 7, 1.0], [-87, 42, 7, 0.85], [-81, 28, 6, 0.75], [-96, 32, 7, 0.75],
+        [-118, 34, 6, 0.9], [-122, 38, 5, 0.8], [-99, 19, 5, 0.85], [-79, 43, 5, 0.75],
+        [-46, -23, 6, 0.9], [-43, -22, 5, 0.85], [-58, -34, 5, 0.8], [-74, 5, 4, 0.65],
+        [-0.1, 51.5, 5, 0.95], [2.3, 48.8, 6, 0.95], [8, 50, 7, 0.9], [12, 43, 6, 0.8],
+        [-3.7, 40.4, 5, 0.75], [21, 52, 6, 0.7], [37.6, 55.7, 6, 0.85], [29, 41, 5, 0.8],
+        [31.2, 30.0, 4, 0.95], [35, 32, 4, 0.75], [55, 25, 5, 0.8], [3.4, 6.5, 5, 0.7],
+        [28, -26, 4, 0.7], [37, -1, 4, 0.55],
+        [77, 28.5, 7, 0.95], [73, 19, 6, 0.9], [88, 22.5, 6, 0.85], [79, 13, 6, 0.8],
+        [104, 31, 7, 0.85], [116.4, 39.9, 7, 1.0], [121.5, 31.2, 7, 1.0], [113.3, 23.1, 6, 0.95],
+        [127.0, 37.5, 4, 0.95], [139.7, 35.7, 5, 1.0], [135.5, 34.7, 4, 0.9],
+        [100.5, 13.7, 5, 0.8], [106.7, 10.8, 4, 0.75], [103.8, 1.3, 4, 0.85], [107, -6.5, 5, 0.9],
+        [121, 14.6, 4, 0.8], [151, -33.8, 4, 0.75], [145, -37.8, 4, 0.7]
+      ];
+
+      // Global storm hotspots [lon, lat, spreadDeg, weight]
+      const STORM_HOTSPOTS = [
+        [-71.5, 9.8, 12, 1.5],   // Lake Maracaibo & Northern Andes
+        [-60.0, -5.0, 18, 1.3],  // Amazon Basin
+        [-88.0, 26.0, 16, 1.1],  // Gulf of Mexico & US South
+        [23.0, 0.5, 18, 1.6],    // Congo Basin (highest on Earth)
+        [12.0, 6.0, 14, 1.2],    // West/Central Africa
+        [30.0, -25.0, 12, 0.9],  // Southern Africa Highveld
+        [90.0, 24.0, 14, 1.2],   // Bangladesh / Himalayas foothills
+        [104.0, 2.0, 20, 1.5],   // Maritime Continent / Indonesia
+        [114.0, 14.0, 16, 1.1],  // South China Sea / Philippines
+        [135.0, -14.0, 14, 1.0], // Northern Australia monsoon
+        [15.0, 41.0, 14, 0.8],   // Mediterranean storm track
+        [-50.0, 40.0, 20, 0.7],  // North Atlantic storm track
+        [155.0, 36.0, 20, 0.7]   // North Pacific storm track
+      ];
+
+      function buildEarthDataTexture(gl) {
+        const W = 1024;
+        const H = 512;
+
+        // 1. Draw continent mask on an offscreen canvas
+        const maskCanvas = document.createElement("canvas");
+        maskCanvas.width = W;
+        maskCanvas.height = H;
+        const mctx = maskCanvas.getContext("2d");
+        mctx.fillStyle = "#000";
+        mctx.fillRect(0, 0, W, H);
+        mctx.fillStyle = "#fff";
+
+        for (const poly of CONTINENTS) {
+          mctx.beginPath();
+          for (let i = 0; i < poly.length; i++) {
+            const x = ((poly[i][0] + 180) / 360) * W;
+            const y = ((90 - poly[i][1]) / 180) * H;
+            if (i === 0) mctx.moveTo(x, y);
+            else mctx.lineTo(x, y);
+          }
+          mctx.closePath();
+          mctx.fill();
+        }
+
+        const rawMask = mctx.getImageData(0, 0, W, H).data;
+        const landBuf = new Float32Array(W * H);
+        for (let i = 0; i < W * H; i++) {
+          landBuf[i] = rawMask[i * 4] / 255;
+        }
+
+        // Separable 2-pass box blur (approximates smooth coastline SDF)
+        const blurTmp = new Float32Array(W * H);
+        const radius = 6;
+        const invWin = 1 / (radius * 2 + 1);
+
+        // Horizontal pass (periodic wrap at +-180 deg)
+        for (let y = 0; y < H; y++) {
+          const row = y * W;
+          let sum = 0;
+          for (let k = -radius; k <= radius; k++) {
+            sum += landBuf[row + ((k + W) % W)];
+          }
+          for (let x = 0; x < W; x++) {
+            blurTmp[row + x] = sum * invWin;
+            const addIdx = (x + radius + 1) % W;
+            const subIdx = (x - radius + W) % W;
+            sum += landBuf[row + addIdx] - landBuf[row + subIdx];
+          }
+        }
+
+        // Vertical pass (clamped at poles)
+        const landSmooth = new Float32Array(W * H);
+        for (let x = 0; x < W; x++) {
+          let sum = 0;
+          for (let k = -radius; k <= radius; k++) {
+            const cy = Math.max(0, Math.min(H - 1, k));
+            sum += blurTmp[cy * W + x];
+          }
+          for (let y = 0; y < H; y++) {
+            landSmooth[y * W + x] = sum * invWin;
+            const addY = Math.min(H - 1, y + radius + 1);
+            const subY = Math.max(0, y - radius);
+            sum += blurTmp[addY * W + x] - blurTmp[subY * W + x];
+          }
+        }
+
+        // Fast deterministic 3D value noise on unit sphere for crisp fractal coastlines & biomes
+        function hash3(ix, iy, iz) {
+          let n = (ix * 374761393 + iy * 668265263 + iz * 2147483647) | 0;
+          n = ((n ^ (n >> 13)) * 1274126177) | 0;
+          return ((n ^ (n >> 16)) >>> 0) / 4294967295;
+        }
+
+        function noise3JS(x, y, z) {
+          const ix = Math.floor(x), iy = Math.floor(y), iz = Math.floor(z);
+          let fx = x - ix, fy = y - iy, fz = z - iz;
+          fx = fx * fx * (3 - 2 * fx);
+          fy = fy * fy * (3 - 2 * fy);
+          fz = fz * fz * (3 - 2 * fz);
+
+          const c000 = hash3(ix, iy, iz), c100 = hash3(ix + 1, iy, iz);
+          const c010 = hash3(ix, iy + 1, iz), c110 = hash3(ix + 1, iy + 1, iz);
+          const c001 = hash3(ix, iy, iz + 1), c101 = hash3(ix + 1, iy, iz + 1);
+          const c011 = hash3(ix, iy + 1, iz + 1), c111 = hash3(ix + 1, iy + 1, iz + 1);
+
+          const x00 = c000 + (c100 - c000) * fx;
+          const x10 = c010 + (c110 - c010) * fx;
+          const x01 = c001 + (c101 - c001) * fx;
+          const x11 = c011 + (c111 - c011) * fx;
+          const y0 = x00 + (x10 - x00) * fy;
+          const y1 = x01 + (x11 - x01) * fy;
+          return y0 + (y1 - y0) * fz;
+        }
+
+        function fbmJS(x, y, z) {
+          return (
+            noise3JS(x, y, z) * 0.55 +
+            noise3JS(x * 2.07 + 11.3, y * 2.07 + 7.1, z * 2.07 + 3.9) * 0.28 +
+            noise3JS(x * 4.31 + 23.7, y * 4.31 + 17.5, z * 4.31 + 9.2) * 0.17
+          );
+        }
+
+        // Populate RGBA data:
+        // R = fractalized land/coast elevation (0 ocean .. 1 inland)
+        // G = city lights density
+        // B = mountain ridge height
+        // A = biome moisture
+        const rgba = new Uint8Array(W * H * 4);
+        for (let y = 0; y < H; y++) {
+          const v = (y + 0.5) / H;
+          const theta = v * Math.PI;
+          const sinT = Math.sin(theta);
+          const cosT = Math.cos(theta);
+          const lat = 90 - v * 180;
+          const cosLat = Math.max(0.18, Math.cos(lat * DEG2RAD));
+
+          for (let x = 0; x < W; x++) {
+            const u = (x + 0.5) / W;
+            const phi = u * Math.PI * 2 - Math.PI;
+            const sx = sinT * Math.sin(phi);
+            const sy = cosT;
+            const sz = sinT * Math.cos(phi);
+            const lon = u * 360 - 180;
+            const idx = y * W + x;
+
+            const nDetail = fbmJS(sx * 6.2, sy * 6.2, sz * 6.2) - 0.5;
+            const landVal = Math.max(0, Math.min(1, landSmooth[idx] + nDetail * 0.24));
+            const moisture = fbmJS(sx * 4.2 + 5.2, sy * 4.2 + 1.8, sz * 4.2 + 9.1);
+
+            // Mountain accumulation
+            let mtn = 0;
+            for (let i = 0; i < MOUNTAINS.length; i++) {
+              const m = MOUNTAINS[i];
+              let dl = Math.abs(lon - m[0]);
+              if (dl > 180) dl = 360 - dl;
+              dl *= cosLat;
+              const dlat = lat - m[1];
+              const d2 = (dl * dl + dlat * dlat) / (m[2] * m[2]);
+              if (d2 < 3.5) mtn += m[3] * Math.exp(-d2 * 1.4);
+            }
+            mtn = Math.min(1, mtn + Math.max(0, nDetail) * 0.45 * landVal);
+
+            // City accumulation (gated by land)
+            let city = 0;
+            if (landVal > 0.36) {
+              for (let i = 0; i < CITIES.length; i++) {
+                const c = CITIES[i];
+                let dl = Math.abs(lon - c[0]);
+                if (dl > 180) dl = 360 - dl;
+                dl *= cosLat;
+                const dlat = lat - c[1];
+                const d2 = (dl * dl + dlat * dlat) / (c[2] * c[2]);
+                if (d2 < 3.5) city += c[3] * Math.exp(-d2 * 1.8);
+              }
+            }
+
+            const p = idx * 4;
+            rgba[p] = Math.min(255, Math.max(0, Math.round(landVal * 255)));
+            rgba[p + 1] = Math.min(255, Math.max(0, Math.round(Math.min(1, city) * 255)));
+            rgba[p + 2] = Math.min(255, Math.max(0, Math.round(mtn * 255)));
+            rgba[p + 3] = Math.min(255, Math.max(0, Math.round(moisture * 255)));
+          }
+        }
+
+        const tex = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, tex);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, W, H, 0, gl.RGBA, gl.UNSIGNED_BYTE, rgba);
+        gl.generateMipmap(gl.TEXTURE_2D);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        return tex;
+      }
+
+      // =========================================================================
+      // 2. WEBGL2 SETUP, SHADERS & GEOMETRY
+      // =========================================================================
+      const canvas = document.getElementById("glCanvas");
+      const gl = canvas.getContext("webgl2", {
+        antialias: true,
+        alpha: false,
+        powerPreference: "high-performance"
+      });
+
+      if (!gl) {
+        document.body.innerHTML =
+          '<div style="padding:40px;color:#fff;font-family:sans-serif">WebGL2 is required to view Terra Fulmen.</div>';
+        return;
+      }
+
+      function compileShader(type, src) {
+        const shader = gl.createShader(type);
+        gl.shaderSource(shader, src.trim());
+        gl.compileShader(shader);
+        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+          const info = gl.getShaderInfoLog(shader);
+          console.error("Shader error:", info, src);
+          throw new Error(info);
+        }
+        return shader;
+      }
+
+      function createProgram(vsSrc, fsSrc) {
+        const prog = gl.createProgram();
+        gl.attachShader(prog, compileShader(gl.VERTEX_SHADER, vsSrc));
+        gl.attachShader(prog, compileShader(gl.FRAGMENT_SHADER, fsSrc));
+        gl.linkProgram(prog);
+        if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+          const info = gl.getProgramInfoLog(prog);
+          console.error("Program link error:", info);
+          throw new Error(info);
+        }
+        return prog;
+      }
+
+      // Shared GLSL 3D noise + strike ripple evaluation chunk
+      const GLSL_NOISE_AND_STRIKES = `
+        #define MAX_STRIKES 24
+        #define PI 3.14159265359
+
+        float hash31(vec3 p) {
+          p = fract(p * 0.1031);
+          p += dot(p, p.yzx + 33.33);
+          return fract((p.x + p.y) * p.z);
+        }
+
+        float noise3(vec3 x) {
+          vec3 i = floor(x);
+          vec3 f = fract(x);
+          f = f * f * (3.0 - 2.0 * f);
+          return mix(
+            mix(
+              mix(hash31(i + vec3(0, 0, 0)), hash31(i + vec3(1, 0, 0)), f.x),
+              mix(hash31(i + vec3(0, 1, 0)), hash31(i + vec3(1, 1, 0)), f.x),
+              f.y
+            ),
+            mix(
+              mix(hash31(i + vec3(0, 0, 1)), hash31(i + vec3(1, 0, 1)), f.x),
+              mix(hash31(i + vec3(0, 1, 1)), hash31(i + vec3(1, 1, 1)), f.x),
+              f.y
+            ),
+            f.z
+          );
+        }
+
+        float fbm(vec3 p) {
+          float v = 0.0;
+          float a = 0.5;
+          mat3 m = mat3(
+            0.00,  0.80,  0.60,
+           -0.80,  0.36, -0.48,
+           -0.60, -0.48,  0.64
+          );
+          for (int i = 0; i < 5; i++) {
+            v += a * noise3(p);
+            p = m * p * 2.03 + vec3(13.1, 7.7, 5.3);
+            a *= 0.5;
+          }
+          return v;
+        }
+
+        float fbmFast(vec3 p) {
+          float v = 0.0;
+          float a = 0.5;
+          for (int i = 0; i < 3; i++) {
+            v += a * noise3(p);
+            p = p * 2.11 + vec3(4.1, 9.2, 2.7);
+            a *= 0.5;
+          }
+          return v;
+        }
+
+        // Returns vec3(rippleGlow, flashGlow, hueMix)
+        vec3 evalStrikes(vec3 pNorm, float time, vec4 strikes[MAX_STRIKES], vec4 strikesMeta[MAX_STRIKES], int strikeCount) {
+          float rippleSum = 0.0;
+          float flashSum = 0.0;
+          float colorMix = 0.0;
+
+          for (int i = 0; i < MAX_STRIKES; i++) {
+            if (i >= strikeCount) break;
+            float tStart = strikes[i].w;
+            float age = time - tStart;
+            float duration = strikesMeta[i].x;
+            if (age < 0.0 || age > duration) continue;
+
+            vec3 sPos = strikes[i].xyz;
+            vec3 dVec = pNorm - sPos;
+            if (dot(dVec, dVec) > 1.85) continue;
+
+            float intensity = strikesMeta[i].y;
+            float hueShift = strikesMeta[i].z;
+
+            // Exact great-circle angular distance on the unit sphere (stable near 0)
+            float ang = atan(length(cross(pNorm, sPos)), dot(pNorm, sPos));
+
+            float life = 1.0 - age / duration;
+            float env = smoothstep(0.0, 0.04, age) * pow(life, 1.35);
+
+            // Multi-flicker initial lightning discharge flash
+            float flicker = 0.0;
+            if (age < 0.36) {
+              float p1 = exp(-pow((age - 0.02) / 0.032, 2.0));
+              float p2 = 0.72 * exp(-pow((age - 0.10) / 0.028, 2.0));
+              float p3 = 0.45 * exp(-pow((age - 0.19) / 0.042, 2.0));
+              flicker = (p1 + p2 + p3) * intensity;
+            }
+            float coreSpot = exp(-ang * ang * 220.0) * flicker;
+            float wideGlow = exp(-ang * ang * 18.0) * flicker * 0.55;
+            flashSum += coreSpot + wideGlow;
+
+            // Concentric expanding plasma ripples
+            float speed = 0.24 + intensity * 0.08;
+            float rFront = age * speed;
+            float ring1 = exp(-pow((ang - rFront) * 38.0, 2.0));
+            float ring2 = 0.55 * exp(-pow((ang - (rFront - 0.055)) * 48.0, 2.0)) * step(0.055, rFront);
+            float ring3 = 0.28 * exp(-pow((ang - (rFront - 0.105)) * 55.0, 2.0)) * step(0.105, rFront);
+
+            // Subtle trailing glow inside the wavefront
+            float wake = smoothstep(rFront + 0.02, max(0.0, rFront - 0.14), ang) * step(ang, rFront + 0.02) * 0.14;
+            float ripple = (ring1 + ring2 + ring3 + wake) * env * intensity;
+
+            rippleSum += ripple;
+            colorMix += (ripple + coreSpot) * hueShift;
+          }
+
+          float totalW = max(0.0001, rippleSum + flashSum);
+          return vec3(rippleSum, flashSum, clamp(colorMix / totalW, 0.0, 1.0));
+        }
+      `;
+
+      // --- 1) Starfield Shader ---
+      const starVS = `#version 300 es
+        layout(location = 0) in vec3 aPos;
+        layout(location = 1) in vec4 aAttr; // size, brightness, temp, phase
+        uniform mat4 uViewProj;
+        uniform float uTime;
+        out float vBright;
+        out float vTemp;
+        void main() {
+          gl_Position = uViewProj * vec4(aPos, 1.0);
+          float twinkle = 0.78 + 0.22 * sin(uTime * (1.2 + aAttr.w * 2.1) + aAttr.w * 37.0);
+          vBright = aAttr.y * twinkle;
+          vTemp = aAttr.z;
+          gl_PointSize = aAttr.x;
+        }
+      `;
+
+      const starFS = `#version 300 es
+        precision highp float;
+        in float vBright;
+        in float vTemp;
+        out vec4 fragColor;
+        void main() {
+          vec2 d = gl_PointCoord - 0.5;
+          float r2 = dot(d, d);
+          if (r2 > 0.25) discard;
+          float falloff = exp(-r2 * 18.0);
+          vec3 coolStar = vec3(0.68, 0.84, 1.0);
+          vec3 warmStar = vec3(1.0, 0.87, 0.72);
+          vec3 col = mix(coolStar, warmStar, vTemp) * vBright * falloff;
+          fragColor = vec4(col, falloff * vBright);
+        }
+      `;
+
+      // --- 2) Earth Surface Shader ---
+      const earthVS = `#version 300 es
+        layout(location = 0) in vec3 aPos;
+        layout(location = 1) in vec2 aUv;
+        uniform mat4 uModel;
+        uniform mat4 uViewProj;
+        out vec3 vLocalPos;
+        out vec3 vWorldPos;
+        out vec2 vUv;
+        void main() {
+          vLocalPos = aPos;
+          vUv = aUv;
+          vec4 wp = uModel * vec4(aPos, 1.0);
+          vWorldPos = wp.xyz;
+          gl_Position = uViewProj * wp;
+        }
+      `;
+
+      const earthFS = `#version 300 es
+        precision highp float;
+        in vec3 vLocalPos;
+        in vec3 vWorldPos;
+        in vec2 vUv;
+
+        uniform sampler2D uEarthData;
+        uniform vec3 uSunDir;
+        uniform vec3 uCamPos;
+        uniform float uTime;
+        uniform vec4 uStrikes[24];
+        uniform vec4 uStrikesMeta[24];
+        uniform int uStrikeCount;
+
+        out vec4 fragColor;
+
+        ${GLSL_NOISE_AND_STRIKES}
+
+        void main() {
+          vec3 pNorm = normalize(vLocalPos);
+          vec3 wNorm = normalize(vWorldPos);
+          vec4 data = texture(uEarthData, vUv);
+
+          float micro = noise3(pNorm * 26.0) - 0.5;
+          float coastField = data.r + micro * 0.035;
+          float landMask = smoothstep(0.475, 0.505, coastField);
+
+          // Fast texture-gradient terrain relief (coastlines & mountain ranges)
+          float h0 = data.r * 0.35 + data.b * 0.9;
+          vec4 dU = texture(uEarthData, vUv + vec2(0.0012, 0.0));
+          vec4 dV = texture(uEarthData, vUv + vec2(0.0, 0.0024));
+          float dhdu = (dU.r * 0.35 + dU.b * 0.9) - h0;
+          float dhdv = (dV.r * 0.35 + dV.b * 0.9) - h0;
+          vec3 east = normalize(cross(vec3(0.0, 1.0, 0.0), wNorm) + vec3(0.0001, 0.0, 0.0));
+          vec3 north = cross(wNorm, east);
+          vec3 N = normalize(wNorm - (east * dhdu - north * dhdv) * (2.6 * landMask));
+
+          // Biomes & Ocean coloring
+          float absLat = abs(pNorm.y);
+          float shelf = smoothstep(0.24, 0.48, coastField);
+          vec3 deepOcean = vec3(0.015, 0.055, 0.145);
+          vec3 midOcean = vec3(0.025, 0.11, 0.24);
+          vec3 shallowSea = vec3(0.04, 0.26, 0.38);
+          vec3 oceanCol = mix(deepOcean, midOcean, smoothstep(0.05, 0.35, coastField));
+          oceanCol = mix(oceanCol, shallowSea, shelf * 0.72);
+
+          // Land biomes (tropical green, subtropical desert, temperate, alpine, polar ice)
+          float aridBelt = exp(-pow((absLat - 0.42) / 0.18, 2.0));
+          float moisture = data.a;
+          float desertMask = smoothstep(0.44, 0.68, aridBelt * 0.78 + (1.0 - moisture) * 0.45);
+          float forestMask = smoothstep(0.32, 0.72, moisture) * (1.0 - smoothstep(0.55, 0.82, absLat));
+
+          vec3 grassCol = vec3(0.11, 0.24, 0.12);
+          vec3 forestCol = vec3(0.055, 0.16, 0.08);
+          vec3 desertCol = vec3(0.45, 0.37, 0.24);
+          vec3 mountainCol = vec3(0.27, 0.26, 0.24);
+          vec3 snowCol = vec3(0.84, 0.89, 0.95);
+
+          vec3 landCol = mix(grassCol, forestCol, forestMask);
+          landCol = mix(landCol, desertCol, desertMask * 0.85);
+          float mtnMask = smoothstep(0.18, 0.78, data.b);
+          landCol = mix(landCol, mountainCol, mtnMask * 0.75);
+          float alpineSnow = smoothstep(0.62, 0.88, data.b + absLat * 0.35 + micro * 0.12);
+          landCol = mix(landCol, snowCol, alpineSnow * 0.85);
+
+          // Polar ice caps
+          float iceThreshold = 0.82 + micro * 0.06;
+          float polarIce = smoothstep(iceThreshold - 0.05, iceThreshold + 0.04, absLat);
+
+          vec3 albedo = mix(oceanCol, landCol, landMask);
+          albedo = mix(albedo, snowCol, polarIce * 0.92);
+
+          // Day / Night lighting
+          vec3 V = normalize(uCamPos - vWorldPos);
+          vec3 L = normalize(uSunDir);
+          float NdotL = dot(wNorm, L);
+          float bumpNdotL = max(dot(N, L), 0.0);
+          float dayFactor = smoothstep(-0.14, 0.22, NdotL);
+          float twilight = exp(-pow(NdotL / 0.14, 2.0));
+
+          // Sunlit diffuse + ocean specular
+          vec3 H = normalize(L + V);
+          float specPow = mix(95.0, 24.0, shelf);
+          float spec = pow(max(dot(wNorm, H), 0.0), specPow) * (1.0 - landMask) * (1.0 - polarIce) * smoothstep(-0.05, 0.25, NdotL);
+          vec3 sunTint = mix(vec3(1.0, 0.56, 0.28), vec3(1.0, 0.98, 0.95), smoothstep(-0.05, 0.32, NdotL));
+
+          vec3 dayColor = albedo * (0.045 + 1.15 * bumpNdotL * sunTint) + vec3(0.42, 0.55, 0.72) * spec * 0.55;
+          // Subtle ambient earthshine on night side so continents remain faintly legible
+          vec3 nightBase = albedo * vec3(0.035, 0.055, 0.11);
+
+          // City lights on the night side
+          float cityNoise = noise3(pNorm * 95.0) * noise3(pNorm * 42.0 + 3.7);
+          float cityGlow = data.g * smoothstep(0.14, 0.46, cityNoise) * landMask * (1.0 - polarIce);
+          float nightMask = smoothstep(0.12, -0.18, NdotL);
+          vec3 cityLights = vec3(1.0, 0.74, 0.36) * cityGlow * nightMask * 2.1;
+
+          vec3 color = mix(nightBase, dayColor, dayFactor) + cityLights;
+
+          // Subtle twilight atmospheric scattering on surface
+          color += vec3(0.75, 0.32, 0.18) * twilight * 0.08 * (1.0 - polarIce * 0.3);
+
+          // Surface Fresnel atmospheric scatter
+          float fresnel = pow(1.0 - max(dot(wNorm, V), 0.0), 3.4);
+          vec3 atmoDay = vec3(0.24, 0.58, 1.0);
+          vec3 atmoNight = vec3(0.06, 0.16, 0.38);
+          color += mix(atmoNight, atmoDay, smoothstep(-0.25, 0.45, NdotL)) * fresnel * 0.58;
+
+          // Lightning strikes: flash lighting + concentric plasma ripples
+          vec3 strikeData = evalStrikes(pNorm, uTime, uStrikes, uStrikesMeta, uStrikeCount);
+          float ripple = strikeData.x;
+          float flash = strikeData.y;
+          float hueMix = strikeData.z;
+
+          vec3 electricCyan = vec3(0.32, 0.88, 1.0);
+          vec3 electricViolet = vec3(0.68, 0.45, 1.0);
+          vec3 rippleCol = mix(electricCyan, electricViolet, hueMix);
+          vec3 flashCol = mix(vec3(0.78, 0.94, 1.0), vec3(0.88, 0.78, 1.0), hueMix);
+
+          // Lightning illuminates terrain & oceans locally and overlays glowing ripples
+          color += albedo * flashCol * flash * 1.45;
+          color += flashCol * flash * 0.72;
+          color += rippleCol * ripple * 1.35;
+
+          // Filmic tone mapping
+          color = color / (1.0 + color * 0.38);
+          color = pow(max(color, 0.0), vec3(0.95));
+
+          fragColor = vec4(color, 1.0);
+        }
+      `;
+
+      // --- 3) Cloud Layer Shader ---
+      const cloudVS = `#version 300 es
+        layout(location = 0) in vec3 aPos;
+        uniform mat4 uModel;
+        uniform mat4 uViewProj;
+        out vec3 vLocalPos;
+        out vec3 vWorldPos;
+        void main() {
+          vec3 pos = aPos * 1.016;
+          vLocalPos = aPos;
+          vec4 wp = uModel * vec4(pos, 1.0);
+          vWorldPos = wp.xyz;
+          gl_Position = uViewProj * wp;
+        }
+      `;
+
+      const cloudFS = `#version 300 es
+        precision highp float;
+        in vec3 vLocalPos;
+        in vec3 vWorldPos;
+        uniform vec3 uSunDir;
+        uniform vec3 uCamPos;
+        uniform float uTime;
+        uniform vec4 uStrikes[24];
+        uniform vec4 uStrikesMeta[24];
+        uniform int uStrikeCount;
+        out vec4 fragColor;
+
+        ${GLSL_NOISE_AND_STRIKES}
+
+        void main() {
+          vec3 pNorm = normalize(vLocalPos);
+          vec3 wNorm = normalize(vWorldPos);
+
+          // Swirl clouds gently over time
+          float drift = uTime * 0.012;
+          float c = cos(drift);
+          float s = sin(drift);
+          vec3 q = vec3(pNorm.x * c - pNorm.z * s, pNorm.y, pNorm.x * s + pNorm.z * c);
+
+          // Lightweight domain warp for cyclone/trade-wind swirls
+          float w1 = noise3(q * 2.8 + vec3(1.2, 4.3, 2.1));
+          float w2 = noise3(q * 2.8 + vec3(7.4, 2.2, 8.8));
+          float cloudDensity = fbmFast(q * 4.2 + vec3(w1, w2, w1 - w2) * 0.75);
+          float cloud = smoothstep(0.48, 0.76, cloudDensity);
+
+          vec3 strikeData = evalStrikes(pNorm, uTime, uStrikes, uStrikesMeta, uStrikeCount);
+          float ripple = strikeData.x;
+          float flash = strikeData.y;
+          float hueMix = strikeData.z;
+
+          vec3 L = normalize(uSunDir);
+          float NdotL = dot(wNorm, L);
+          float dayLight = smoothstep(-0.18, 0.25, NdotL);
+          vec3 cloudTint = mix(vec3(0.05, 0.08, 0.16), vec3(0.95, 0.97, 1.0), dayLight);
+
+          // Under-lit lightning flash scattering inside the clouds
+          vec3 flashCol = mix(vec3(0.55, 0.88, 1.0), vec3(0.76, 0.56, 1.0), hueMix);
+          vec3 rippleCol = mix(vec3(0.28, 0.85, 1.0), vec3(0.65, 0.42, 1.0), hueMix);
+
+          vec3 col = cloudTint + flashCol * flash * (0.45 + cloud * 1.45) + rippleCol * ripple * 0.52;
+          float alpha = clamp(cloud * 0.52 + flash * 0.35 + ripple * 0.42, 0.0, 0.88);
+          if (alpha < 0.004) discard;
+
+          fragColor = vec4(col, alpha);
+        }
+      `;
+
+      // --- 4) Outer Atmosphere Rim Shader ---
+      const atmoVS = `#version 300 es
+        layout(location = 0) in vec3 aPos;
+        uniform mat4 uModel;
+        uniform mat4 uViewProj;
+        out vec3 vLocalPos;
+        out vec3 vWorldPos;
+        void main() {
+          vec3 pos = aPos * 1.068;
+          vLocalPos = aPos;
+          vec4 wp = uModel * vec4(pos, 1.0);
+          vWorldPos = wp.xyz;
+          gl_Position = uViewProj * wp;
+        }
+      `;
+
+      const atmoFS = `#version 300 es
+        precision highp float;
+        in vec3 vLocalPos;
+        in vec3 vWorldPos;
+        uniform vec3 uSunDir;
+        uniform vec3 uCamPos;
+        uniform float uTime;
+        uniform vec4 uStrikes[24];
+        uniform vec4 uStrikesMeta[24];
+        uniform int uStrikeCount;
+        out vec4 fragColor;
+
+        ${GLSL_NOISE_AND_STRIKES}
+
+        void main() {
+          vec3 pNorm = normalize(vLocalPos);
+          vec3 N = normalize(vWorldPos);
+          vec3 V = normalize(uCamPos - vWorldPos);
+
+          // Rendered on back-face of outer r=1.068 sphere: -dot(N, V) goes from 0 at outer edge to ~0.35 at Earth limb
+          float backView = clamp(-dot(N, V) / 0.355, 0.0, 1.0);
+          float rim = pow(backView, 2.4);
+
+          float sun = smoothstep(-0.35, 0.55, dot(N, normalize(uSunDir)));
+          vec3 baseAtmo = mix(vec3(0.08, 0.22, 0.52), vec3(0.28, 0.65, 1.0), sun);
+
+          vec3 strikeData = evalStrikes(pNorm, uTime, uStrikes, uStrikesMeta, uStrikeCount);
+          float stormGlow = strikeData.x * 0.45 + strikeData.y * 0.9;
+          vec3 stormCol = mix(vec3(0.32, 0.88, 1.0), vec3(0.7, 0.48, 1.0), strikeData.z);
+
+          vec3 col = (baseAtmo * 0.72 + stormCol * stormGlow) * rim;
+          float alpha = clamp(rim * (0.62 + stormGlow * 0.5), 0.0, 0.95);
+          fragColor = vec4(col, alpha);
+        }
+      `;
+
+      // --- 5) 3D Lightning Bolts Shader ---
+      const boltVS = `#version 300 es
+        layout(location = 0) in vec3 aPos;
+        layout(location = 1) in vec4 aColor;
+        uniform mat4 uModel;
+        uniform mat4 uViewProj;
+        out vec4 vColor;
+        void main() {
+          vColor = aColor;
+          gl_Position = uViewProj * (uModel * vec4(aPos, 1.0));
+        }
+      `;
+
+      const boltFS = `#version 300 es
+        precision highp float;
+        in vec4 vColor;
+        out vec4 fragColor;
+        void main() {
+          fragColor = vColor;
+        }
+      `;
+
+      const starProg = createProgram(starVS, starFS);
+      const earthProg = createProgram(earthVS, earthFS);
+      const cloudProg = createProgram(cloudVS, cloudFS);
+      const atmoProg = createProgram(atmoVS, atmoFS);
+      const boltProg = createProgram(boltVS, boltFS);
+
+      // Build Sphere Mesh (96 x 192)
+      function createSphereMesh(latSegs, lonSegs) {
+        const positions = [];
+        const uvs = [];
+        const indices = [];
+
+        for (let i = 0; i <= latSegs; i++) {
+          const v = i / latSegs;
+          const theta = v * Math.PI;
+          const sinT = Math.sin(theta);
+          const cosT = Math.cos(theta);
+
+          for (let j = 0; j <= lonSegs; j++) {
+            const u = j / lonSegs;
+            const phi = u * Math.PI * 2 - Math.PI;
+            const x = sinT * Math.sin(phi);
+            const y = cosT;
+            const z = sinT * Math.cos(phi);
+            positions.push(x, y, z);
+            uvs.push(u, v);
+          }
+        }
+
+        const stride = lonSegs + 1;
+        for (let i = 0; i < latSegs; i++) {
+          for (let j = 0; j < lonSegs; j++) {
+            const v00 = i * stride + j;
+            const v10 = (i + 1) * stride + j;
+            const v01 = i * stride + (j + 1);
+            const v11 = (i + 1) * stride + (j + 1);
+            indices.push(v00, v10, v11);
+            indices.push(v00, v11, v01);
+          }
+        }
+
+        const vao = gl.createVertexArray();
+        gl.bindVertexArray(vao);
+
+        const posBuf = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, posBuf);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+        gl.enableVertexAttribArray(0);
+        gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
+
+        const uvBuf = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, uvBuf);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(uvs), gl.STATIC_DRAW);
+        gl.enableVertexAttribArray(1);
+        gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 0, 0);
+
+        const idxBuf = gl.createBuffer();
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, idxBuf);
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint32Array(indices), gl.STATIC_DRAW);
+
+        gl.bindVertexArray(null);
+        return { vao, count: indices.length };
+      }
+
+      // Build Starfield Mesh
+      function createStarfield(count) {
+        const pos = new Float32Array(count * 3);
+        const attr = new Float32Array(count * 4);
+        for (let i = 0; i < count; i++) {
+          // Uniform sphere distribution at radius 28
+          const u = Math.random() * 2 - 1;
+          const phi = Math.random() * Math.PI * 2;
+          const rHoriz = Math.sqrt(1 - u * u);
+          const r = 28;
+          pos[i * 3] = r * rHoriz * Math.cos(phi);
+          pos[i * 3 + 1] = r * u;
+          pos[i * 3 + 2] = r * rHoriz * Math.sin(phi);
+
+          const mag = Math.pow(Math.random(), 2.2);
+          attr[i * 4] = 1.0 + mag * 2.5;
+          attr[i * 4 + 1] = 0.25 + mag * 0.75;
+          attr[i * 4 + 2] = Math.random();
+          attr[i * 4 + 3] = Math.random();
+        }
+
+        const vao = gl.createVertexArray();
+        gl.bindVertexArray(vao);
+
+        const pBuf = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, pBuf);
+        gl.bufferData(gl.ARRAY_BUFFER, pos, gl.STATIC_DRAW);
+        gl.enableVertexAttribArray(0);
+        gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
+
+        const aBuf = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, aBuf);
+        gl.bufferData(gl.ARRAY_BUFFER, attr, gl.STATIC_DRAW);
+        gl.enableVertexAttribArray(1);
+        gl.vertexAttribPointer(1, 4, gl.FLOAT, false, 0, 0);
+
+        gl.bindVertexArray(null);
+        return { vao, count };
+      }
+
+      // Dynamic buffer for 3D lightning bolt segments
+      const MAX_BOLT_VERTS = 1600;
+      const boltPosData = new Float32Array(MAX_BOLT_VERTS * 3);
+      const boltColData = new Float32Array(MAX_BOLT_VERTS * 4);
+      const boltVao = gl.createVertexArray();
+      gl.bindVertexArray(boltVao);
+      const boltPosBuf = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, boltPosBuf);
+      gl.bufferData(gl.ARRAY_BUFFER, boltPosData.byteLength, gl.DYNAMIC_DRAW);
+      gl.enableVertexAttribArray(0);
+      gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
+      const boltColBuf = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, boltColBuf);
+      gl.bufferData(gl.ARRAY_BUFFER, boltColData.byteLength, gl.DYNAMIC_DRAW);
+      gl.enableVertexAttribArray(1);
+      gl.vertexAttribPointer(1, 4, gl.FLOAT, false, 0, 0);
+      gl.bindVertexArray(null);
+
+      const sphereMesh = createSphereMesh(96, 192);
+      const starMesh = createStarfield(1800);
+      const earthDataTex = buildEarthDataTexture(gl);
+
+      // =========================================================================
+      // 3. MATRIX MATH HELPERS
+      // =========================================================================
+      function mat4Perspective(fovRad, aspect, near, far) {
+        const f = 1.0 / Math.tan(fovRad * 0.5);
+        const nf = 1 / (near - far);
+        return new Float32Array([
+          f / aspect, 0, 0, 0,
+          0, f, 0, 0,
+          0, 0, (far + near) * nf, -1,
+          0, 0, 2 * far * near * nf, 0
+        ]);
+      }
+
+      function mat4TranslateZ(z) {
+        return new Float32Array([
+          1, 0, 0, 0,
+          0, 1, 0, 0,
+          0, 0, 1, 0,
+          0, 0, z, 1
+        ]);
+      }
+
+      function mat4RotateXY(pitch, yaw) {
+        const cx = Math.cos(pitch), sx = Math.sin(pitch);
+        const cy = Math.cos(yaw), sy = Math.sin(yaw);
+        // R = Rx(pitch) * Ry(yaw) (column-major)
+        return new Float32Array([
+          cy, sx * sy, -cx * sy, 0,
+          0, cx, sx, 0,
+          sy, -sx * cy, cx * cy, 0,
+          0, 0, 0, 1
+        ]);
+      }
+
+      function mat4Multiply(a, b) {
+        const out = new Float32Array(16);
+        for (let c = 0; c < 4; c++) {
+          const b0 = b[c * 4], b1 = b[c * 4 + 1], b2 = b[c * 4 + 2], b3 = b[c * 4 + 3];
+          out[c * 4] = a[0] * b0 + a[4] * b1 + a[8] * b2 + a[12] * b3;
+          out[c * 4 + 1] = a[1] * b0 + a[5] * b1 + a[9] * b2 + a[13] * b3;
+          out[c * 4 + 2] = a[2] * b0 + a[6] * b1 + a[10] * b2 + a[14] * b3;
+          out[c * 4 + 3] = a[3] * b0 + a[7] * b1 + a[11] * b2 + a[15] * b3;
+        }
+        return out;
+      }
+
+      function transformPointMat4(m, v) {
+        return [
+          m[0] * v[0] + m[4] * v[1] + m[8] * v[2],
+          m[1] * v[0] + m[5] * v[1] + m[9] * v[2],
+          m[2] * v[0] + m[6] * v[1] + m[10] * v[2]
+        ];
+      }
+
+      function inverseRotatePointMat4(m, v) {
+        // Transpose of upper-left 3x3 orthogonal rotation matrix
+        return [
+          m[0] * v[0] + m[1] * v[1] + m[2] * v[2],
+          m[4] * v[0] + m[5] * v[1] + m[6] * v[2],
+          m[8] * v[0] + m[9] * v[1] + m[10] * v[2]
+        ];
+      }
+
+      // =========================================================================
+      // 4. WEB AUDIO AMBIENT MUSIC ENGINE
+      // =========================================================================
+      class StormAudioEngine {
+        constructor() {
+          this.ctx = null;
+          this.started = false;
+          this.muted = false;
+          this.masterGain = null;
+          this.reverbNode = null;
+          this.delayLeft = null;
+          this.delayRight = null;
+          this.padFilter = null;
+          this.padOscs = [];
+          this.rainFilter = null;
+          this.rainGain = null;
+          this.analyser = null;
+          this.freqData = null;
+
+          // Lush D Dorian / Minor-9 harmonic palette (Hz)
+          this.scale = [
+            73.42, 110.00, 146.83, 164.81, 174.61, 220.00, 261.63,
+            293.66, 329.63, 349.23, 392.00, 440.00, 523.25, 587.33,
+            659.25, 698.46, 880.00, 1046.50
+          ];
+          this.noteNames = [
+            "D2", "A2", "D3", "E3", "F3", "A3", "C4",
+            "D4", "E4", "F4", "G4", "A4", "C5", "D5",
+            "E5", "F5", "A5", "C6"
+          ];
+          // Slowly cycling chord roots for the ambient drone
+          this.droneRoots = [
+            [73.42, 110.00, 174.61, 261.63], // Dm7
+            [58.27, 87.31, 146.83, 220.00],  // Bbmaj7
+            [98.00, 146.83, 174.61, 261.63], // Gm11
+            [65.41, 98.00, 164.81, 246.94]   // Cmaj7
+          ];
+          this.chordIdx = 0;
+          this.lastChordTime = 0;
+        }
+
+        initAndStart() {
+          if (!this.ctx) {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            this.ctx = new AudioCtx();
+            this._buildGraph();
+          }
+          if (this.ctx.state === "suspended") {
+            this.ctx.resume();
+          }
+          this.started = true;
+          this.muted = false;
+          const now = this.ctx.currentTime;
+          this.masterGain.gain.cancelScheduledValues(now);
+          this.masterGain.gain.setTargetAtTime(0.75, now, 0.35);
+        }
+
+        toggleMute() {
+          if (!this.started) {
+            this.initAndStart();
+            return true;
+          }
+          this.muted = !this.muted;
+          const now = this.ctx.currentTime;
+          this.masterGain.gain.cancelScheduledValues(now);
+          this.masterGain.gain.setTargetAtTime(this.muted ? 0.0 : 0.75, now, 0.18);
+          return !this.muted;
+        }
+
+        _buildGraph() {
+          const ctx = this.ctx;
+
+          this.masterGain = ctx.createGain();
+          this.masterGain.gain.value = 0.0;
+
+          const compressor = ctx.createDynamicsCompressor();
+          compressor.threshold.value = -14;
+          compressor.knee.value = 18;
+          compressor.ratio.value = 4;
+          compressor.attack.value = 0.008;
+          compressor.release.value = 0.25;
+
+          this.analyser = ctx.createAnalyser();
+          this.analyser.fftSize = 64;
+          this.freqData = new Uint8Array(this.analyser.frequencyBinCount);
+
+          this.masterGain.connect(compressor);
+          compressor.connect(this.analyser);
+          this.analyser.connect(ctx.destination);
+
+          // 1. Procedural Stereo Convolution Reverb (4.4s lush tail)
+          const irLen = Math.floor(ctx.sampleRate * 4.4);
+          const irBuf = ctx.createBuffer(2, irLen, ctx.sampleRate);
+          for (let ch = 0; ch < 2; ch++) {
+            const data = irBuf.getChannelData(ch);
+            let lp = 0;
+            for (let i = 0; i < irLen; i++) {
+              const t = i / irLen;
+              const env = Math.pow(1 - t, 2.7) * Math.min(1, i / (ctx.sampleRate * 0.025));
+              const white = Math.random() * 2 - 1;
+              lp = lp * 0.72 + white * 0.28;
+              data[i] = lp * env;
+            }
+          }
+          this.reverbNode = ctx.createConvolver();
+          this.reverbNode.buffer = irBuf;
+          const reverbGain = ctx.createGain();
+          reverbGain.gain.value = 0.56;
+          this.reverbNode.connect(reverbGain);
+          reverbGain.connect(this.masterGain);
+
+          // 2. Stereo Ping-Pong Delay
+          this.delayLeft = ctx.createDelay(2.0);
+          this.delayRight = ctx.createDelay(2.0);
+          this.delayLeft.delayTime.value = 0.375;
+          this.delayRight.delayTime.value = 0.5625;
+
+          const fbL = ctx.createGain();
+          const fbR = ctx.createGain();
+          fbL.gain.value = 0.36;
+          fbR.gain.value = 0.36;
+
+          const delayLP = ctx.createBiquadFilter();
+          delayLP.type = "lowpass";
+          delayLP.frequency.value = 2100;
+
+          const delayMerger = ctx.createChannelMerger(2);
+          this.delayLeft.connect(delayLP);
+          delayLP.connect(fbL);
+          fbL.connect(this.delayRight);
+          this.delayRight.connect(fbR);
+          fbR.connect(this.delayLeft);
+
+          this.delayLeft.connect(delayMerger, 0, 0);
+          this.delayRight.connect(delayMerger, 0, 1);
+
+          const delayOutGain = ctx.createGain();
+          delayOutGain.gain.value = 0.34;
+          delayMerger.connect(delayOutGain);
+          delayOutGain.connect(this.masterGain);
+          delayOutGain.connect(this.reverbNode);
+
+          // 3. Evolving Ambient Drone Pad
+          this.padFilter = ctx.createBiquadFilter();
+          this.padFilter.type = "lowpass";
+          this.padFilter.frequency.value = 240;
+          this.padFilter.Q.value = 1.6;
+
+          const padGain = ctx.createGain();
+          padGain.gain.value = 0.19;
+          this.padFilter.connect(padGain);
+          padGain.connect(this.masterGain);
+          padGain.connect(this.reverbNode);
+
+          const chord = this.droneRoots[0];
+          const types = ["sine", "triangle", "triangle", "sine"];
+          const detunes = [-5, 4, -7, 6];
+          for (let i = 0; i < chord.length; i++) {
+            const osc = ctx.createOscillator();
+            osc.type = types[i];
+            osc.frequency.value = chord[i];
+            osc.detune.value = detunes[i];
+
+            const voiceGain = ctx.createGain();
+            voiceGain.gain.value = i === 0 ? 0.52 : 0.24;
+            osc.connect(voiceGain);
+            voiceGain.connect(this.padFilter);
+            osc.start();
+            this.padOscs.push(osc);
+          }
+
+          // Slow LFO breathing on pad filter
+          const lfo = ctx.createOscillator();
+          lfo.frequency.value = 0.055;
+          const lfoGain = ctx.createGain();
+          lfoGain.gain.value = 85;
+          lfo.connect(lfoGain);
+          lfoGain.connect(this.padFilter.frequency);
+          lfo.start();
+
+          // 4. Atmospheric Wind / Rain Noise Bed
+          const noiseLen = ctx.sampleRate * 4;
+          const noiseBuf = ctx.createBuffer(2, noiseLen, ctx.sampleRate);
+          for (let ch = 0; ch < 2; ch++) {
+            const d = noiseBuf.getChannelData(ch);
+            let b0 = 0, b1 = 0, b2 = 0;
+            for (let i = 0; i < noiseLen; i++) {
+              const w = Math.random() * 2 - 1;
+              b0 = 0.99765 * b0 + w * 0.099046;
+              b1 = 0.96300 * b1 + w * 0.2965164;
+              b2 = 0.57000 * b2 + w * 1.0526913;
+              d[i] = (b0 + b1 + b2 + w * 0.1848) * 0.06;
+            }
+          }
+          const rainSrc = ctx.createBufferSource();
+          rainSrc.buffer = noiseBuf;
+          rainSrc.loop = true;
+
+          this.rainFilter = ctx.createBiquadFilter();
+          this.rainFilter.type = "bandpass";
+          this.rainFilter.frequency.value = 480;
+          this.rainFilter.Q.value = 0.65;
+
+          this.rainGain = ctx.createGain();
+          this.rainGain.gain.value = 0.06;
+
+          rainSrc.connect(this.rainFilter);
+          this.rainFilter.connect(this.rainGain);
+          this.rainGain.connect(this.masterGain);
+          this.rainGain.connect(this.reverbNode);
+          rainSrc.start();
+          this.noiseBuf = noiseBuf;
+        }
+
+        updateAtmosphere(stormEnergy, simTime) {
+          if (!this.ctx || !this.started) return;
+          const now = this.ctx.currentTime;
+
+          // Modulate pad warmth and rain intensity from global storm energy
+          const targetCutoff = 190 + stormEnergy * 880;
+          this.padFilter.frequency.setTargetAtTime(targetCutoff, now, 0.35);
+
+          this.rainFilter.frequency.setTargetAtTime(380 + stormEnergy * 950, now, 0.4);
+          this.rainGain.gain.setTargetAtTime(0.045 + stormEnergy * 0.18, now, 0.4);
+
+          // Evolve ambient chord progression every ~22 seconds
+          if (simTime - this.lastChordTime > 22) {
+            this.lastChordTime = simTime;
+            this.chordIdx = (this.chordIdx + 1) % this.droneRoots.length;
+            const chord = this.droneRoots[this.chordIdx];
+            for (let i = 0; i < this.padOscs.length; i++) {
+              this.padOscs[i].frequency.setTargetAtTime(chord[i], now, 2.2);
+            }
+          }
+        }
+
+        triggerStrikeSound(lat, lon, pan, frontness, intensity, stormEnergy) {
+          // Pick a musical pitch from the scale based on latitude & longitude
+          const latNorm = (lat + 90) / 180; // 0 (South) .. 1 (North)
+          const lonJitter = Math.abs(Math.sin(lon * 0.17 + lat * 0.11));
+          const idxRaw = Math.floor((latNorm * 0.65 + lonJitter * 0.35) * (this.scale.length - 1));
+          const noteIdx = Math.max(0, Math.min(this.scale.length - 1, idxRaw));
+          const freq = this.scale[noteIdx];
+          const noteLabel = this.noteNames[noteIdx];
+
+          if (!this.ctx || !this.started || this.muted) {
+            return noteLabel;
+          }
+
+          const ctx = this.ctx;
+          const now = ctx.currentTime;
+          // Strikes facing the viewer are closer/brighter; far-side strikes are softer & more cavernous
+          const proximity = 0.42 + 0.58 * ((frontness + 1) * 0.5);
+
+          // Stereo panner aligned with globe position on screen
+          const panner = ctx.createStereoPanner();
+          panner.pan.setValueAtTime(Math.max(-0.88, Math.min(0.88, pan)), now);
+
+          const voiceFilter = ctx.createBiquadFilter();
+          voiceFilter.type = "lowpass";
+          voiceFilter.frequency.setValueAtTime(900 + proximity * 3200 + stormEnergy * 1200, now);
+
+          panner.connect(voiceFilter);
+          const dryGain = ctx.createGain();
+          dryGain.gain.value = 0.48 * proximity;
+          const wetGain = ctx.createGain();
+          wetGain.gain.value = 0.72;
+
+          voiceFilter.connect(dryGain);
+          voiceFilter.connect(wetGain);
+          dryGain.connect(this.masterGain);
+          wetGain.connect(this.reverbNode);
+          wetGain.connect(pan < 0 ? this.delayLeft : this.delayRight);
+
+          // 1. Crystalline FM Bell / Harmonic Pluck
+          const carrier = ctx.createOscillator();
+          const mod = ctx.createOscillator();
+          const modGain = ctx.createGain();
+          const env = ctx.createGain();
+
+          carrier.type = "sine";
+          carrier.frequency.setValueAtTime(freq, now);
+
+          mod.type = "sine";
+          mod.frequency.setValueAtTime(freq * (intensity > 0.75 ? 3.0 : 2.0), now);
+          const modDepth = freq * (0.6 + intensity * 1.4) * proximity;
+          modGain.gain.setValueAtTime(modDepth, now);
+          modGain.gain.exponentialRampToValueAtTime(0.5, now + 0.35);
+
+          const amp = (0.09 + intensity * 0.13) * proximity;
+          const decay = 1.6 + (1 - latNorm) * 1.4 + intensity * 0.8;
+          env.gain.setValueAtTime(0.0001, now);
+          env.gain.linearRampToValueAtTime(amp, now + 0.008);
+          env.gain.exponentialRampToValueAtTime(0.0001, now + decay);
+
+          mod.connect(modGain);
+          modGain.connect(carrier.frequency);
+          carrier.connect(env);
+          env.connect(panner);
+
+          carrier.start(now);
+          mod.start(now);
+          carrier.stop(now + decay + 0.05);
+          mod.stop(now + decay + 0.05);
+
+          // 2. Shimmer Harmonic Echo on intense strikes
+          if (intensity > 0.65) {
+            const shim = ctx.createOscillator();
+            const shimEnv = ctx.createGain();
+            const shimTime = now + 0.16;
+            shim.type = "triangle";
+            shim.frequency.setValueAtTime(freq * 1.5, shimTime); // Perfect fifth shimmer
+            shimEnv.gain.setValueAtTime(0.0001, shimTime);
+            shimEnv.gain.linearRampToValueAtTime(amp * 0.36, shimTime + 0.04);
+            shimEnv.gain.exponentialRampToValueAtTime(0.0001, shimTime + 1.8);
+            shim.connect(shimEnv);
+            shimEnv.connect(panner);
+            shim.start(shimTime);
+            shim.stop(shimTime + 1.85);
+          }
+
+          // 3. Distant Thunder Sub-Rumble
+          if (intensity > 0.45) {
+            const sub = ctx.createOscillator();
+            const subEnv = ctx.createGain();
+            sub.type = "sine";
+            sub.frequency.setValueAtTime(68, now);
+            sub.frequency.exponentialRampToValueAtTime(28, now + 0.9);
+            const subAmp = 0.14 * intensity * proximity;
+            subEnv.gain.setValueAtTime(0.0001, now);
+            subEnv.gain.linearRampToValueAtTime(subAmp, now + 0.025);
+            subEnv.gain.exponentialRampToValueAtTime(0.0001, now + 1.15);
+            sub.connect(subEnv);
+            subEnv.connect(panner);
+            sub.start(now);
+            sub.stop(now + 1.2);
+
+            // Filtered thunder crackle roll
+            const rumbleSrc = ctx.createBufferSource();
+            rumbleSrc.buffer = this.noiseBuf;
+            const rumbleFilter = ctx.createBiquadFilter();
+            rumbleFilter.type = "lowpass";
+            rumbleFilter.frequency.setValueAtTime(240 + intensity * 180, now);
+            rumbleFilter.frequency.exponentialRampToValueAtTime(55, now + 1.7);
+            const rumbleEnv = ctx.createGain();
+            rumbleEnv.gain.setValueAtTime(0.0001, now);
+            rumbleEnv.gain.linearRampToValueAtTime(0.28 * intensity * proximity, now + 0.04);
+            rumbleEnv.gain.exponentialRampToValueAtTime(0.0001, now + 1.85);
+            rumbleSrc.connect(rumbleFilter);
+            rumbleFilter.connect(rumbleEnv);
+            rumbleEnv.connect(panner);
+            rumbleSrc.start(now, Math.random() * 1.5, 1.9);
+          }
+
+          return noteLabel;
+        }
+      }
+
+      const audioEngine = new StormAudioEngine();
+
+      // =========================================================================
+      // 5. LIGHTNING STRIKE SIMULATION & 3D BOLTS
+      // =========================================================================
+      const strikeBuffer = new Float32Array(MAX_STRIKES * 4);
+      const strikeMetaBuffer = new Float32Array(MAX_STRIKES * 4);
+      for (let i = 0; i < MAX_STRIKES; i++) {
+        strikeBuffer[i * 4 + 3] = -100.0;
+      }
+
+      let strikeWriteIdx = 0;
+      let stormEnergy = 0.15;
+      let stormMultiplier = 1.0;
+      let nextAutoStrikeIn = 0.35;
+      const activeBolts = [];
+
+      const coordValEl = document.getElementById("coordVal");
+      const noteValEl = document.getElementById("noteVal");
+      const energyValEl = document.getElementById("energyVal");
+      const energyBarEl = document.getElementById("energyBar");
+
+      function latLonToVec3(latDeg, lonDeg) {
+        const lat = latDeg * DEG2RAD;
+        const lon = lonDeg * DEG2RAD;
+        const cosLat = Math.cos(lat);
+        return [
+          cosLat * Math.sin(lon),
+          Math.sin(lat),
+          cosLat * Math.cos(lon)
+        ];
+      }
+
+      function vec3ToLatLon(v) {
+        const len = Math.hypot(v[0], v[1], v[2]) || 1;
+        const nx = v[0] / len;
+        const ny = Math.max(-1, Math.min(1, v[1] / len));
+        const nz = v[2] / len;
+        const lat = Math.asin(ny) * RAD2DEG;
+        const lon = Math.atan2(nx, nz) * RAD2DEG;
+        return { lat, lon };
+      }
+
+      function formatLatLon(lat, lon) {
+        const ns = lat >= 0 ? "N" : "S";
+        const ew = lon >= 0 ? "E" : "W";
+        return `${Math.abs(lat).toFixed(1)}°${ns}, ${Math.abs(lon).toFixed(1)}°${ew}`;
+      }
+
+      function sampleStormLatLon() {
+        // 80% chance to spawn near realistic global storm hotspots, 20% anywhere
+        if (Math.random() < 0.8) {
+          let totalW = 0;
+          for (const h of STORM_HOTSPOTS) totalW += h[3];
+          let r = Math.random() * totalW;
+          let chosen = STORM_HOTSPOTS[0];
+          for (const h of STORM_HOTSPOTS) {
+            r -= h[3];
+            if (r <= 0) {
+              chosen = h;
+              break;
+            }
+          }
+          const angle = Math.random() * Math.PI * 2;
+          const dist = Math.sqrt(-2 * Math.log(Math.max(0.001, Math.random()))) * 0.45 * chosen[2];
+          const lat = Math.max(-78, Math.min(78, chosen[1] + Math.sin(angle) * dist));
+          let lon = chosen[0] + Math.cos(angle) * dist;
+          if (lon > 180) lon -= 360;
+          if (lon < -180) lon += 360;
+          return { lat, lon };
+        }
+        // Uniform-area global fallback
+        const lat = Math.asin(Math.random() * 2 - 1) * RAD2DEG * 0.92;
+        const lon = Math.random() * 360 - 180;
+        return { lat, lon };
+      }
+
+      function buildLightningBoltGeometry(normal, hueMix) {
+        // Create an orthonormal basis around normal
+        const upRef = Math.abs(normal[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0];
+        let tx = upRef[1] * normal[2] - upRef[2] * normal[1];
+        let ty = upRef[2] * normal[0] - upRef[0] * normal[2];
+        let tz = upRef[0] * normal[1] - upRef[1] * normal[0];
+        const tLen = Math.hypot(tx, ty, tz) || 1;
+        tx /= tLen; ty /= tLen; tz /= tLen;
+
+        const bx = normal[1] * tz - normal[2] * ty;
+        const by = normal[2] * tx - normal[0] * tz;
+        const bz = normal[0] * ty - normal[1] * tx;
+
+        const segments = 9;
+        const cloudAlt = 1.055;
+        const surfaceAlt = 1.002;
+        const pts = [];
+
+        // Cloud origin slightly offset laterally
+        const topSpread = 0.022;
+        const topA = (Math.random() - 0.5) * topSpread;
+        const topB = (Math.random() - 0.5) * topSpread;
+
+        for (let i = 0; i <= segments; i++) {
+          const t = i / segments;
+          const r = cloudAlt * (1 - t) + surfaceAlt * t;
+          const jAmp = Math.sin(t * Math.PI) * 0.016;
+          const ja = topA * (1 - t) + (Math.random() - 0.5) * jAmp;
+          const jb = topB * (1 - t) + (Math.random() - 0.5) * jAmp;
+          pts.push([
+            normal[0] * r + tx * ja + bx * jb,
+            normal[1] * r + ty * ja + by * jb,
+            normal[2] * r + tz * ja + bz * jb
+          ]);
+        }
+
+        const lines = [];
+        for (let i = 0; i < segments; i++) {
+          lines.push(pts[i], pts[i + 1]);
+          // Occasional fork branch
+          if (i >= 2 && i <= 6 && Math.random() < 0.45) {
+            const p = pts[i];
+            const branchEnd = [
+              p[0] * 0.985 + (Math.random() - 0.5) * 0.025,
+              p[1] * 0.985 + (Math.random() - 0.5) * 0.025,
+              p[2] * 0.985 + (Math.random() - 0.5) * 0.025
+            ];
+            lines.push(p, branchEnd);
+          }
+        }
+        return { lines, hueMix };
+      }
+
+      let modelMatrix = mat4RotateXY(0.28, -0.5);
+
+      function spawnStrikeAtUnitVec(vec, simTime, intensityOverride = null) {
+        const len = Math.hypot(vec[0], vec[1], vec[2]) || 1;
+        const nx = vec[0] / len;
+        const ny = vec[1] / len;
+        const nz = vec[2] / len;
+
+        const intensity = intensityOverride ?? (0.55 + Math.random() * 0.55);
+        const duration = 2.6 + intensity * 1.4;
+        const hueMix = Math.random();
+
+        const idx = strikeWriteIdx;
+        strikeWriteIdx = (strikeWriteIdx + 1) % MAX_STRIKES;
+
+        const base = idx * 4;
+        strikeBuffer[base] = nx;
+        strikeBuffer[base + 1] = ny;
+        strikeBuffer[base + 2] = nz;
+        strikeBuffer[base + 3] = simTime;
+
+        strikeMetaBuffer[base] = duration;
+        strikeMetaBuffer[base + 1] = intensity;
+        strikeMetaBuffer[base + 2] = hueMix;
+        strikeMetaBuffer[base + 3] = 1.0;
+
+        activeBolts.push({
+          startTime: simTime,
+          life: 0.28,
+          ...buildLightningBoltGeometry([nx, ny, nz], hueMix)
+        });
+
+        stormEnergy = Math.min(1.0, stormEnergy + 0.095 * intensity);
+
+        const { lat, lon } = vec3ToLatLon([nx, ny, nz]);
+        const worldPos = transformPointMat4(modelMatrix, [nx, ny, nz]);
+        const pan = worldPos[0];
+        const frontness = worldPos[2];
+
+        const noteLabel = audioEngine.triggerStrikeSound(
+          lat,
+          lon,
+          pan,
+          frontness,
+          intensity,
+          stormEnergy
+        );
+
+        coordValEl.textContent = formatLatLon(lat, lon);
+        noteValEl.textContent = audioEngine.started && !audioEngine.muted
+          ? `${noteLabel} (${pan >= 0 ? "R" : "L"}${Math.round(Math.abs(pan) * 100)}%)`
+          : `${noteLabel} (muted)`;
+      }
+
+      // =========================================================================
+      // 6. INTERACTION (Drag to Rotate, Inertia, Wheel Zoom, Click to Strike)
+      // =========================================================================
+      let rotYaw = -0.35;
+      let rotPitch = 0.26;
+      let velYaw = 0.0;
+      let velPitch = 0.0;
+      let camDist = 2.85;
+      let targetCamDist = 2.85;
+      let autoOrbit = true;
+
+      let isDragging = false;
+      let activePointerId = null;
+      let downX = 0;
+      let downY = 0;
+      let lastX = 0;
+      let lastY = 0;
+      let totalDragDist = 0;
+
+      canvas.addEventListener("pointerdown", (e) => {
+        if (activePointerId !== null) return;
+        activePointerId = e.pointerId;
+        canvas.setPointerCapture(e.pointerId);
+        isDragging = true;
+        canvas.classList.add("dragging");
+        downX = lastX = e.clientX;
+        downY = lastY = e.clientY;
+        totalDragDist = 0;
+        velYaw = 0;
+        velPitch = 0;
+      });
+
+      canvas.addEventListener("pointermove", (e) => {
+        if (!isDragging || e.pointerId !== activePointerId) return;
+        const dx = e.clientX - lastX;
+        const dy = e.clientY - lastY;
+        lastX = e.clientX;
+        lastY = e.clientY;
+        totalDragDist += Math.hypot(dx, dy);
+
+        const sens = 0.0052 * (camDist / 2.85);
+        rotYaw += dx * sens;
+        rotPitch = Math.max(-1.42, Math.min(1.42, rotPitch + dy * sens));
+        velYaw = dx * sens * 0.85;
+        velPitch = dy * sens * 0.85;
+      });
+
+      function endPointer(e) {
+        if (e.pointerId !== activePointerId) return;
+        const wasClick = totalDragDist < 6;
+        isDragging = false;
+        activePointerId = null;
+        canvas.classList.remove("dragging");
+
+        if (wasClick) {
+          triggerStrikeFromScreenPoint(e.clientX, e.clientY);
+        }
+      }
+
+      canvas.addEventListener("pointerup", endPointer);
+      canvas.addEventListener("pointercancel", endPointer);
+
+      canvas.addEventListener(
+        "wheel",
+        (e) => {
+          e.preventDefault();
+          targetCamDist = Math.max(1.55, Math.min(5.4, targetCamDist + e.deltaY * 0.0022));
+        },
+        { passive: false }
+      );
+
+      let simTime = 0;
+
+      function triggerStrikeFromScreenPoint(clientX, clientY) {
+        const rect = canvas.getBoundingClientRect();
+        const nx = ((clientX - rect.left) / rect.width) * 2 - 1;
+        const ny = 1 - ((clientY - rect.top) / rect.height) * 2;
+        const aspect = rect.width / Math.max(1, rect.height);
+        const tanHalfFov = Math.tan((44 * DEG2RAD) * 0.5);
+
+        // Ray in camera space (camera at (0,0,camDist) looking along -Z)
+        let rx = nx * aspect * tanHalfFov;
+        let ry = ny * tanHalfFov;
+        let rz = -1.0;
+        const rLen = Math.hypot(rx, ry, rz);
+        rx /= rLen; ry /= rLen; rz /= rLen;
+
+        // Ray-sphere intersection against unit sphere at origin
+        const b = camDist * rz;
+        const c = camDist * camDist - 1.0;
+        const disc = b * b - c;
+        if (disc < 0) return;
+
+        const t = -b - Math.sqrt(disc);
+        const hitWorld = [rx * t, ry * t, camDist + rz * t];
+        const hitLocal = inverseRotatePointMat4(modelMatrix, hitWorld);
+        spawnStrikeAtUnitVec(hitLocal, simTime, 0.92 + Math.random() * 0.2);
+      }
+
+      // =========================================================================
+      // 7. UI CONTROLS & AUDIO VISUALIZER
+      // =========================================================================
+      const audioBtn = document.getElementById("audioBtn");
+      const audioIcon = document.getElementById("audioIcon");
+      const audioLabel = document.getElementById("audioLabel");
+      const stormSlider = document.getElementById("stormSlider");
+      const strikeBtn = document.getElementById("strikeBtn");
+      const orbitBtn = document.getElementById("orbitBtn");
+      const vizCanvas = document.getElementById("vizCanvas");
+      const vctx = vizCanvas.getContext("2d");
+
+      function refreshAudioButton(isOn) {
+        if (isOn) {
+          audioBtn.classList.add("active");
+          audioIcon.innerHTML = "&#9646;&#9646;";
+          audioLabel.textContent = "Audio Active";
+        } else {
+          audioBtn.classList.remove("active");
+          audioIcon.innerHTML = "&#9654;";
+          audioLabel.textContent = audioEngine.started ? "Resume Audio" : "Start Audio";
+        }
+      }
+
+      audioBtn.addEventListener("click", () => {
+        const active = audioEngine.toggleMute();
+        refreshAudioButton(active);
+      });
+
+      stormSlider.addEventListener("input", () => {
+        stormMultiplier = parseFloat(stormSlider.value);
+      });
+
+      strikeBtn.addEventListener("click", () => {
+        const { lat, lon } = sampleStormLatLon();
+        spawnStrikeAtUnitVec(latLonToVec3(lat, lon), simTime, 0.95);
+      });
+
+      orbitBtn.addEventListener("click", () => {
+        autoOrbit = !autoOrbit;
+        orbitBtn.textContent = `Auto-Orbit: ${autoOrbit ? "On" : "Off"}`;
+        orbitBtn.classList.toggle("off", !autoOrbit);
+      });
+
+      function drawAudioVisualizer() {
+        const w = vizCanvas.width;
+        const h = vizCanvas.height;
+        vctx.clearRect(0, 0, w, h);
+
+        if (!audioEngine.analyser || !audioEngine.started || audioEngine.muted) {
+          vctx.fillStyle = "rgba(94, 231, 255, 0.16)";
+          for (let i = 0; i < 24; i++) {
+            const x = i * (w / 24) + 2;
+            vctx.fillRect(x, h - 3, w / 24 - 4, 2);
+          }
+          return;
+        }
+
+        audioEngine.analyser.getByteFrequencyData(audioEngine.freqData);
+        const bars = 24;
+        const barW = w / bars;
+        for (let i = 0; i < bars; i++) {
+          const val = audioEngine.freqData[i] / 255;
+          const bh = Math.max(2, val * (h - 4));
+          const grad = vctx.createLinearGradient(0, h, 0, h - bh);
+          grad.addColorStop(0, "rgba(65, 130, 255, 0.7)");
+          grad.addColorStop(1, "rgba(94, 231, 255, 0.95)");
+          vctx.fillStyle = grad;
+          vctx.fillRect(i * barW + 1.5, h - bh, barW - 3, bh);
+        }
+      }
+
+      // =========================================================================
+      // 8. RESIZE & RENDER LOOP
+      // =========================================================================
+      let width = 1;
+      let height = 1;
+      let projMatrix = mat4Perspective(44 * DEG2RAD, 1, 0.1, 100);
+
+      function handleResize() {
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        width = Math.max(1, Math.floor(window.innerWidth * dpr));
+        height = Math.max(1, Math.floor(window.innerHeight * dpr));
+        canvas.width = width;
+        canvas.height = height;
+        gl.viewport(0, 0, width, height);
+        projMatrix = mat4Perspective(44 * DEG2RAD, width / height, 0.1, 100);
+      }
+
+      window.addEventListener("resize", handleResize);
+      handleResize();
+
+      // Cache uniform locations
+      const earthLocs = {
+        uModel: gl.getUniformLocation(earthProg, "uModel"),
+        uViewProj: gl.getUniformLocation(earthProg, "uViewProj"),
+        uEarthData: gl.getUniformLocation(earthProg, "uEarthData"),
+        uSunDir: gl.getUniformLocation(earthProg, "uSunDir"),
+        uCamPos: gl.getUniformLocation(earthProg, "uCamPos"),
+        uTime: gl.getUniformLocation(earthProg, "uTime"),
+        uStrikes: gl.getUniformLocation(earthProg, "uStrikes"),
+        uStrikesMeta: gl.getUniformLocation(earthProg, "uStrikesMeta"),
+        uStrikeCount: gl.getUniformLocation(earthProg, "uStrikeCount")
+      };
+
+      const cloudLocs = {
+        uModel: gl.getUniformLocation(cloudProg, "uModel"),
+        uViewProj: gl.getUniformLocation(cloudProg, "uViewProj"),
+        uSunDir: gl.getUniformLocation(cloudProg, "uSunDir"),
+        uCamPos: gl.getUniformLocation(cloudProg, "uCamPos"),
+        uTime: gl.getUniformLocation(cloudProg, "uTime"),
+        uStrikes: gl.getUniformLocation(cloudProg, "uStrikes"),
+        uStrikesMeta: gl.getUniformLocation(cloudProg, "uStrikesMeta"),
+        uStrikeCount: gl.getUniformLocation(cloudProg, "uStrikeCount")
+      };
+
+      const atmoLocs = {
+        uModel: gl.getUniformLocation(atmoProg, "uModel"),
+        uViewProj: gl.getUniformLocation(atmoProg, "uViewProj"),
+        uSunDir: gl.getUniformLocation(atmoProg, "uSunDir"),
+        uCamPos: gl.getUniformLocation(atmoProg, "uCamPos"),
+        uTime: gl.getUniformLocation(atmoProg, "uTime"),
+        uStrikes: gl.getUniformLocation(atmoProg, "uStrikes"),
+        uStrikesMeta: gl.getUniformLocation(atmoProg, "uStrikesMeta"),
+        uStrikeCount: gl.getUniformLocation(atmoProg, "uStrikeCount")
+      };
+
+      const starLocs = {
+        uViewProj: gl.getUniformLocation(starProg, "uViewProj"),
+        uTime: gl.getUniformLocation(starProg, "uTime")
+      };
+
+      const boltLocs = {
+        uModel: gl.getUniformLocation(boltProg, "uModel"),
+        uViewProj: gl.getUniformLocation(boltProg, "uViewProj")
+      };
+
+      const activeStrikeBuf = new Float32Array(MAX_STRIKES * 4);
+      const activeMetaBuf = new Float32Array(MAX_STRIKES * 4);
+
+      let lastFrameMs = performance.now();
+
+      function frame(nowMs) {
+        const dt = Math.min(0.05, Math.max(0.001, (nowMs - lastFrameMs) * 0.001));
+        lastFrameMs = nowMs;
+        simTime += dt;
+
+        // Smooth camera zoom & rotation inertia
+        camDist += (targetCamDist - camDist) * Math.min(1, dt * 9);
+        if (!isDragging) {
+          rotYaw += velYaw;
+          rotPitch = Math.max(-1.42, Math.min(1.42, rotPitch + velPitch));
+          velYaw *= Math.pow(0.04, dt);
+          velPitch *= Math.pow(0.04, dt);
+          if (autoOrbit) {
+            rotYaw += dt * 0.055;
+          }
+        }
+
+        modelMatrix = mat4RotateXY(rotPitch, rotYaw);
+        const viewMatrix = mat4TranslateZ(-camDist);
+        const viewProj = mat4Multiply(projMatrix, viewMatrix);
+        const camPos = [0, 0, camDist];
+
+        // Slowly orbiting sun direction so day/night terminator sweeps gradually
+        const sunAngle = 0.72 + simTime * 0.015;
+        const sunDir = [Math.cos(sunAngle), 0.28, Math.sin(sunAngle)];
+
+        // Simulated global lightning strike scheduler
+        nextAutoStrikeIn -= dt * stormMultiplier;
+        if (nextAutoStrikeIn <= 0) {
+          const { lat, lon } = sampleStormLatLon();
+          spawnStrikeAtUnitVec(latLonToVec3(lat, lon), simTime);
+          // Clustered storm timing: occasional quick double-strikes
+          const burst = Math.random() < 0.24 ? 0.14 + Math.random() * 0.28 : 0.65 + Math.random() * 1.45;
+          nextAutoStrikeIn = burst;
+        }
+
+        // Pack only live strikes so shaders skip expired slots
+        let activeStrikeCount = 0;
+        for (let i = 0; i < MAX_STRIKES; i++) {
+          const b = i * 4;
+          const tStart = strikeBuffer[b + 3];
+          const age = simTime - tStart;
+          if (tStart >= 0 && age >= 0 && age <= strikeMetaBuffer[b]) {
+            const dst = activeStrikeCount * 4;
+            activeStrikeBuf[dst] = strikeBuffer[b];
+            activeStrikeBuf[dst + 1] = strikeBuffer[b + 1];
+            activeStrikeBuf[dst + 2] = strikeBuffer[b + 2];
+            activeStrikeBuf[dst + 3] = tStart;
+            activeMetaBuf[dst] = strikeMetaBuffer[b];
+            activeMetaBuf[dst + 1] = strikeMetaBuffer[b + 1];
+            activeMetaBuf[dst + 2] = strikeMetaBuffer[b + 2];
+            activeMetaBuf[dst + 3] = strikeMetaBuffer[b + 3];
+            activeStrikeCount++;
+          }
+        }
+
+        // Decay global storm energy smoothly
+        stormEnergy = Math.max(0.05, stormEnergy * Math.exp(-dt * 0.24));
+        audioEngine.updateAtmosphere(stormEnergy, simTime);
+
+        const pct = Math.round(stormEnergy * 100);
+        energyValEl.textContent = `${pct}%`;
+        energyBarEl.style.width = `${pct}%`;
+        drawAudioVisualizer();
+
+        // Clear screen
+        gl.clearColor(0.01, 0.02, 0.05, 1.0);
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+        // 1. Render Starfield
+        gl.disable(gl.DEPTH_TEST);
+        gl.disable(gl.CULL_FACE);
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+        gl.useProgram(starProg);
+        const starView = mat4Multiply(projMatrix, mat4Multiply(viewMatrix, mat4RotateXY(rotPitch * 0.12, rotYaw * 0.12)));
+        gl.uniformMatrix4fv(starLocs.uViewProj, false, starView);
+        gl.uniform1f(starLocs.uTime, simTime);
+        gl.bindVertexArray(starMesh.vao);
+        gl.drawArrays(gl.POINTS, 0, starMesh.count);
+
+        // 2. Render Earth Surface
+        gl.enable(gl.DEPTH_TEST);
+        gl.depthMask(true);
+        gl.enable(gl.CULL_FACE);
+        gl.cullFace(gl.BACK);
+        gl.disable(gl.BLEND);
+
+        gl.useProgram(earthProg);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, earthDataTex);
+        gl.uniform1i(earthLocs.uEarthData, 0);
+        gl.uniformMatrix4fv(earthLocs.uModel, false, modelMatrix);
+        gl.uniformMatrix4fv(earthLocs.uViewProj, false, viewProj);
+        gl.uniform3fv(earthLocs.uSunDir, sunDir);
+        gl.uniform3fv(earthLocs.uCamPos, camPos);
+        gl.uniform1f(earthLocs.uTime, simTime);
+        gl.uniform4fv(earthLocs.uStrikes, activeStrikeBuf);
+        gl.uniform4fv(earthLocs.uStrikesMeta, activeMetaBuf);
+        gl.uniform1i(earthLocs.uStrikeCount, activeStrikeCount);
+
+        gl.bindVertexArray(sphereMesh.vao);
+        gl.drawElements(gl.TRIANGLES, sphereMesh.count, gl.UNSIGNED_INT, 0);
+
+        // 3. Render Cloud Layer
+        gl.depthMask(false);
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+        gl.useProgram(cloudProg);
+        gl.uniformMatrix4fv(cloudLocs.uModel, false, modelMatrix);
+        gl.uniformMatrix4fv(cloudLocs.uViewProj, false, viewProj);
+        gl.uniform3fv(cloudLocs.uSunDir, sunDir);
+        gl.uniform3fv(cloudLocs.uCamPos, camPos);
+        gl.uniform1f(cloudLocs.uTime, simTime);
+        gl.uniform4fv(cloudLocs.uStrikes, activeStrikeBuf);
+        gl.uniform4fv(cloudLocs.uStrikesMeta, activeMetaBuf);
+        gl.uniform1i(cloudLocs.uStrikeCount, activeStrikeCount);
+        gl.drawElements(gl.TRIANGLES, sphereMesh.count, gl.UNSIGNED_INT, 0);
+
+        // 4. Render 3D Lightning Bolts
+        let vertCount = 0;
+        for (let i = activeBolts.length - 1; i >= 0; i--) {
+          const b = activeBolts[i];
+          const age = simTime - b.startTime;
+          if (age > b.life) {
+            activeBolts.splice(i, 1);
+            continue;
+          }
+          const alpha = Math.pow(1 - age / b.life, 1.4);
+          const rCol = 0.72 + 0.25 * b.hueMix;
+          const gCol = 0.92 - 0.25 * b.hueMix;
+          const bCol = 1.0;
+
+          for (let j = 0; j < b.lines.length; j++) {
+            if (vertCount >= MAX_BOLT_VERTS) break;
+            const pt = b.lines[j];
+            const p3 = vertCount * 3;
+            const p4 = vertCount * 4;
+            boltPosData[p3] = pt[0];
+            boltPosData[p3 + 1] = pt[1];
+            boltPosData[p3 + 2] = pt[2];
+            boltColData[p4] = rCol;
+            boltColData[p4 + 1] = gCol;
+            boltColData[p4 + 2] = bCol;
+            boltColData[p4 + 3] = alpha;
+            vertCount++;
+          }
+        }
+
+        if (vertCount > 0) {
+          gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+          gl.useProgram(boltProg);
+          gl.uniformMatrix4fv(boltLocs.uModel, false, modelMatrix);
+          gl.uniformMatrix4fv(boltLocs.uViewProj, false, viewProj);
+          gl.bindVertexArray(boltVao);
+          gl.bindBuffer(gl.ARRAY_BUFFER, boltPosBuf);
+          gl.bufferSubData(gl.ARRAY_BUFFER, 0, boltPosData.subarray(0, vertCount * 3));
+          gl.bindBuffer(gl.ARRAY_BUFFER, boltColBuf);
+          gl.bufferSubData(gl.ARRAY_BUFFER, 0, boltColData.subarray(0, vertCount * 4));
+          gl.drawArrays(gl.LINES, 0, vertCount);
+        }
+
+        // 5. Render Outer Atmosphere Fresnel Halo (front-face culled back shell)
+        gl.cullFace(gl.FRONT);
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+        gl.useProgram(atmoProg);
+        gl.uniformMatrix4fv(atmoLocs.uModel, false, modelMatrix);
+        gl.uniformMatrix4fv(atmoLocs.uViewProj, false, viewProj);
+        gl.uniform3fv(atmoLocs.uSunDir, sunDir);
+        gl.uniform3fv(atmoLocs.uCamPos, camPos);
+        gl.uniform1f(atmoLocs.uTime, simTime);
+        gl.uniform4fv(atmoLocs.uStrikes, activeStrikeBuf);
+        gl.uniform4fv(atmoLocs.uStrikesMeta, activeMetaBuf);
+        gl.uniform1i(atmoLocs.uStrikeCount, activeStrikeCount);
+        gl.bindVertexArray(sphereMesh.vao);
+        gl.drawElements(gl.TRIANGLES, sphereMesh.count, gl.UNSIGNED_INT, 0);
+
+        gl.depthMask(true);
+        gl.cullFace(gl.BACK);
+
+        requestAnimationFrame(frame);
+      }
+
+      // Seed 2 initial strikes so the globe is alive immediately on first frame
+      spawnStrikeAtUnitVec(latLonToVec3(10.0, -71.5), 0.0, 0.9);
+      spawnStrikeAtUnitVec(latLonToVec3(1.5, 22.0), 0.0, 0.8);
+
+      requestAnimationFrame(frame);
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,1239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Black Hole — WebGL2 Relativistic Lensing</title>
+<style>
+  *, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #020306;
+    color: #e8ecf4;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  canvas {
+    display: block;
+    width: 100vw;
+    height: 100vh;
+    cursor: grab;
+    touch-action: none;
+  }
+
+  canvas:active {
+    cursor: grabbing;
+  }
+
+  .hud-title {
+    position: fixed;
+    top: 22px;
+    left: 26px;
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  .hud-title h1 {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: rgba(235, 240, 250, 0.72);
+    text-shadow: 0 1px 12px rgba(0, 0, 0, 0.8);
+  }
+
+  .hud-title p {
+    margin-top: 4px;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(200, 212, 232, 0.42);
+    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.8);
+  }
+
+  .control-panel {
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    width: 248px;
+    padding: 13px 16px 14px;
+    border-radius: 14px;
+    background: rgba(10, 12, 18, 0.56);
+    border: 1px solid rgba(255, 255, 255, 0.11);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    z-index: 10;
+    transition: border-color 0.25s ease, background 0.25s ease;
+  }
+
+  .control-panel:hover {
+    background: rgba(12, 15, 22, 0.68);
+    border-color: rgba(255, 255, 255, 0.18);
+  }
+
+  .control-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+
+  .control-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: rgba(226, 232, 244, 0.65);
+  }
+
+  .temp-readout {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(245, 247, 252, 0.94);
+    letter-spacing: 0.03em;
+  }
+
+  .temp-swatch {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #ffd9a8;
+    box-shadow: 0 0 8px #ffb266;
+    flex-shrink: 0;
+  }
+
+  .slider-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    height: 18px;
+  }
+
+  input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 4px;
+    border-radius: 999px;
+    background: linear-gradient(
+      90deg,
+      #ff2d08 0%,
+      #ff7d24 22%,
+      #ffd9a6 44%,
+      #eef5ff 64%,
+      #9bc4ff 84%,
+      #6ca5ff 100%
+    );
+    outline: none;
+    cursor: pointer;
+    box-shadow: inset 0 0 2px rgba(0, 0, 0, 0.6);
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #f7f9fc;
+    border: 2px solid rgba(12, 16, 24, 0.85);
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.65), 0 2px 6px rgba(0, 0, 0, 0.6);
+    transition: transform 0.12s ease;
+  }
+
+  input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.16);
+  }
+
+  input[type="range"]::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #f7f9fc;
+    border: 2px solid rgba(12, 16, 24, 0.85);
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.65), 0 2px 6px rgba(0, 0, 0, 0.6);
+    transition: transform 0.12s ease;
+  }
+
+  .scale-ticks {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 6px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 9px;
+    color: rgba(200, 212, 232, 0.38);
+    letter-spacing: 0.04em;
+  }
+
+  .error-banner {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: #05070c;
+    color: #e8ecf4;
+    text-align: center;
+    font-size: 14px;
+    line-height: 1.6;
+    z-index: 100;
+  }
+</style>
+</head>
+<body>
+<canvas id="glcanvas"></canvas>
+
+<div class="hud-title">
+  <h1>Event Horizon</h1>
+  <p>Schwarzschild Geodesic Lensing</p>
+</div>
+
+<div class="control-panel" id="controlPanel">
+  <div class="control-header">
+    <span class="control-label">Disk Temp</span>
+    <span class="temp-readout">
+      <span class="temp-swatch" id="tempSwatch"></span>
+      <span id="tempValue">4,800 K</span>
+    </span>
+  </div>
+  <div class="slider-wrap">
+    <input id="tempSlider" type="range" min="1500" max="18000" step="50" value="4800" aria-label="Accretion disk temperature in Kelvin">
+  </div>
+  <div class="scale-ticks">
+    <span>1,500 K</span>
+    <span>6,500 K</span>
+    <span>18,000 K</span>
+  </div>
+</div>
+
+<div class="error-banner" id="errorBanner"></div>
+
+<script>
+(() => {
+  'use strict';
+
+  const canvas = document.getElementById('glcanvas');
+  const errorBanner = document.getElementById('errorBanner');
+  const tempSlider = document.getElementById('tempSlider');
+  const tempValue = document.getElementById('tempValue');
+  const tempSwatch = document.getElementById('tempSwatch');
+
+  function showError(msg) {
+    errorBanner.textContent = msg;
+    errorBanner.style.display = 'flex';
+  }
+
+  const gl = canvas.getContext('webgl2', {
+    antialias: false,
+    alpha: false,
+    depth: false,
+    stencil: false,
+    powerPreference: 'high-performance',
+    preserveDrawingBuffer: false
+  });
+
+  if (!gl) {
+    showError('WebGL2 is required to view this black hole simulation.');
+    return;
+  }
+
+  // Enable float render targets for true HDR bloom when supported
+  const extColorFloat = gl.getExtension('EXT_color_buffer_float');
+  const extHalfFloat = gl.getExtension('EXT_color_buffer_half_float');
+  const useFloatFBO = Boolean(extColorFloat || extHalfFloat);
+
+  // ---------------------------------------------------------------------------
+  // Shared Fullscreen Triangle Vertex Shader
+  // ---------------------------------------------------------------------------
+  const FULLSCREEN_VS = `#version 300 es
+precision highp float;
+out vec2 vUv;
+void main() {
+  vec2 pos = vec2((gl_VertexID << 1) & 2, gl_VertexID & 2);
+  vUv = pos;
+  gl_Position = vec4(pos * 2.0 - 1.0, 0.0, 1.0);
+}
+`;
+
+  // ---------------------------------------------------------------------------
+  // Pass 1: Black Hole Geodesic Raymarcher + Accretion Disk + Lensed Starfield
+  // ---------------------------------------------------------------------------
+  const BLACKHOLE_FS = `#version 300 es
+precision highp float;
+precision highp int;
+
+in vec2 vUv;
+out vec4 fragColor;
+
+uniform vec2 uResolution;
+uniform float uTime;
+uniform float uTemperature;
+uniform vec3 uCamPos;
+uniform vec3 uCamRight;
+uniform vec3 uCamUp;
+uniform vec3 uCamFwd;
+uniform float uHdrEncode;
+
+const float PI = 3.14159265359;
+const float RS = 1.0;
+
+// ---------------------------------------------------------------------------
+// Hashing & Smooth 3D Value Noise (Dave Hoskins float hashes)
+// ---------------------------------------------------------------------------
+float hash12(vec2 p) {
+  vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+  p3 += dot(p3, p3.yzx + 33.33);
+  return fract((p3.x + p3.y) * p3.z);
+}
+
+float hash13(vec3 p3) {
+  p3 = fract(p3 * 0.1031);
+  p3 += dot(p3, p3.zyx + 31.32);
+  return fract((p3.x + p3.y) * p3.z);
+}
+
+vec3 hash33(vec3 p3) {
+  p3 = fract(p3 * vec3(0.1031, 0.1030, 0.0973));
+  p3 += dot(p3, p3.yxz + 33.33);
+  return fract((p3.xxy + p3.yxx) * p3.zyx);
+}
+
+float noise3(vec3 p) {
+  vec3 i = floor(p);
+  vec3 f = fract(p);
+  vec3 u = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);
+
+  float n000 = hash13(i + vec3(0.0, 0.0, 0.0));
+  float n100 = hash13(i + vec3(1.0, 0.0, 0.0));
+  float n010 = hash13(i + vec3(0.0, 1.0, 0.0));
+  float n110 = hash13(i + vec3(1.0, 1.0, 0.0));
+  float n001 = hash13(i + vec3(0.0, 0.0, 1.0));
+  float n101 = hash13(i + vec3(1.0, 0.0, 1.0));
+  float n011 = hash13(i + vec3(0.0, 1.0, 1.0));
+  float n111 = hash13(i + vec3(1.0, 1.0, 1.0));
+
+  float nx00 = mix(n000, n100, u.x);
+  float nx10 = mix(n010, n110, u.x);
+  float nx01 = mix(n001, n101, u.x);
+  float nx11 = mix(n011, n111, u.x);
+
+  float nxy0 = mix(nx00, nx10, u.y);
+  float nxy1 = mix(nx01, nx11, u.y);
+
+  return mix(nxy0, nxy1, u.z);
+}
+
+const mat3 OCT_ROT = mat3(
+   0.64,  0.48,  0.60,
+  -0.60,  0.80,  0.00,
+  -0.48, -0.36,  0.80
+);
+
+float fbm4(vec3 p) {
+  float val = 0.0;
+  float amp = 0.52;
+  for (int i = 0; i < 4; i++) {
+    val += amp * noise3(p);
+    p = OCT_ROT * p * 2.04 + vec3(13.7, 7.3, 19.1);
+    amp *= 0.5;
+  }
+  return val;
+}
+
+float fbm3(vec3 p) {
+  float val = 0.0;
+  float amp = 0.55;
+  for (int i = 0; i < 3; i++) {
+    val += amp * noise3(p);
+    p = OCT_ROT * p * 2.07 + vec3(5.2, 11.4, 3.8);
+    amp *= 0.48;
+  }
+  return val;
+}
+
+// ---------------------------------------------------------------------------
+// D65-Normalized Physical Planck Blackbody Radiator (Linear RGB)
+// Wavelengths: R=620nm, G=540nm, B=460nm; normalized so 6500K -> (1, 1, 1)
+// ---------------------------------------------------------------------------
+vec3 blackbody(float tempK) {
+  float T = clamp(tempK, 700.0, 45000.0);
+  const vec3 C = vec3(23206.45, 26644.44, 31278.26);
+  const vec3 D65_NUM = vec3(34.5245, 59.2886, 122.0085);
+  vec3 x = clamp(C / T, 0.05, 55.0);
+  vec3 col = D65_NUM / (exp(x) - 1.0);
+  float m = max(col.r, max(col.g, col.b));
+  return col / max(m, 1e-12);
+}
+
+mat2 rot2(float a) {
+  float c = cos(a);
+  float s = sin(a);
+  return mat2(c, -s, s, c);
+}
+
+// ---------------------------------------------------------------------------
+// Volumetric Relativistic Accretion Disk
+// ---------------------------------------------------------------------------
+void sampleDisk(
+  vec3 p,
+  vec3 rayDir,
+  float r,
+  out vec3 emission,
+  out float absorption
+) {
+  emission = vec3(0.0);
+  absorption = 0.0;
+
+  float rIn = 2.05;
+  float rOut = 13.8;
+  if (r < rIn - 0.15 || r > rOut) return;
+
+  // Flared thin-disk half-thickness
+  float hScale = 0.075 + 0.032 * pow(max(r - rIn, 1e-4), 1.18);
+  float yNorm = abs(p.y) / hScale;
+  if (yNorm > 2.6) return;
+
+  float vProfile = exp(-yNorm * yNorm * 1.45);
+
+  // Smooth inner ISCO ramp & outer exponential taper
+  float innerRamp = smoothstep(rIn - 0.12, rIn + 0.72, r);
+  float outerFade = 1.0 - smoothstep(4.5, rOut, r);
+  outerFade = pow(max(outerFade, 1e-5), 1.35);
+  float radialEnv = innerRamp * outerFade;
+  if (radialEnv * vProfile < 0.002) return;
+
+  // Differential Keplerian shear with dual-phase flow advection (never over-winds)
+  float spiral = 3.1 * log(max(r, 1.0));
+  float omega = 1.45 * pow(max(r, 1.5) / 3.0, -1.25);
+  float cycleRate = 0.085;
+  float ph0 = fract(uTime * cycleRate);
+  float ph1 = fract(uTime * cycleRate + 0.5);
+  float w0 = 1.0 - abs(2.0 * ph0 - 1.0);
+  float w1 = 1.0 - w0;
+
+  // Steady rigid spin + continuous differential shear
+  float baseSpin = -uTime * 0.18;
+  float ang0 = spiral + baseSpin - omega * (ph0 - 0.5) * 4.8;
+  float ang1 = spiral + baseSpin - omega * (ph1 - 0.5) * 4.8;
+
+  vec2 xz0 = rot2(ang0) * p.xz;
+  vec2 xz1 = rot2(ang1) * p.xz;
+
+  // Stretch slightly along tangential flow to form plasma streams
+  vec3 q0 = vec3(xz0 * 0.42, p.y * 2.4);
+  vec3 q1 = vec3(xz1 * 0.42, p.y * 2.4);
+
+  float n0 = fbm4(q0);
+  float n1 = fbm4(q1);
+  float turb = n0 * w0 + n1 * w1;
+
+  // Fine bright ring streaks & dark shear lanes
+  float streak0 = fbm3(vec3(xz0 * 1.05 + vec2(r * 0.35, -r * 0.25), p.y * 3.2));
+  float streak1 = fbm3(vec3(xz1 * 1.05 + vec2(r * 0.35, -r * 0.25), p.y * 3.2));
+  float streaks = streak0 * w0 + streak1 * w1;
+
+  float rings = 0.55 + 0.45 * sin(r * 3.4 - turb * 4.2 + streaks * 2.1);
+  float filaments = smoothstep(0.20, 0.85, turb * 0.72 + streaks * 0.42);
+  float hotCore = smoothstep(0.56, 0.92, turb * 0.65 + streaks * 0.52);
+
+  // Inner hot plasma ring boost near ISCO
+  float innerDelta = (r - 2.75) / 1.05;
+  float innerHot = exp(-innerDelta * innerDelta);
+
+  float density = radialEnv * vProfile * (0.26 + 0.92 * filaments * (0.65 + 0.55 * rings) + 0.55 * innerHot);
+
+  // Keplerian orbital velocity (counter-clockwise viewed from +Y)
+  float beta = clamp(sqrt(0.5 * RS / max(r - RS, 0.35)), 0.0, 0.62);
+  vec3 velDir = normalize(vec3(-p.z, 0.0, p.x));
+  // Photon travels from disk to camera along -rayDir
+  float betaLOS = beta * dot(velDir, -rayDir);
+  float gravShift = sqrt(clamp(1.0 - RS / r, 0.08, 1.0));
+  float doppler = sqrt(1.0 - beta * beta) / max(1.0 - betaLOS, 0.28);
+  float gFactor = clamp(doppler * gravShift, 0.32, 2.35);
+
+  // Radial Shakura-Sunyaev temperature gradient + turbulent hot spots + Doppler shift
+  float tempRadial = pow(2.65 / max(r, 2.05), 0.74);
+  float tempTurb = 0.78 + 0.46 * hotCore + 0.18 * innerHot;
+  float localTemp = uTemperature * tempRadial * tempTurb * pow(gFactor, 0.82);
+
+  vec3 col = blackbody(localTemp);
+
+  // Perceptually balanced luminosity across the 1,500K - 18,000K temperature slider
+  float tempLum = pow(clamp(uTemperature / 4800.0, 0.25, 4.0), 0.42);
+  float beaming = pow(gFactor, 2.45);
+  float radialEnergy = pow(3.2 / max(r, 2.1), 1.35);
+
+  float emitStrength = density * radialEnergy * beaming * tempLum * (1.55 + 1.85 * hotCore + 1.15 * innerHot);
+  // Subtle incandescent midplane brightness
+  emitStrength *= (0.75 + 0.65 * exp(-yNorm * yNorm * 3.8));
+
+  emission = col * emitStrength;
+  // Cooler dark lanes absorb slightly more than hot ionized filaments
+  absorption = density * (0.52 + 0.45 * (1.0 - filaments)) * (0.55 + 0.45 * outerFade);
+}
+
+// ---------------------------------------------------------------------------
+// Procedural Anti-Aliased Starfield & Milky Way Band (Evaluated on Bent Ray)
+// ---------------------------------------------------------------------------
+vec3 starLayer(vec3 dir, float scale, float density, float baseRadius, float brightness, float fw) {
+  vec3 p = dir * scale;
+  vec3 ip = floor(p);
+  vec3 fp = fract(p);
+  vec3 acc = vec3(0.0);
+
+  for (int z = -1; z <= 1; z++) {
+    for (int y = -1; y <= 1; y++) {
+      for (int x = -1; x <= 1; x++) {
+        vec3 o = vec3(float(x), float(y), float(z));
+        vec3 cell = ip + o;
+        vec3 h = hash33(cell);
+        if (h.x > density) continue;
+
+        vec3 jitter = hash33(cell + vec3(17.13, 41.7, 9.21));
+        vec3 diff = o + 0.15 + 0.70 * jitter - fp;
+        float d2 = dot(diff, diff);
+
+        float rad = baseRadius * (0.55 + 0.75 * h.y) + fw * scale * 0.58;
+        float r2 = rad * rad;
+        float core = exp(-d2 / r2);
+        float halo = 0.14 * exp(-d2 / (r2 * 16.0));
+
+        // Realistic stellar spectral distribution (K/M orange -> G/F white -> B/O blue)
+        float starTemp = mix(3300.0, 15500.0, pow(max(h.z, 1e-4), 1.65));
+        vec3 sCol = blackbody(starTemp);
+
+        float mag = brightness * pow(max(h.y, 1e-4), 2.75);
+        float energyFix = clamp((baseRadius * baseRadius) / max(r2, 1e-5), 0.18, 1.0);
+        acc += sCol * mag * (core * mix(1.0, energyFix, 0.45) + halo);
+      }
+    }
+  }
+  return acc;
+}
+
+vec3 sampleBackground(vec3 dir, float fw) {
+  vec3 d = normalize(dir);
+
+  // Tilted galactic coordinate frame so the Milky Way sweeps behind the black hole
+  vec3 galUp = normalize(vec3(0.32, 0.84, -0.44));
+  vec3 galFwd = normalize(cross(galUp, vec3(0.0, 0.0, 1.0)));
+  vec3 galRight = cross(galUp, galFwd);
+  vec3 gd = vec3(dot(d, galRight), dot(d, galUp), dot(d, galFwd));
+
+  float lat = gd.y;
+  float band = exp(-lat * lat * 15.0);
+  float wideBand = exp(-lat * lat * 4.2);
+
+  // Galactic dust & faint unresolved starlight
+  float neb1 = fbm4(gd * 3.6 + vec3(2.4, -1.1, 4.7));
+  float neb2 = fbm3(gd * 8.5 + vec3(-5.1, 3.2, 1.9));
+  float dustRift = smoothstep(0.42, 0.76, fbm4(gd * 5.2 + vec3(9.1, 0.3, -2.7)));
+
+  float coreDot = max(dot(d, normalize(galFwd + 0.45 * galRight)), 0.0);
+  float coreGlow = coreDot * coreDot * coreDot;
+
+  vec3 mwCool = vec3(0.11, 0.16, 0.29) * wideBand * (0.35 + 0.9 * neb1);
+  vec3 mwWarm = vec3(0.30, 0.22, 0.15) * band * (0.45 + 0.85 * coreGlow) * (0.4 + 0.8 * neb2);
+  vec3 mwNebula = vec3(0.16, 0.12, 0.24) * band * smoothstep(0.45, 0.85, neb1 * neb2 * 1.9);
+
+  float dustAtten = 1.0 - 0.74 * dustRift * exp(-lat * lat * 32.0);
+  vec3 sky = vec3(0.0025, 0.0035, 0.0065) + (mwCool + mwWarm + mwNebula) * dustAtten * 0.24;
+
+  // Multi-scale crisp stars (stretch cleanly into Einstein arcs under lensing!)
+  sky += starLayer(d, 34.0,  0.11, 0.052, 2.95, fw);
+  sky += starLayer(d, 78.0,  0.22, 0.058, 1.35, fw);
+  sky += starLayer(d, 155.0, 0.34, 0.068, 0.62, fw);
+
+  // Extra dense faint Milky Way star field along the galactic band
+  if (wideBand > 0.08) {
+    sky += starLayer(d, 215.0, 0.42, 0.075, 0.42 * wideBand * dustAtten, fw);
+  }
+
+  return sky;
+}
+
+// ---------------------------------------------------------------------------
+// Exact Schwarzschild Null Geodesic Acceleration: d2r/dl2 = -1.5 * r_s * h^2 * r / |r|^5
+// ---------------------------------------------------------------------------
+vec3 geodesicAccel(vec3 p, float h2) {
+  float r2 = dot(p, p);
+  float invR2 = 1.0 / max(r2, 1e-4);
+  float invR = sqrt(invR2);
+  return (-1.5 * RS * h2 * invR2 * invR2 * invR) * p;
+}
+
+void main() {
+  // Normalized screen coords adapted cleanly for both landscape & portrait viewports
+  float scaleDim = min(uResolution.y, uResolution.x * 0.70);
+  vec2 screen = (gl_FragCoord.xy - 0.5 * uResolution) / scaleDim;
+
+  float focal = 1.24;
+  vec3 rd = normalize(uCamFwd * focal + uCamRight * screen.x + uCamUp * screen.y);
+
+  vec3 p = uCamPos;
+  vec3 v = rd;
+  vec3 hVec = cross(p, v);
+  float h2 = dot(hVec, hVec);
+  vec3 a = geodesicAccel(p, h2);
+
+  // Interleaved gradient noise jitter to eliminate volumetric slicing bands
+  float ign = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));
+
+  vec3 accumLight = vec3(0.0);
+  float transmittance = 1.0;
+  bool hitHorizon = false;
+  float minR = length(p);
+
+  const int MAX_STEPS = 220;
+  for (int i = 0; i < MAX_STEPS; i++) {
+    float r2 = dot(p, p);
+    float r = sqrt(r2);
+    minR = min(minR, r);
+
+    // Event horizon capture
+    if (r < 1.02 * RS) {
+      hitHorizon = true;
+      break;
+    }
+
+    // Escaped to asymptotically flat space
+    if (r > 48.0 && dot(p, v) > 0.0) {
+      break;
+    }
+
+    // Adaptive spatial step size
+    float stepTarget = 0.056 * r;
+    stepTarget = min(stepTarget, 0.044 * max(r - 0.92, 0.22) + 0.022);
+
+    // Fine sampling near the equatorial accretion disk slab
+    if (r < 15.2 && r > 1.75) {
+      float diskProx = max(abs(p.y), 0.16);
+      stepTarget = min(stepTarget, 0.34 * diskProx);
+    }
+    stepTarget = clamp(stepTarget, 0.024, 1.35);
+
+    if (i == 0) {
+      stepTarget *= (0.45 + 0.55 * ign);
+    }
+
+    float vLen = length(v);
+    float dt = stepTarget / max(vLen, 0.25);
+
+    // Velocity Verlet geodesic step
+    vec3 pNext = p + v * dt + 0.5 * a * (dt * dt);
+    vec3 aNext = geodesicAccel(pNext, h2);
+    vec3 vNext = v + 0.5 * (a + aNext) * dt;
+
+    vec3 pMid = 0.5 * (p + pNext);
+    float ds = length(pNext - p);
+    float rMid = length(pMid);
+
+    // Sample volumetric accretion disk
+    if (rMid > 1.85 && rMid < 14.2 && abs(pMid.y) < 1.85) {
+      vec3 dEmit;
+      float dAbs;
+      sampleDisk(pMid, normalize(v), rMid, dEmit, dAbs);
+      if (dAbs > 1e-5 || dot(dEmit, dEmit) > 1e-8) {
+        // Analytic sub-step radiative integration
+        float stepTrans = exp(-dAbs * ds);
+        float integ = (dAbs > 1e-4) ? ((1.0 - stepTrans) / dAbs) : ds;
+        accumLight += transmittance * dEmit * integ;
+        transmittance *= stepTrans;
+        if (transmittance < 0.005) {
+          transmittance = 0.0;
+          break;
+        }
+      }
+    }
+
+    // Subtle optically-thin relativistic photon-sphere scatter corona
+    if (rMid > 1.25 && rMid < 2.25) {
+      float phDist = abs(rMid - 1.52);
+      float corona = exp(-phDist * phDist * 26.0) * 0.022;
+      vec3 coronaCol = blackbody(uTemperature * 1.15);
+      accumLight += transmittance * coronaCol * corona * ds;
+    }
+
+    p = pNext;
+    v = vNext;
+    a = aNext;
+  }
+
+  // Background sky at the gravitationally bent escape direction
+  vec3 exitDir = normalize(v);
+  // Compute derivative outside branches for valid GLSL screen-space derivatives
+  float fw = clamp(length(fwidth(exitDir)), 0.0, 0.014);
+
+  if (!hitHorizon && transmittance > 0.002) {
+    vec3 bg = sampleBackground(exitDir, fw);
+    accumLight += transmittance * bg;
+  }
+
+  // Delicate razor-thin photon ring highlight for rays grazing the critical sphere
+  if (!hitHorizon && minR < 1.85) {
+    float grazeDelta = (minR - 1.50) / 0.11;
+    float graze = exp(-grazeDelta * grazeDelta);
+    vec3 ringCol = blackbody(uTemperature * 1.25);
+    float tempLum = pow(clamp(uTemperature / 4800.0, 0.25, 4.0), 0.35);
+    accumLight += ringCol * graze * 0.18 * tempLum * transmittance;
+  }
+
+  if (uHdrEncode > 0.5) {
+    // Graceful soft-HDR compression fallback when float FBOs are unavailable
+    accumLight = accumLight / (1.0 + accumLight);
+  }
+
+  fragColor = vec4(max(accumLight, 0.0), 1.0);
+}
+`;
+
+  // ---------------------------------------------------------------------------
+  // Pass 2: Bright-Pass Threshold & Downsample for Bloom
+  // ---------------------------------------------------------------------------
+  const BRIGHT_FS = `#version 300 es
+precision highp float;
+
+in vec2 vUv;
+out vec4 fragColor;
+
+uniform sampler2D uScene;
+uniform vec2 uTexelSize;
+uniform float uHdrEncode;
+
+vec3 decodeHdr(vec3 c) {
+  if (uHdrEncode > 0.5) {
+    return c / max(1.0 - c, 0.04);
+  }
+  return c;
+}
+
+void main() {
+  // 4-tap box downsample to prevent firefly shimmering in bloom
+  vec3 c0 = decodeHdr(texture(uScene, vUv + vec2(-0.5, -0.5) * uTexelSize).rgb);
+  vec3 c1 = decodeHdr(texture(uScene, vUv + vec2( 0.5, -0.5) * uTexelSize).rgb);
+  vec3 c2 = decodeHdr(texture(uScene, vUv + vec2(-0.5,  0.5) * uTexelSize).rgb);
+  vec3 c3 = decodeHdr(texture(uScene, vUv + vec2( 0.5,  0.5) * uTexelSize).rgb);
+  vec3 col = 0.25 * (c0 + c1 + c2 + c3);
+
+  float lum = dot(col, vec3(0.2126, 0.7152, 0.0722));
+  float knee = 0.55;
+  float threshold = 0.75;
+  float soft = clamp(lum - threshold + knee, 0.0, 2.0 * knee);
+  soft = (soft * soft) / (4.0 * knee + 1e-5);
+  float contrib = max(soft, lum - threshold) / max(lum, 1e-5);
+
+  vec3 bright = col * contrib;
+  // Clamp extreme spikes so bloom stays silky
+  bright = min(bright, vec3(14.0));
+  if (uHdrEncode > 0.5) {
+    bright = bright / (1.0 + bright);
+  }
+  fragColor = vec4(bright, 1.0);
+}
+`;
+
+  // ---------------------------------------------------------------------------
+  // Pass 3: Separable 9-Tap Gaussian Blur
+  // ---------------------------------------------------------------------------
+  const BLUR_FS = `#version 300 es
+precision highp float;
+
+in vec2 vUv;
+out vec4 fragColor;
+
+uniform sampler2D uInput;
+uniform vec2 uDirection;
+
+void main() {
+  // Linearly-sampled 9-tap Gaussian weights
+  vec3 sum = texture(uInput, vUv).rgb * 0.22702703;
+  sum += texture(uInput, vUv + uDirection * 1.38461538).rgb * 0.31621622;
+  sum += texture(uInput, vUv - uDirection * 1.38461538).rgb * 0.31621622;
+  sum += texture(uInput, vUv + uDirection * 3.23076923).rgb * 0.07027027;
+  sum += texture(uInput, vUv - uDirection * 3.23076923).rgb * 0.07027027;
+  fragColor = vec4(sum, 1.0);
+}
+`;
+
+  // ---------------------------------------------------------------------------
+  // Pass 4: Final Composite + Multi-Scale Bloom + ACES Filmic Tonemap + Dither
+  // ---------------------------------------------------------------------------
+  const COMPOSITE_FS = `#version 300 es
+precision highp float;
+
+in vec2 vUv;
+out vec4 fragColor;
+
+uniform sampler2D uScene;
+uniform sampler2D uBloom1;
+uniform sampler2D uBloom2;
+uniform float uHdrEncode;
+
+vec3 decodeHdr(vec3 c) {
+  if (uHdrEncode > 0.5) {
+    return c / max(1.0 - c, 0.04);
+  }
+  return c;
+}
+
+// Narkowicz ACES Filmic Tone Mapping Curve
+vec3 acesToneMap(vec3 x) {
+  const float a = 2.51;
+  const float b = 0.03;
+  const float c = 2.43;
+  const float d = 0.59;
+  const float e = 0.14;
+  return clamp((x * (a * x + b)) / (x * (c * x + d) + e), 0.0, 1.0);
+}
+
+float hash12(vec2 p) {
+  vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+  p3 += dot(p3, p3.yzx + 33.33);
+  return fract((p3.x + p3.y) * p3.z);
+}
+
+void main() {
+  vec3 scene = decodeHdr(texture(uScene, vUv).rgb);
+  vec3 b1 = decodeHdr(texture(uBloom1, vUv).rgb);
+  vec3 b2 = decodeHdr(texture(uBloom2, vUv).rgb);
+
+  // Subtle horizontal anamorphic lens streak from wide bloom
+  vec3 streak = 0.5 * (
+    decodeHdr(texture(uBloom2, vUv + vec2(0.018, 0.0)).rgb) +
+    decodeHdr(texture(uBloom2, vUv - vec2(0.018, 0.0)).rgb)
+  );
+
+  vec3 hdr = scene + b1 * 0.34 + b2 * 0.42 + streak * 0.09;
+
+  // Gentle cinematic vignette
+  vec2 centered = vUv * 2.0 - 1.0;
+  float vig = 1.0 - 0.22 * dot(centered, centered);
+  hdr *= clamp(vig, 0.65, 1.0);
+
+  // Exposure + ACES Filmic Tonemapping
+  vec3 mapped = acesToneMap(hdr * 0.92);
+
+  // Linear to sRGB
+  vec3 srgb = pow(max(mapped, vec3(0.0)), vec3(1.0 / 2.2));
+
+  // Triangular-PDF dithering to eliminate dark-space banding
+  float dither = (hash12(gl_FragCoord.xy) + hash12(gl_FragCoord.xy + 19.37) - 1.0) / 255.0;
+  srgb = clamp(srgb + dither, 0.0, 1.0);
+
+  fragColor = vec4(srgb, 1.0);
+}
+`;
+
+  // ---------------------------------------------------------------------------
+  // WebGL2 Helpers
+  // ---------------------------------------------------------------------------
+  function compileShader(type, source) {
+    const shader = gl.createShader(type);
+    gl.shaderSource(shader, source);
+    gl.compileShader(shader);
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+      const log = gl.getShaderInfoLog(shader);
+      gl.deleteShader(shader);
+      throw new Error('Shader compile failed:\n' + log);
+    }
+    return shader;
+  }
+
+  function createProgram(vsSource, fsSource) {
+    const vs = compileShader(gl.VERTEX_SHADER, vsSource);
+    const fs = compileShader(gl.FRAGMENT_SHADER, fsSource);
+    const prog = gl.createProgram();
+    gl.attachShader(prog, vs);
+    gl.attachShader(prog, fs);
+    gl.linkProgram(prog);
+    gl.deleteShader(vs);
+    gl.deleteShader(fs);
+    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+      const log = gl.getProgramInfoLog(prog);
+      gl.deleteProgram(prog);
+      throw new Error('Program link failed:\n' + log);
+    }
+    return prog;
+  }
+
+  let progBlackHole, progBright, progBlur, progComposite;
+  try {
+    progBlackHole = createProgram(FULLSCREEN_VS, BLACKHOLE_FS);
+    progBright = createProgram(FULLSCREEN_VS, BRIGHT_FS);
+    progBlur = createProgram(FULLSCREEN_VS, BLUR_FS);
+    progComposite = createProgram(FULLSCREEN_VS, COMPOSITE_FS);
+  } catch (err) {
+    console.error(err);
+    showError('Failed to compile WebGL2 shaders: ' + err.message);
+    return;
+  }
+
+  const emptyVao = gl.createVertexArray();
+
+  // Cache uniform locations
+  const uBH = {
+    resolution: gl.getUniformLocation(progBlackHole, 'uResolution'),
+    time: gl.getUniformLocation(progBlackHole, 'uTime'),
+    temperature: gl.getUniformLocation(progBlackHole, 'uTemperature'),
+    camPos: gl.getUniformLocation(progBlackHole, 'uCamPos'),
+    camRight: gl.getUniformLocation(progBlackHole, 'uCamRight'),
+    camUp: gl.getUniformLocation(progBlackHole, 'uCamUp'),
+    camFwd: gl.getUniformLocation(progBlackHole, 'uCamFwd'),
+    hdrEncode: gl.getUniformLocation(progBlackHole, 'uHdrEncode')
+  };
+
+  const uBright = {
+    scene: gl.getUniformLocation(progBright, 'uScene'),
+    texelSize: gl.getUniformLocation(progBright, 'uTexelSize'),
+    hdrEncode: gl.getUniformLocation(progBright, 'uHdrEncode')
+  };
+
+  const uBlur = {
+    input: gl.getUniformLocation(progBlur, 'uInput'),
+    direction: gl.getUniformLocation(progBlur, 'uDirection')
+  };
+
+  const uComp = {
+    scene: gl.getUniformLocation(progComposite, 'uScene'),
+    bloom1: gl.getUniformLocation(progComposite, 'uBloom1'),
+    bloom2: gl.getUniformLocation(progComposite, 'uBloom2'),
+    hdrEncode: gl.getUniformLocation(progComposite, 'uHdrEncode')
+  };
+
+  // ---------------------------------------------------------------------------
+  // Framebuffer Management (HDR RGBA16F with automatic RGBA8 fallback)
+  // ---------------------------------------------------------------------------
+  let hdrEncodedMode = !useFloatFBO;
+  let fboScene = null;
+  let fboHalfA = null;
+  let fboHalfB = null;
+  let fboQuarterA = null;
+  let fboQuarterB = null;
+  let renderWidth = 0;
+  let renderHeight = 0;
+
+  function createTarget(w, h, floatMode) {
+    const tex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+    if (floatMode) {
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA16F, w, h, 0, gl.RGBA, gl.HALF_FLOAT, null);
+    } else {
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    }
+
+    const fbo = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+
+    const status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.bindTexture(gl.TEXTURE_2D, null);
+
+    if (status !== gl.FRAMEBUFFER_COMPLETE) {
+      gl.deleteFramebuffer(fbo);
+      gl.deleteTexture(tex);
+      return null;
+    }
+    return { fbo, tex, w, h };
+  }
+
+  function destroyTarget(t) {
+    if (!t) return;
+    gl.deleteFramebuffer(t.fbo);
+    gl.deleteTexture(t.tex);
+  }
+
+  function resizeTargets() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    const w = Math.max(2, Math.floor(window.innerWidth * dpr));
+    const h = Math.max(2, Math.floor(window.innerHeight * dpr));
+
+    if (w === renderWidth && h === renderHeight && fboScene) return;
+
+    canvas.width = w;
+    canvas.height = h;
+    renderWidth = w;
+    renderHeight = h;
+
+    destroyTarget(fboScene);
+    destroyTarget(fboHalfA);
+    destroyTarget(fboHalfB);
+    destroyTarget(fboQuarterA);
+    destroyTarget(fboQuarterB);
+
+    let tryFloat = !hdrEncodedMode;
+    fboScene = createTarget(w, h, tryFloat);
+    if (!fboScene && tryFloat) {
+      hdrEncodedMode = true;
+      tryFloat = false;
+      fboScene = createTarget(w, h, false);
+    }
+
+    const hw = Math.max(2, w >> 1);
+    const hh = Math.max(2, h >> 1);
+    const qw = Math.max(2, w >> 2);
+    const qh = Math.max(2, h >> 2);
+
+    fboHalfA = createTarget(hw, hh, tryFloat);
+    fboHalfB = createTarget(hw, hh, tryFloat);
+    fboQuarterA = createTarget(qw, qh, tryFloat);
+    fboQuarterB = createTarget(qw, qh, tryFloat);
+  }
+
+  window.addEventListener('resize', resizeTargets);
+  resizeTargets();
+
+  // ---------------------------------------------------------------------------
+  // Disk Temperature Control & Matching Planck Swatch Color
+  // ---------------------------------------------------------------------------
+  let targetTemperature = parseFloat(tempSlider.value);
+  let smoothTemperature = targetTemperature;
+
+  function planckCssColor(tempK) {
+    const T = Math.max(700, Math.min(45000, tempK));
+    const C = [23206.45, 26644.44, 31278.26];
+    const D = [34.5245, 59.2886, 122.0085];
+    const lin = [0, 0, 0];
+    let maxV = 0;
+    for (let i = 0; i < 3; i++) {
+      const x = Math.min(55, C[i] / T);
+      lin[i] = D[i] / (Math.exp(x) - 1.0);
+      if (lin[i] > maxV) maxV = lin[i];
+    }
+    const rgb = lin.map(v => Math.round(Math.pow(v / maxV, 1 / 2.2) * 255));
+    return `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+  }
+
+  function updateTempUI(val) {
+    tempValue.textContent = `${Math.round(val).toLocaleString('en-US')} K`;
+    const col = planckCssColor(val);
+    tempSwatch.style.background = col;
+    tempSwatch.style.boxShadow = `0 0 10px ${col}`;
+  }
+
+  tempSlider.addEventListener('input', () => {
+    targetTemperature = parseFloat(tempSlider.value);
+    updateTempUI(targetTemperature);
+  });
+  updateTempUI(targetTemperature);
+
+  // ---------------------------------------------------------------------------
+  // Slow Cinematic Camera Orbit + Gentle Optional Pointer Inspection
+  // ---------------------------------------------------------------------------
+  let userYaw = 0.0;
+  let userPitch = 0.0;
+  let targetUserYaw = 0.0;
+  let targetUserPitch = 0.0;
+  let userZoom = 1.0;
+  let targetUserZoom = 1.0;
+  let isDragging = false;
+  let lastX = 0;
+  let lastY = 0;
+
+  canvas.addEventListener('pointerdown', (e) => {
+    isDragging = true;
+    lastX = e.clientX;
+    lastY = e.clientY;
+    canvas.setPointerCapture(e.pointerId);
+  });
+
+  canvas.addEventListener('pointermove', (e) => {
+    if (!isDragging) return;
+    const dx = e.clientX - lastX;
+    const dy = e.clientY - lastY;
+    lastX = e.clientX;
+    lastY = e.clientY;
+    targetUserYaw -= dx * 0.0042;
+    targetUserPitch = Math.max(-1.15, Math.min(1.15, targetUserPitch + dy * 0.0038));
+  });
+
+  function endDrag(e) {
+    if (!isDragging) return;
+    isDragging = false;
+    try { canvas.releasePointerCapture(e.pointerId); } catch (_) {}
+  }
+
+  canvas.addEventListener('pointerup', endDrag);
+  canvas.addEventListener('pointercancel', endDrag);
+
+  canvas.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    targetUserZoom *= Math.exp(e.deltaY * 0.0008);
+    targetUserZoom = Math.max(0.58, Math.min(1.85, targetUserZoom));
+  }, { passive: false });
+
+  canvas.addEventListener('dblclick', () => {
+    targetUserYaw = 0.0;
+    targetUserPitch = 0.0;
+    targetUserZoom = 1.0;
+  });
+
+  // Vector helpers
+  function normalize3(v) {
+    const l = Math.hypot(v[0], v[1], v[2]) || 1;
+    return [v[0] / l, v[1] / l, v[2] / l];
+  }
+
+  function cross3(a, b) {
+    return [
+      a[1] * b[2] - a[2] * b[1],
+      a[2] * b[0] - a[0] * b[2],
+      a[0] * b[1] - a[1] * b[0]
+    ];
+  }
+
+  function drawFullscreen() {
+    gl.bindVertexArray(emptyVao);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+  }
+
+  function runBlurPass(srcTarget, tempTarget, dstTarget, spread) {
+    gl.useProgram(progBlur);
+    gl.uniform1i(uBlur.input, 0);
+
+    // Horizontal pass
+    gl.bindFramebuffer(gl.FRAMEBUFFER, tempTarget.fbo);
+    gl.viewport(0, 0, tempTarget.w, tempTarget.h);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, srcTarget.tex);
+    gl.uniform2f(uBlur.direction, spread / tempTarget.w, 0.0);
+    drawFullscreen();
+
+    // Vertical pass
+    gl.bindFramebuffer(gl.FRAMEBUFFER, dstTarget.fbo);
+    gl.viewport(0, 0, dstTarget.w, dstTarget.h);
+    gl.bindTexture(gl.TEXTURE_2D, tempTarget.tex);
+    gl.uniform2f(uBlur.direction, 0.0, spread / dstTarget.h);
+    drawFullscreen();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Main Render Loop
+  // ---------------------------------------------------------------------------
+  let startTime = null;
+  let lastFrame = null;
+
+  function render(now) {
+    requestAnimationFrame(render);
+    if (startTime === null) {
+      startTime = now;
+      lastFrame = now;
+    }
+    const dt = Math.min(0.1, (now - lastFrame) * 0.001);
+    lastFrame = now;
+    const t = (now - startTime) * 0.001;
+
+    // Smoothly damp temperature and optional camera offsets
+    const damp = 1.0 - Math.exp(-dt * 8.0);
+    smoothTemperature += (targetTemperature - smoothTemperature) * damp;
+    userYaw += (targetUserYaw - userYaw) * damp;
+    userPitch += (targetUserPitch - userPitch) * damp;
+    userZoom += (targetUserZoom - userZoom) * damp;
+
+    // Slow cinematic orbital camera path
+    const yaw = 0.55 + t * 0.052 + userYaw;
+    const basePitch = 0.165 + 0.105 * Math.sin(t * 0.082 + 0.55);
+    const pitch = Math.max(-1.35, Math.min(1.35, basePitch + userPitch));
+    const camDist = (20.4 + 2.1 * Math.sin(t * 0.064 - 0.7)) * userZoom;
+    const roll = 0.095 * Math.sin(t * 0.068 + 1.1);
+
+    const cp = Math.cos(pitch);
+    const camPos = [
+      camDist * cp * Math.cos(yaw),
+      camDist * Math.sin(pitch),
+      camDist * cp * Math.sin(yaw)
+    ];
+
+    const fwd = normalize3([-camPos[0], -camPos[1], -camPos[2]]);
+    const right0 = normalize3(cross3(fwd, [0, 1, 0]));
+    const up0 = cross3(right0, fwd);
+
+    const cr = Math.cos(roll);
+    const sr = Math.sin(roll);
+    const camRight = [
+      right0[0] * cr + up0[0] * sr,
+      right0[1] * cr + up0[1] * sr,
+      right0[2] * cr + up0[2] * sr
+    ];
+    const camUp = [
+      -right0[0] * sr + up0[0] * cr,
+      -right0[1] * sr + up0[1] * cr,
+      -right0[2] * sr + up0[2] * cr
+    ];
+
+    const hdrFlag = hdrEncodedMode ? 1.0 : 0.0;
+
+    // Pass 1: Black Hole Geodesic Raymarch
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fboScene.fbo);
+    gl.viewport(0, 0, fboScene.w, fboScene.h);
+    gl.useProgram(progBlackHole);
+    gl.uniform2f(uBH.resolution, fboScene.w, fboScene.h);
+    gl.uniform1f(uBH.time, t);
+    gl.uniform1f(uBH.temperature, smoothTemperature);
+    gl.uniform3f(uBH.camPos, camPos[0], camPos[1], camPos[2]);
+    gl.uniform3f(uBH.camRight, camRight[0], camRight[1], camRight[2]);
+    gl.uniform3f(uBH.camUp, camUp[0], camUp[1], camUp[2]);
+    gl.uniform3f(uBH.camFwd, fwd[0], fwd[1], fwd[2]);
+    gl.uniform1f(uBH.hdrEncode, hdrFlag);
+    drawFullscreen();
+
+    // Pass 2: Bright-pass threshold + half-res downsample
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fboHalfA.fbo);
+    gl.viewport(0, 0, fboHalfA.w, fboHalfA.h);
+    gl.useProgram(progBright);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, fboScene.tex);
+    gl.uniform1i(uBright.scene, 0);
+    gl.uniform2f(uBright.texelSize, 1.0 / fboScene.w, 1.0 / fboScene.h);
+    gl.uniform1f(uBright.hdrEncode, hdrFlag);
+    drawFullscreen();
+
+    // Pass 3a: Tight bloom blur (half-res)
+    runBlurPass(fboHalfA, fboHalfB, fboHalfA, 1.25);
+
+    // Pass 3b: Wide bloom blur (quarter-res, 2 iterations)
+    runBlurPass(fboHalfA, fboQuarterB, fboQuarterA, 1.45);
+    runBlurPass(fboQuarterA, fboQuarterB, fboQuarterA, 2.25);
+
+    // Pass 4: Composite + ACES Tonemap to screen
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.viewport(0, 0, renderWidth, renderHeight);
+    gl.useProgram(progComposite);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, fboScene.tex);
+    gl.uniform1i(uComp.scene, 0);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, fboHalfA.tex);
+    gl.uniform1i(uComp.bloom1, 1);
+    gl.activeTexture(gl.TEXTURE2);
+    gl.bindTexture(gl.TEXTURE_2D, fboQuarterA.tex);
+    gl.uniform1i(uComp.bloom2, 2);
+    gl.uniform1f(uComp.hdrEncode, hdrFlag);
+    drawFullscreen();
+  }
+
+  requestAnimationFrame(render);
+})();
+</script>
+</body>
+</html>

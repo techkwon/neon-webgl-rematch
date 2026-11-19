@@ -1,0 +1,680 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'">
+  <meta name="theme-color" content="#08090e">
+  <title>Black Hole — Event Horizon</title>
+  <link rel="icon" href="data:,">
+  <style>
+    :root {
+      color-scheme: dark;
+      --paper: #f4eee6;
+      --muted: #b6aeab;
+      --ember: #ffb477;
+      --gutter: clamp(22px, 5.1vw, 88px);
+      --mono: ui-monospace, "SF Mono", Consolas, monospace;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #08090e; color: var(--paper); }
+    [hidden] { display: none !important; }
+    main { position: relative; isolation: isolate; min-height: 100vh; min-height: 100svh; }
+    canvas, .shade { position: absolute; inset: 0; width: 100%; height: 100%; }
+    canvas { display: block; }
+    .shade {
+      pointer-events: none;
+      background: linear-gradient(180deg, #08090eaa, transparent 28%, transparent 76%, #08090ee6);
+    }
+    .instrument {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 310px;
+      min-height: inherit;
+      padding: clamp(26px, 5vh, 60px) var(--gutter) clamp(22px, 4vh, 44px);
+      pointer-events: none;
+    }
+    .instrument header { align-self: flex-start; }
+    .eyebrow, .orbit, .temperature label, .range-ends, output {
+      font: 500 11px/1.25 var(--mono);
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    .eyebrow {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 0 0 16px;
+      color: var(--ember);
+    }
+    .eyebrow::before { content: ""; width: 22px; height: 1px; background: currentColor; }
+    h1 {
+      margin: 0;
+      font: 400 clamp(3.55rem, 7.1vw, 8rem)/.88 Georgia, "Times New Roman", serif;
+      letter-spacing: -.065em;
+    }
+    footer {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 24px;
+    }
+    button, input { pointer-events: auto; }
+    .orbit {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      min-height: 44px;
+      padding: 0;
+      color: var(--muted);
+      background: transparent;
+      border: 0;
+      cursor: pointer;
+      text-align: left;
+    }
+    .orbit:hover { color: var(--paper); }
+    .orbit-icon {
+      display: grid;
+      place-items: center;
+      width: 38px;
+      height: 38px;
+      border: 1px solid #f4eee64d;
+      border-radius: 50%;
+      color: var(--paper);
+      transition: border-color .2s, background .2s;
+    }
+    .orbit:hover .orbit-icon { border-color: var(--ember); background: #ffb47712; }
+    .orbit-icon::before {
+      content: "";
+      width: 4px;
+      height: 10px;
+      border-inline: 2px solid currentColor;
+    }
+    .orbit[aria-pressed="true"] .orbit-icon::before {
+      width: 0;
+      height: 0;
+      margin-left: 3px;
+      border: 5px solid transparent;
+      border-right: 0;
+      border-left: 8px solid currentColor;
+    }
+    .temperature {
+      width: min(276px, 55vw);
+      min-width: 0;
+      padding-top: 13px;
+      border-top: 1px solid #f4eee64d;
+    }
+    .readout, .range-ends { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+    .temperature label { color: var(--muted); }
+    output { color: var(--paper); font-size: 13px; letter-spacing: .04em; white-space: nowrap; }
+    input[type="range"] {
+      --fill: 37.7%;
+      appearance: none;
+      display: block;
+      width: 100%;
+      height: 28px;
+      margin: 3px 0 0;
+      background: transparent;
+      cursor: pointer;
+    }
+    input[type="range"]::-webkit-slider-runnable-track {
+      height: 2px;
+      background: linear-gradient(90deg, #ff9452, #ffe2be var(--fill), #55504f var(--fill));
+    }
+    input[type="range"]::-moz-range-track {
+      height: 2px;
+      background: linear-gradient(90deg, #ff9452, #ffe2be var(--fill), #55504f var(--fill));
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      appearance: none;
+      width: 12px;
+      height: 12px;
+      margin-top: -5px;
+      border: 1px solid #fff2de;
+      border-radius: 50%;
+      background: var(--ember);
+      box-shadow: 0 0 11px #ff9c5d85;
+    }
+    input[type="range"]::-moz-range-thumb {
+      width: 10px;
+      height: 10px;
+      border: 1px solid #fff2de;
+      border-radius: 50%;
+      background: var(--ember);
+      box-shadow: 0 0 11px #ff9c5d85;
+    }
+    .range-ends { color: var(--muted); font-size: 10px; letter-spacing: .04em; }
+    :focus-visible { outline: 2px solid var(--ember); outline-offset: 4px; }
+    input[type="range"]:focus-visible { outline-offset: -2px; border-radius: 3px; }
+    .notice {
+      position: absolute;
+      z-index: 2;
+      top: 50%;
+      left: 50%;
+      width: min(400px, calc(100% - 44px));
+      margin: 0;
+      padding: 22px;
+      transform: translate(-50%, -50%);
+      background: #111017;
+      border: 1px solid #ffffff30;
+      text-align: center;
+      font: 1rem/1.5 system-ui, sans-serif;
+    }
+    @media (max-width: 520px) {
+      .instrument { gap: 235px; }
+      .eyebrow { margin-bottom: 12px; }
+      footer { gap: 14px; }
+      .orbit { gap: 7px; font-size: 9px; letter-spacing: .06em; }
+      .orbit-icon { width: 32px; height: 32px; flex: 0 0 32px; }
+      .temperature { width: min(215px, 54vw); }
+      .temperature label { font-size: 10px; letter-spacing: .06em; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .orbit-icon { transition: none; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <canvas id="universe" role="img" aria-label="A rotating view of a black hole, its glowing accretion disk, and stars bent around its shadow"></canvas>
+    <div class="shade" aria-hidden="true"></div>
+    <div class="instrument">
+      <header>
+        <p class="eyebrow">Event horizon</p>
+        <h1>Black hole</h1>
+      </header>
+      <footer id="controls" hidden>
+        <button class="orbit" id="orbit" type="button" aria-label="Pause camera orbit" aria-pressed="false">
+          <span class="orbit-icon" aria-hidden="true"></span>
+          <span>Camera orbit</span>
+        </button>
+        <div class="temperature">
+          <div class="readout">
+            <label for="temperature">Disk temperature</label>
+            <output id="kelvin" for="temperature" aria-live="off">7,400 K</output>
+          </div>
+          <input id="temperature" type="range" min="2800" max="15000" step="100" value="7400" aria-valuetext="7,400 kelvin">
+          <div class="range-ends" aria-hidden="true"><span>2,800 K</span><span>15,000 K</span></div>
+        </div>
+      </footer>
+    </div>
+    <p class="notice" id="notice" role="status" hidden></p>
+    <noscript><p class="notice">Enable JavaScript to run this WebGL2 scene.</p></noscript>
+  </main>
+
+  <script>
+    "use strict";
+
+    const vertexSource = `#version 300 es
+      out vec2 vUv;
+      void main() {
+        vec2 corner = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2));
+        vUv = corner;
+        gl_Position = vec4(corner * 2.0 - 1.0, 0.0, 1.0);
+      }
+    `;
+
+    const sceneSource = `#version 300 es
+      precision highp float;
+      in vec2 vUv;
+      out vec4 fragColor;
+      uniform vec2 uResolution;
+      uniform vec3 uObserver;
+      uniform vec3 uRight;
+      uniform vec3 uUp;
+      uniform vec2 uFilmCenter;
+      uniform float uFilmScale;
+      uniform float uTime;
+      uniform float uTemperature;
+
+      const float PI = 3.14159265359;
+      const float CAMERA_RADIUS = 21.0;
+      const float CRITICAL_IMPACT = 2.598076211;
+      const float DISK_INNER = 2.85;
+      const float DISK_OUTER = 15.5;
+
+      float hash(vec2 cell) {
+        vec3 p = fract(vec3(cell.xyx) * 0.1031);
+        p += dot(p, p.yzx + 33.33);
+        return fract((p.x + p.y) * p.z);
+      }
+
+      float noise(vec2 p) {
+        vec2 i = floor(p);
+        vec2 f = fract(p);
+        f = f * f * (3.0 - 2.0 * f);
+        return mix(
+          mix(hash(i), hash(i + vec2(1, 0)), f.x),
+          mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), f.x), f.y);
+      }
+
+      vec3 starLayer(vec2 sky, float cells, float angularPixel, float rarity, bool bright) {
+        vec2 grid = sky * vec2(cells, cells * 0.5);
+        vec2 id = floor(grid);
+        id.x = mod(id.x, cells);
+        float seed = hash(id + 19.73);
+        if (seed < rarity) return vec3(0.0);
+
+        vec2 jitter = vec2(hash(id + 3.1), hash(id + 47.2));
+        vec2 delta = abs(fract(grid) - mix(vec2(0.26), vec2(0.74), jitter));
+        float width = mix(0.025, 0.059, jitter.x) * (bright ? 1.12 : 0.82);
+        float pixel = max(0.0001, angularPixel * cells / (2.0 * PI));
+        float variance = width * width + pixel * pixel * 0.28;
+        float energy = width * width / variance;
+        float core = exp(-dot(delta, delta) / (2.0 * variance)) * energy;
+        float halo = max(0.0, exp(-dot(delta, delta) * 31.0) - 0.14);
+        float flare = 0.0;
+        if (bright && seed > 0.985) {
+          flare = (exp(-delta.x * 13.0 - delta.y * 100.0)
+                 + exp(-delta.y * 13.0 - delta.x * 100.0))
+                * (1.0 - smoothstep(0.14, 0.26, max(delta.x, delta.y))) * 0.21;
+        }
+        vec3 tint = mix(vec3(0.50, 0.66, 1.0), vec3(1.0, 0.74, 0.49), jitter.y);
+        tint = mix(tint, vec3(1.0), 0.37);
+        float intensity = mix(0.27, 1.0, jitter.x * jitter.y) * (bright ? 1.35 : 0.30);
+        return tint * (core + halo * 0.038 + flare) * intensity;
+      }
+
+      vec3 starfield(vec3 direction, float angularPixel) {
+        vec2 sky = vec2(atan(direction.x, direction.z) / (2.0 * PI) + 0.5,
+                        asin(clamp(direction.y, -1.0, 1.0)) / PI + 0.5);
+        float latitude = dot(direction, vec3(-0.47, 0.865, 0.176));
+        vec2 cloud = vec2(dot(direction, vec3(0.819, 0.0, 0.574)), latitude);
+        float band = exp(-abs(latitude) * 8.2);
+        float clouds = noise(cloud * 10.0) * 0.53
+                     + noise(cloud * 24.0 + 9.0) * 0.28
+                     + noise(cloud * 56.0 - 4.0) * 0.19;
+        float dust = smoothstep(0.27, 0.78, clouds);
+        float lane = exp(-abs(latitude + 0.035 * sin(cloud.x * 21.0)) * 37.0);
+        vec3 skyColor = vec3(0.0011, 0.0014, 0.0029);
+        vec3 haze = mix(vec3(0.009, 0.014, 0.032), vec3(0.033, 0.026, 0.041), dust);
+        skyColor += haze * band * (dust * 0.72 + 0.16) * (1.0 - lane * 0.36);
+        skyColor += starLayer(sky, 246.0, angularPixel, 0.79, true);
+        skyColor += starLayer(sky + vec2(0.0021, -0.0011), 704.0, angularPixel, 0.69, false);
+        return skyColor;
+      }
+
+      // An artist-tuned blackbody palette in linear RGB.
+      vec3 thermalColor(float kelvin) {
+        vec3 red = vec3(1.0, 0.036, 0.006);
+        vec3 amber = vec3(1.0, 0.34, 0.062);
+        vec3 ivory = vec3(1.0, 0.83, 0.63);
+        vec3 blue = vec3(0.47, 0.68, 1.0);
+        vec3 color = mix(red, amber, smoothstep(1650.0, 4600.0, kelvin));
+        color = mix(color, ivory, smoothstep(4200.0, 8700.0, kelvin));
+        return mix(color, blue, smoothstep(8500.0, 14500.0, kelvin));
+      }
+
+      vec4 diskSample(float radius, vec3 radial, vec3 rayDirection) {
+        float phase = atan(radial.z, radial.x);
+        float rotation = uTime * 0.60 * pow(DISK_INNER / radius, 1.33);
+        float spiral = phase - rotation + log(radius) * 1.65;
+        vec2 arc = vec2(cos(spiral), sin(spiral));
+        float r = radius - DISK_INNER;
+        float flow = noise(arc * 3.7 + vec2(radius * 1.28, radius * 0.47));
+        float threads = noise(arc * 6.5 + vec2(radius * 14.0, radius * 2.8));
+        float grains = noise(arc * 18.0 + vec2(radius * 27.0, -radius * 17.0));
+        float filament = 0.5 + 0.5 * sin(radius * 44.0 + flow * 6.0 + threads * 4.5);
+        float streaks = pow(filament, 5.0) * mix(0.10, 0.52, flow);
+        float texture = 0.41 + flow * 0.53 + threads * 0.33 + streaks + grains * 0.14;
+        float innerEdge = smoothstep(0.0, 0.21, r);
+        float outerEdge = 1.0 - smoothstep(11.2, DISK_OUTER, radius);
+        float density = innerEdge * outerEdge * exp(-r * 0.22);
+
+        vec3 tangent = vec3(-radial.z, 0.0, radial.x);
+        float speed = inversesqrt(2.0 * (radius - 1.0));
+        float beaming = sqrt(1.0 - speed * speed) / (1.0 + speed * dot(tangent, rayDirection));
+        float redshift = sqrt(1.0 - 1.0 / radius) * beaming;
+        float kelvin = uTemperature * pow(DISK_INNER / radius, 0.47) * (0.98 + 0.20 * (redshift - 0.7));
+        float heat = pow(uTemperature / 7400.0, 0.68);
+        float light = density * texture * heat * (0.72 + 0.63 * pow(beaming, 2.6));
+        light *= 1.0 + exp(-pow((r - 0.45) * 2.6, 2.0)) * 0.83;
+        float opacity = innerEdge * outerEdge * (0.82 + 0.14 * flow);
+        return vec4(thermalColor(kelvin) * light, opacity);
+      }
+
+      float acceleration(float u) {
+        return -u + 1.5 * u * u;
+      }
+
+      vec3 traceRay(vec3 ray, float angularPixel) {
+        // In the ray's orbital plane u = R_s / r. For a Schwarzschild
+        // null geodesic, u'' = 1.5 u² - u with azimuth as the time step.
+        float initialU = 1.0 / CAMERA_RADIUS;
+        float inward = -dot(ray, uObserver);
+        vec3 tangent = ray + inward * uObserver;
+        float sine = length(tangent);
+        if (sine < 0.00001) return vec3(0.0);
+        tangent /= sine;
+        float impact = CAMERA_RADIUS * sine / sqrt(1.0 - initialU);
+        float u = initialU;
+        float velocity = initialU * sqrt(1.0 - initialU) * inward / sine;
+        float phi = 0.0;
+        const float stepAngle = 0.055;
+
+        // The ray crosses the equatorial disk at the orbital plane's nodes.
+        float node = atan(uObserver.y, -tangent.y);
+        vec3 radiance = vec3(0.0);
+        float transmission = 1.0;
+        for (int i = 0; i < 144; ++i) {
+          float middleVelocity = velocity + 0.5 * stepAngle * acceleration(u);
+          float nextU = u + stepAngle * middleVelocity;
+          float nextVelocity = middleVelocity + 0.5 * stepAngle * acceleration(nextU);
+          float nextPhi = phi + stepAngle;
+
+          if (node <= nextPhi) {
+            float t = (node - phi) / stepAngle;
+            float nodeU = mix(u, nextU, t);
+            if (nodeU > 1.0 / DISK_OUTER && nodeU < 1.0 / DISK_INNER) {
+              vec3 radial = cos(node) * uObserver + sin(node) * tangent;
+              vec3 angular = -sin(node) * uObserver + cos(node) * tangent;
+              vec3 direction = normalize(angular * nodeU - radial * mix(velocity, nextVelocity, t));
+              vec4 disk = diskSample(1.0 / nodeU, radial, direction);
+              radiance += transmission * disk.rgb;
+              transmission *= 1.0 - disk.a;
+            }
+            node += PI;
+          }
+          if (nextU >= 1.0) break;
+          if (nextU <= 0.0) {
+            float escape = phi + stepAngle * clamp(u / (u - nextU), 0.0, 1.0);
+            vec3 skyDirection = cos(escape) * uObserver + sin(escape) * tangent;
+            radiance += transmission * starfield(skyDirection, angularPixel);
+            break;
+          }
+          u = nextU;
+          velocity = nextVelocity;
+          phi = nextPhi;
+        }
+
+        // Unresolved light from additional winding near the critical curve.
+        float rimWidth = max(0.012, CAMERA_RADIUS * angularPixel * 0.74);
+        float offset = impact - CRITICAL_IMPACT - 0.019;
+        float rim = exp(-0.5 * offset * offset / (rimWidth * rimWidth));
+        float rimLight = 0.045 + 0.12 * abs(tangent.y);
+        radiance += thermalColor(uTemperature * 0.75) * rim * rimLight * transmission;
+        return radiance;
+      }
+
+      void main() {
+        vec2 film = (vUv - uFilmCenter) * uResolution / uResolution.y * uFilmScale;
+        vec3 ray = normalize(-uObserver + film.x * uRight + film.y * uUp);
+        vec3 radiance = traceRay(ray, uFilmScale / uResolution.y);
+        // Square-root encoding keeps faint stars and dust smooth in RGBA8.
+        vec3 mapped = 1.0 - exp(-radiance * 1.05);
+        fragColor = vec4(sqrt(mapped), 1.0);
+      }
+    `;
+
+    const postSource = `#version 300 es
+      precision highp float;
+      in vec2 vUv;
+      out vec4 fragColor;
+      uniform sampler2D uScene;
+      uniform vec2 uSceneSize;
+      uniform float uMaxLod;
+
+      vec3 readScene(vec2 uv, float lod) {
+        vec3 encoded = textureLod(uScene, uv, lod).rgb;
+        return encoded * encoded;
+      }
+
+      vec3 glow(float lod, float spacing) {
+        vec2 d = spacing / uSceneSize;
+        lod = min(lod, uMaxLod);
+        vec3 blur = readScene(vUv, lod) * 0.36;
+        blur += readScene(vUv + vec2( d.x,  d.y), lod) * 0.16;
+        blur += readScene(vUv + vec2(-d.x,  d.y), lod) * 0.16;
+        blur += readScene(vUv + vec2( d.x, -d.y), lod) * 0.16;
+        blur += readScene(vUv - d, lod) * 0.16;
+        return max(blur - vec3(0.038), 0.0);
+      }
+
+      void main() {
+        vec3 scene = readScene(vUv, 0.0);
+        scene += glow(2.0, 2.5) * 0.25 + glow(4.0, 10.0) * 0.17 + glow(6.0, 29.0) * 0.13;
+
+        vec2 edge = (vUv - 0.5) * vec2(1.0, 0.88);
+        float vignette = 1.0 - 0.39 * smoothstep(0.16, 0.68, length(edge));
+        scene *= vignette;
+        // sRGB transfer keeps the shadow dark without hiding faint stars.
+        vec3 srgb = mix(scene * 12.92, 1.055 * pow(scene, vec3(1.0 / 2.4)) - 0.055,
+                        step(vec3(0.0031308), scene));
+        float dither = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));
+        fragColor = vec4(srgb + (dither - 0.5) / 255.0, 1.0);
+      }
+    `;
+
+    const canvas = document.querySelector("#universe");
+    const controls = document.querySelector("#controls");
+    const notice = document.querySelector("#notice");
+    const slider = document.querySelector("#temperature");
+    const kelvin = document.querySelector("#kelvin");
+    const orbitButton = document.querySelector("#orbit");
+    const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
+    const formatKelvin = new Intl.NumberFormat("en-US");
+    const orbitPeriod = 112;
+    let paused = reducedMotion.matches;
+    let elapsed = 0;
+    let previousFrame = 0;
+    let pendingFrame = 0;
+    let needsDraw = true;
+    let renderer;
+
+    function buildProgram(gl, fragmentSource) {
+      function compile(type, source) {
+        const shader = gl.createShader(type);
+        gl.shaderSource(shader, source);
+        gl.compileShader(shader);
+        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+          const message = gl.getShaderInfoLog(shader);
+          gl.deleteShader(shader);
+          throw new Error(message || "Could not compile a shader.");
+        }
+        return shader;
+      }
+
+      const program = gl.createProgram();
+      const vertex = compile(gl.VERTEX_SHADER, vertexSource);
+      const fragment = compile(gl.FRAGMENT_SHADER, fragmentSource);
+      gl.attachShader(program, vertex);
+      gl.attachShader(program, fragment);
+      gl.linkProgram(program);
+      gl.deleteShader(vertex);
+      gl.deleteShader(fragment);
+      if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+        const message = gl.getProgramInfoLog(program);
+        gl.deleteProgram(program);
+        throw new Error(message || "Could not link a shader program.");
+      }
+      return program;
+    }
+
+    function createRenderer(gl) {
+      const scene = buildProgram(gl, sceneSource);
+      const post = buildProgram(gl, postSource);
+      const sceneUniforms = {};
+      for (const name of ["Resolution", "Observer", "Right", "Up", "FilmCenter", "FilmScale", "Time", "Temperature"]) {
+        sceneUniforms[name] = gl.getUniformLocation(scene, "u" + name);
+      }
+      const sceneSampler = gl.getUniformLocation(post, "uScene");
+      const sceneSize = gl.getUniformLocation(post, "uSceneSize");
+      const maxLod = gl.getUniformLocation(post, "uMaxLod");
+      const framebuffer = gl.createFramebuffer();
+      const texture = gl.createTexture();
+      const textureLimit = gl.getParameter(gl.MAX_TEXTURE_SIZE);
+      let sceneWidth = 0;
+      let sceneHeight = 0;
+
+      gl.disable(gl.DITHER);
+      gl.bindTexture(gl.TEXTURE_2D, texture);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+      gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
+
+      return function draw(time, temperature) {
+        const width = canvas.clientWidth;
+        const height = canvas.clientHeight;
+        if (width < 1 || height < 1) return;
+
+        const pixelRatio = Math.min(window.devicePixelRatio || 1, 1.75, textureLimit / Math.max(width, height));
+        const outputWidth = Math.max(1, Math.round(width * pixelRatio));
+        const outputHeight = Math.max(1, Math.round(height * pixelRatio));
+        if (canvas.width !== outputWidth || canvas.height !== outputHeight) {
+          canvas.width = outputWidth;
+          canvas.height = outputHeight;
+        }
+
+        const scale = Math.min(pixelRatio, Math.sqrt(1250000 / (width * height)));
+        const nextWidth = Math.max(1, Math.round(width * scale));
+        const nextHeight = Math.max(1, Math.round(height * scale));
+        gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+        // Unbind the render target from the texture unit during the scene pass.
+        if (sceneWidth !== nextWidth || sceneHeight !== nextHeight) {
+          sceneWidth = nextWidth;
+          sceneHeight = nextHeight;
+          gl.bindTexture(gl.TEXTURE_2D, texture);
+          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, sceneWidth, sceneHeight, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+          if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) {
+            throw new Error("Could not create the WebGL2 render target.");
+          }
+        }
+        gl.bindTexture(gl.TEXTURE_2D, null);
+        gl.viewport(0, 0, sceneWidth, sceneHeight);
+        gl.useProgram(scene);
+
+        const azimuth = 0.34 + (time % orbitPeriod) * (2 * Math.PI / orbitPeriod);
+        const elevation = 0.132 + 0.060 * Math.sin(azimuth - 0.34);
+        const roll = -0.18 + 0.075 * Math.sin(azimuth + 0.6);
+        const sa = Math.sin(azimuth);
+        const ca = Math.cos(azimuth);
+        const se = Math.sin(elevation);
+        const ce = Math.cos(elevation);
+        const sr = Math.sin(roll);
+        const cr = Math.cos(roll);
+        const aspect = width / height;
+        gl.uniform2f(sceneUniforms.Resolution, sceneWidth, sceneHeight);
+        gl.uniform3f(sceneUniforms.Observer, sa * ce, se, ca * ce);
+        gl.uniform3f(sceneUniforms.Right, ca * cr - sa * se * sr, ce * sr, -sa * cr - ca * se * sr);
+        gl.uniform3f(sceneUniforms.Up, -sa * se * cr - ca * sr, ce * cr, -ca * se * cr + sa * sr);
+        gl.uniform2f(sceneUniforms.FilmCenter, aspect < 0.9 ? 0.50 : 0.55, aspect < 0.9 ? 0.52 : 0.51);
+        gl.uniform1f(sceneUniforms.FilmScale, 0.77 * Math.max(1, 1.08 / aspect));
+        gl.uniform1f(sceneUniforms.Time, time);
+        gl.uniform1f(sceneUniforms.Temperature, temperature);
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.generateMipmap(gl.TEXTURE_2D);
+        gl.viewport(0, 0, outputWidth, outputHeight);
+        gl.useProgram(post);
+        gl.uniform1i(sceneSampler, 0);
+        gl.uniform2f(sceneSize, sceneWidth, sceneHeight);
+        gl.uniform1f(maxLod, Math.floor(Math.log2(Math.max(sceneWidth, sceneHeight))));
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
+      };
+    }
+
+    function reportUnavailable(message) {
+      controls.hidden = true;
+      notice.textContent = message;
+      notice.hidden = false;
+    }
+
+    function queueDraw() {
+      if (renderer && !pendingFrame && !document.hidden) {
+        pendingFrame = requestAnimationFrame(frame);
+      }
+    }
+
+    function frame(now) {
+      pendingFrame = 0;
+      if (!renderer || document.hidden) return;
+      if (needsDraw || (!paused && now - previousFrame >= 32)) {
+        if (!paused && previousFrame) elapsed += Math.min(0.1, (now - previousFrame) / 1000);
+        previousFrame = now;
+        needsDraw = false;
+        try {
+          renderer(elapsed, slider.valueAsNumber);
+        } catch (error) {
+          renderer = null;
+          console.error(error);
+          reportUnavailable("The WebGL2 scene could not be rendered.");
+          return;
+        }
+      }
+      if (!paused) queueDraw();
+    }
+
+    function invalidate() {
+      needsDraw = true;
+      queueDraw();
+    }
+
+    function setPaused(value) {
+      paused = value;
+      previousFrame = 0;
+      orbitButton.setAttribute("aria-pressed", String(paused));
+      orbitButton.setAttribute("aria-label", paused ? "Resume camera orbit" : "Pause camera orbit");
+      invalidate();
+    }
+
+    function updateTemperature() {
+      const text = formatKelvin.format(slider.valueAsNumber);
+      kelvin.value = text + " K";
+      slider.setAttribute("aria-valuetext", text + " kelvin");
+      const percent = 100 * (slider.valueAsNumber - Number(slider.min)) / (Number(slider.max) - Number(slider.min));
+      slider.style.setProperty("--fill", percent + "%");
+      invalidate();
+    }
+
+    function start() {
+      try {
+        const gl = canvas.getContext("webgl2", {
+          alpha: false, antialias: false, depth: false, stencil: false,
+          powerPreference: "high-performance"
+        });
+        if (!gl) {
+          reportUnavailable("This scene requires a browser with WebGL2 enabled.");
+          return;
+        }
+        renderer = createRenderer(gl);
+        notice.hidden = true;
+        controls.hidden = false;
+        invalidate();
+      } catch (error) {
+        console.error(error);
+        reportUnavailable("The WebGL2 scene could not be initialized.");
+      }
+    }
+
+    orbitButton.addEventListener("click", () => setPaused(!paused));
+    reducedMotion.addEventListener("change", event => setPaused(event.matches));
+    slider.addEventListener("input", updateTemperature);
+    new ResizeObserver(invalidate).observe(canvas);
+    document.addEventListener("visibilitychange", () => {
+      previousFrame = 0;
+      if (!document.hidden) invalidate();
+    });
+    canvas.addEventListener("webglcontextlost", event => {
+      event.preventDefault();
+      renderer = null;
+      cancelAnimationFrame(pendingFrame);
+      pendingFrame = 0;
+      previousFrame = 0;
+      reportUnavailable("The graphics context was lost. Waiting for WebGL2 to recover…");
+    });
+    canvas.addEventListener("webglcontextrestored", start);
+
+    setPaused(paused);
+    updateTemperature();
+    start();
+  </script>
+</body>
+</html>

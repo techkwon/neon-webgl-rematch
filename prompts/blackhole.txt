@@ -1,0 +1,3 @@
+Write a WebGL2 fragment shader demo of a black hole with a glowing accretion disk and gravitational lensing that bends the starfield behind it. Add a slow cinematic camera orbit and a small control to change the disk temperature.
+
+Save the result as one self-contained file named index.html in the current directory. Use raw WebGL2 only, no external libraries or network requests. Do it in one go, do not ask questions.

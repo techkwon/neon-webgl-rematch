@@ -1,0 +1,4310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STRATA 65 — Machined Acoustic Instrument | Edition 01</title>
+<style>
+  :root {
+    --bg: #070709;
+    --bg-elevated: #0e0f13;
+    --bg-card: #121318;
+    --bg-glass: rgba(12, 13, 17, 0.72);
+    --ink: #f3f1ec;
+    --ink-dim: #9799a2;
+    --ink-muted: #5d606a;
+    --line: rgba(255, 255, 255, 0.08);
+    --line-strong: rgba(255, 255, 255, 0.16);
+    --accent: #ff4d24;
+    --accent-soft: rgba(255, 77, 36, 0.16);
+    --brass: #c9a66b;
+    --font-display: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", sans-serif;
+    --font-mono: "SF Mono", "JetBrains Mono", "Fira Code", Menlo, Consolas, monospace;
+    --radius-sm: 4px;
+    --radius-md: 10px;
+    --radius-lg: 18px;
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  *, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  html {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-display);
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: clip;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.5;
+    overflow-x: clip;
+  }
+
+  ::selection {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  button {
+    font-family: inherit;
+    color: inherit;
+    background: none;
+    border: none;
+    cursor: pointer;
+  }
+
+  .mono {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  .eyebrow::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 10px var(--accent);
+  }
+
+  .container {
+    width: 100%;
+    max-width: 1380px;
+    margin: 0 auto;
+    padding: 0 clamp(20px, 4vw, 56px);
+  }
+
+  /* ==================== NAVIGATION ==================== */
+  .nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    background: rgba(7, 7, 9, 0.68);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border-bottom: 1px solid var(--line);
+    transition: background 0.3s ease;
+  }
+
+  .nav-inner {
+    width: 100%;
+    max-width: 1380px;
+    margin: 0 auto;
+    padding: 0 clamp(20px, 4vw, 56px);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+  }
+
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    font-size: 0.8125rem;
+    text-transform: uppercase;
+  }
+
+  .brand-mark {
+    width: 24px;
+    height: 24px;
+    display: grid;
+    place-items: center;
+  }
+
+  .nav-links {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    list-style: none;
+  }
+
+  .nav-links a {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    transition: color 0.2s ease;
+  }
+
+  .nav-links a:hover,
+  .nav-links a.active {
+    color: var(--ink);
+  }
+
+  .nav-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .nav-telemetry {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    color: var(--ink-muted);
+    letter-spacing: 0.08em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 12px 22px;
+    border-radius: 999px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    transition: transform 0.25s var(--ease-out), background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+  }
+
+  .btn:active {
+    transform: scale(0.97);
+  }
+
+  .btn-primary {
+    background: var(--ink);
+    color: var(--bg);
+  }
+
+  .btn-primary:hover {
+    background: #ffffff;
+    box-shadow: 0 0 28px rgba(255, 255, 255, 0.2);
+  }
+
+  .btn-accent {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  .btn-accent:hover {
+    background: #ff623d;
+    box-shadow: 0 0 32px rgba(255, 77, 36, 0.35);
+  }
+
+  .btn-ghost {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--line-strong);
+    color: var(--ink);
+  }
+
+  .btn-ghost:hover {
+    background: rgba(255, 255, 255, 0.09);
+    border-color: rgba(255, 255, 255, 0.3);
+  }
+
+  .btn-sm {
+    padding: 8px 16px;
+    font-size: 0.75rem;
+  }
+
+  .scroll-progress-bar {
+    position: fixed;
+    top: 63px;
+    left: 0;
+    height: 1.5px;
+    width: 0%;
+    background: linear-gradient(90deg, var(--brass), var(--accent));
+    z-index: 101;
+    pointer-events: none;
+  }
+
+  /* ==================== HERO (WEBGL2 TOPOGRAPHIC SHADER) ==================== */
+  .hero {
+    position: relative;
+    min-height: 100svh;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding-top: 64px;
+    overflow: hidden;
+    border-bottom: 1px solid var(--line);
+  }
+
+  #hero-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    z-index: 0;
+  }
+
+  .hero-vignette {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background:
+      radial-gradient(circle at 50% 45%, transparent 20%, rgba(7, 7, 9, 0.65) 100%),
+      linear-gradient(180deg, rgba(7, 7, 9, 0.55) 0%, transparent 25%, transparent 70%, rgba(7, 7, 9, 0.96) 100%);
+  }
+
+  .hero-content {
+    position: relative;
+    z-index: 2;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding-top: clamp(28px, 4vh, 52px);
+    padding-bottom: clamp(24px, 3.5vh, 42px);
+  }
+
+  .hero-top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+  }
+
+  .hero-coords {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 6px 14px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: rgba(7, 7, 9, 0.55);
+    backdrop-filter: blur(10px);
+  }
+
+  .hero-coords span b {
+    color: var(--ink);
+    font-weight: 500;
+  }
+
+  .hero-center {
+    margin: auto 0;
+    padding: clamp(32px, 6vh, 64px) 0;
+    max-width: 920px;
+  }
+
+  .hero-title {
+    font-size: clamp(3.2rem, 8.8vw, 7.6rem);
+    font-weight: 600;
+    line-height: 0.94;
+    letter-spacing: -0.045em;
+    margin-top: 20px;
+    color: var(--ink);
+    text-shadow: 0 20px 60px rgba(0, 0, 0, 0.65);
+  }
+
+  .hero-title .stroke {
+    color: transparent;
+    -webkit-text-stroke: 1px rgba(243, 241, 236, 0.55);
+  }
+
+  .hero-sub {
+    margin-top: 26px;
+    max-width: 560px;
+    font-size: clamp(1rem, 1.35vw, 1.2rem);
+    line-height: 1.55;
+    color: var(--ink-dim);
+    font-weight: 400;
+  }
+
+  .hero-actions {
+    margin-top: 34px;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 14px;
+  }
+
+  .hero-bottom {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+    align-items: end;
+    gap: 20px;
+    padding-top: 24px;
+    border-top: 1px solid var(--line);
+  }
+
+  .hero-metric {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .hero-metric-val {
+    font-family: var(--font-mono);
+    font-size: clamp(1.1rem, 1.8vw, 1.5rem);
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+  }
+
+  .hero-metric-label {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+  }
+
+  .scroll-cue {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+  }
+
+  .scroll-cue-line {
+    width: 36px;
+    height: 1px;
+    background: var(--line-strong);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .scroll-cue-line::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: var(--accent);
+    transform: translateX(-100%);
+    animation: slideLine 2.2s infinite ease-in-out;
+  }
+
+  @keyframes slideLine {
+    0% { transform: translateX(-100%); }
+    50% { transform: translateX(0%); }
+    100% { transform: translateX(100%); }
+  }
+
+  /* ==================== SECTION HEADERS ==================== */
+  .section-pad {
+    padding: clamp(88px, 11vw, 148px) 0;
+  }
+
+  .section-head {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+    gap: 32px;
+    align-items: end;
+    margin-bottom: clamp(40px, 5vw, 68px);
+  }
+
+  .section-title {
+    font-size: clamp(2.1rem, 4.4vw, 3.8rem);
+    font-weight: 600;
+    line-height: 1.02;
+    letter-spacing: -0.038em;
+    margin-top: 14px;
+  }
+
+  .section-desc {
+    font-size: 1rem;
+    color: var(--ink-dim);
+    line-height: 1.65;
+    max-width: 480px;
+    justify-self: end;
+  }
+
+  /* ==================== PINNED 4-STAGE SCROLLYTELLING ==================== */
+  .story-section {
+    position: relative;
+    height: 440vh;
+    border-bottom: 1px solid var(--line);
+    background:
+      radial-gradient(ellipse 80% 50% at 65% 45%, rgba(201, 166, 107, 0.05), transparent 70%),
+      var(--bg);
+  }
+
+  .story-sticky {
+    position: sticky;
+    top: 64px;
+    height: calc(100vh - 64px);
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+  }
+
+  .story-grid {
+    width: 100%;
+    height: 100%;
+    max-height: 820px;
+    display: grid;
+    grid-template-columns: minmax(320px, 440px) minmax(0, 1fr);
+    gap: clamp(24px, 4vw, 64px);
+    align-items: center;
+    padding: 28px 0;
+  }
+
+  .story-left {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 100%;
+    max-height: 620px;
+  }
+
+  .story-steps-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 24px;
+  }
+
+  .story-step-btn {
+    text-align: left;
+    padding: 14px 16px;
+    border-radius: var(--radius-md);
+    border: 1px solid transparent;
+    background: transparent;
+    display: grid;
+    grid-template-columns: 36px 1fr auto;
+    align-items: center;
+    gap: 12px;
+    transition: background 0.3s ease, border-color 0.3s ease, opacity 0.3s ease;
+    opacity: 0.48;
+  }
+
+  .story-step-btn:hover {
+    opacity: 0.85;
+    background: rgba(255, 255, 255, 0.025);
+  }
+
+  .story-step-btn.active {
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.045);
+    border-color: var(--line-strong);
+  }
+
+  .story-step-num {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--accent);
+    letter-spacing: 0.08em;
+  }
+
+  .story-step-name {
+    font-size: 0.9375rem;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+  }
+
+  .story-step-tag {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    color: var(--ink-muted);
+    text-transform: uppercase;
+  }
+
+  .story-narrative {
+    margin-top: 22px;
+    min-height: 170px;
+    padding-top: 22px;
+    border-top: 1px solid var(--line);
+  }
+
+  .story-stage-title {
+    font-size: clamp(1.5rem, 2.4vw, 2.1rem);
+    font-weight: 600;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+  }
+
+  .story-stage-body {
+    margin-top: 12px;
+    font-size: 0.9375rem;
+    color: var(--ink-dim);
+    line-height: 1.65;
+  }
+
+  .story-telemetry {
+    margin-top: 20px;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .story-tel-box {
+    padding: 12px 14px;
+    border-radius: var(--radius-sm);
+    background: var(--bg-card);
+    border: 1px solid var(--line);
+  }
+
+  .story-tel-label {
+    font-family: var(--font-mono);
+    font-size: 0.625rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+  }
+
+  .story-tel-val {
+    font-family: var(--font-mono);
+    font-size: 1rem;
+    color: var(--ink);
+    margin-top: 4px;
+  }
+
+  .story-visual-wrap {
+    position: relative;
+    width: 100%;
+    height: min(68vh, 620px);
+    border-radius: var(--radius-lg);
+    background: linear-gradient(145deg, #0d0e12 0%, #090a0d 100%);
+    border: 1px solid var(--line);
+    overflow: hidden;
+    box-shadow: 0 30px 90px rgba(0, 0, 0, 0.55);
+  }
+
+  #story-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  .story-visual-hud {
+    position: absolute;
+    top: 18px;
+    left: 20px;
+    right: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    pointer-events: none;
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    letter-spacing: 0.12em;
+    color: var(--ink-dim);
+    text-transform: uppercase;
+  }
+
+  .story-rail {
+    position: absolute;
+    bottom: 18px;
+    left: 20px;
+    right: 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    pointer-events: none;
+  }
+
+  .story-rail-track {
+    flex: 1;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .story-rail-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--brass), var(--accent));
+  }
+
+  /* ==================== BEFORE / AFTER SPLIT SLIDER ==================== */
+  .comparison-section {
+    border-bottom: 1px solid var(--line);
+    background: var(--bg);
+  }
+
+  .split-frame {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    min-height: 400px;
+    max-height: 660px;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--line-strong);
+    overflow: hidden;
+    background: #0a0b0e;
+    user-select: none;
+    touch-action: pan-y;
+    cursor: ew-resize;
+    --split: 50%;
+    box-shadow: 0 32px 96px rgba(0, 0, 0, 0.6);
+  }
+
+  .split-layer {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .split-layer canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  .split-before {
+    clip-path: inset(0 calc(100% - var(--split)) 0 0);
+    z-index: 2;
+  }
+
+  .split-after {
+    z-index: 1;
+  }
+
+  .split-divider {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: var(--split);
+    width: 2px;
+    background: rgba(255, 255, 255, 0.85);
+    z-index: 4;
+    transform: translateX(-1px);
+    pointer-events: none;
+    box-shadow: 0 0 24px rgba(255, 77, 36, 0.45);
+  }
+
+  .split-handle {
+    position: absolute;
+    top: 50%;
+    left: var(--split);
+    transform: translate(-50%, -50%);
+    z-index: 5;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: rgba(14, 15, 19, 0.92);
+    border: 1.5px solid rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(12px);
+    display: grid;
+    place-items: center;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.65), 0 0 0 6px rgba(255, 255, 255, 0.06);
+    transition: transform 0.2s var(--ease-out), border-color 0.2s ease;
+    cursor: ew-resize;
+  }
+
+  .split-frame:hover .split-handle,
+  .split-frame.dragging .split-handle {
+    border-color: var(--accent);
+    transform: translate(-50%, -50%) scale(1.08);
+  }
+
+  .split-badge {
+    position: absolute;
+    top: 20px;
+    z-index: 3;
+    padding: 8px 14px;
+    border-radius: 999px;
+    background: rgba(7, 7, 9, 0.72);
+    border: 1px solid var(--line-strong);
+    backdrop-filter: blur(12px);
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .split-badge-left {
+    left: 20px;
+    color: #c2c6d1;
+  }
+
+  .split-badge-right {
+    right: 20px;
+    color: var(--ink);
+  }
+
+  .split-badge-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+  }
+
+  .split-controls-bar {
+    margin-top: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    padding: 18px 22px;
+    border-radius: var(--radius-md);
+    background: var(--bg-elevated);
+    border: 1px solid var(--line);
+  }
+
+  .acoustic-compare-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .sound-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    border-radius: 999px;
+    background: var(--bg-card);
+    border: 1px solid var(--line-strong);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    transition: border-color 0.2s ease, background 0.2s ease, transform 0.15s ease;
+  }
+
+  .sound-pill:hover {
+    border-color: var(--ink);
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  .sound-pill.playing {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    color: #fff;
+  }
+
+  .split-metrics-row {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--ink-dim);
+  }
+
+  .split-metrics-row strong {
+    color: var(--ink);
+    font-weight: 500;
+  }
+
+  /* ==================== 3D WIREFRAME SPEC CARD (WEBGL2) ==================== */
+  .spec-section {
+    border-bottom: 1px solid var(--line);
+    background:
+      radial-gradient(circle at 20% 50%, rgba(255, 77, 36, 0.05), transparent 55%),
+      var(--bg);
+  }
+
+  .spec-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.65fr);
+    gap: 24px;
+    align-items: stretch;
+  }
+
+  .wireframe-card {
+    position: relative;
+    min-height: 580px;
+    border-radius: var(--radius-lg);
+    background: radial-gradient(circle at 50% 45%, #13151d 0%, #090a0e 85%);
+    border: 1px solid var(--line-strong);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 32px 96px rgba(0, 0, 0, 0.55);
+  }
+
+  #wireframe-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    cursor: grab;
+  }
+
+  #wireframe-canvas:active {
+    cursor: grabbing;
+  }
+
+  .wireframe-topbar {
+    position: relative;
+    z-index: 3;
+    padding: 18px 22px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    pointer-events: none;
+  }
+
+  .wireframe-topbar > * {
+    pointer-events: auto;
+  }
+
+  .wf-mode-group {
+    display: inline-flex;
+    padding: 3px;
+    border-radius: 999px;
+    background: rgba(7, 7, 9, 0.76);
+    border: 1px solid var(--line-strong);
+    backdrop-filter: blur(12px);
+  }
+
+  .wf-mode-btn {
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    transition: background 0.2s ease, color 0.2s ease;
+  }
+
+  .wf-mode-btn.active {
+    background: var(--ink);
+    color: var(--bg);
+  }
+
+  .wireframe-bottombar {
+    position: relative;
+    z-index: 3;
+    margin-top: auto;
+    padding: 16px 22px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    background: linear-gradient(180deg, transparent, rgba(7, 7, 9, 0.82));
+    pointer-events: none;
+  }
+
+  .wireframe-bottombar > * {
+    pointer-events: auto;
+  }
+
+  .wf-camera-presets {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .wf-preset-btn {
+    padding: 6px 11px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--line-strong);
+    background: rgba(12, 13, 17, 0.75);
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    transition: all 0.2s ease;
+  }
+
+  .wf-preset-btn:hover,
+  .wf-preset-btn.active {
+    border-color: var(--accent);
+    color: var(--ink);
+    background: rgba(255, 77, 36, 0.14);
+  }
+
+  .wf-callout {
+    position: absolute;
+    z-index: 2;
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+    padding: 4px 8px;
+    border-radius: 4px;
+    background: rgba(7, 7, 9, 0.78);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    font-family: var(--font-mono);
+    font-size: 0.625rem;
+    letter-spacing: 0.08em;
+    color: var(--ink);
+    white-space: nowrap;
+    backdrop-filter: blur(6px);
+    transition: opacity 0.15s ease;
+  }
+
+  .wf-callout::before {
+    content: "";
+    display: inline-block;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--accent);
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+
+  .spec-table-card {
+    border-radius: var(--radius-lg);
+    background: var(--bg-elevated);
+    border: 1px solid var(--line);
+    padding: 28px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .spec-table-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .spec-list {
+    list-style: none;
+    margin: 14px 0;
+  }
+
+  .spec-list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 16px;
+    padding: 13px 0;
+    border-bottom: 1px solid var(--line);
+    font-size: 0.875rem;
+  }
+
+  .spec-list li:last-child {
+    border-bottom: none;
+  }
+
+  .spec-k {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+  }
+
+  .spec-v {
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    color: var(--ink);
+    text-align: right;
+  }
+
+  .spec-cert {
+    margin-top: 16px;
+    padding: 14px 16px;
+    border-radius: var(--radius-md);
+    background: rgba(255, 255, 255, 0.025);
+    border: 1px solid var(--line);
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    color: var(--ink-dim);
+    line-height: 1.6;
+  }
+
+  /* ==================== LIVE COLOR CONFIGURATOR ==================== */
+  .config-section {
+    border-bottom: 1px solid var(--line);
+    background:
+      radial-gradient(ellipse 65% 50% at 30% 40%, rgba(255, 77, 36, 0.045), transparent 65%),
+      var(--bg);
+  }
+
+  .config-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.3fr) minmax(340px, 0.7fr);
+    gap: 28px;
+    align-items: start;
+  }
+
+  .config-stage {
+    position: sticky;
+    top: 88px;
+    border-radius: var(--radius-lg);
+    background: radial-gradient(circle at 50% 35%, #181a21 0%, #0b0c10 85%);
+    border: 1px solid var(--line-strong);
+    overflow: hidden;
+    box-shadow: 0 32px 96px rgba(0, 0, 0, 0.55);
+  }
+
+  .config-stage-top {
+    padding: 18px 22px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    border-bottom: 1px solid var(--line);
+    background: rgba(7, 7, 9, 0.45);
+  }
+
+  .config-canvas-wrap {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    min-height: 360px;
+  }
+
+  #config-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+    cursor: pointer;
+  }
+
+  .config-stage-bottom {
+    padding: 16px 22px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 14px;
+    border-top: 1px solid var(--line);
+    background: rgba(7, 7, 9, 0.55);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--ink-dim);
+  }
+
+  .typing-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .typing-indicator .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #35d07f;
+    box-shadow: 0 0 10px rgba(53, 208, 127, 0.6);
+  }
+
+  .config-panel {
+    border-radius: var(--radius-lg);
+    background: var(--bg-elevated);
+    border: 1px solid var(--line);
+    padding: 26px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .cfg-group-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 12px;
+  }
+
+  .cfg-label {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+  }
+
+  .cfg-selected {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--ink);
+  }
+
+  .swatch-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+  }
+
+  .swatch-btn {
+    position: relative;
+    aspect-ratio: 1;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--line-strong);
+    padding: 4px;
+    display: grid;
+    place-items: center;
+    transition: transform 0.2s var(--ease-out), border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .swatch-btn:hover {
+    transform: translateY(-2px);
+    border-color: rgba(255, 255, 255, 0.45);
+  }
+
+  .swatch-btn.active {
+    border-color: var(--ink);
+    box-shadow: 0 0 0 2px var(--bg-elevated), 0 0 0 3.5px var(--accent);
+  }
+
+  .swatch-fill {
+    width: 100%;
+    height: 100%;
+    border-radius: 6px;
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.25), inset 0 -2px 6px rgba(0, 0, 0, 0.4);
+  }
+
+  .option-cards {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .opt-card {
+    text-align: left;
+    padding: 12px 13px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--line);
+    background: var(--bg-card);
+    transition: border-color 0.2s ease, background 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .opt-card:hover {
+    border-color: var(--line-strong);
+    background: rgba(255, 255, 255, 0.035);
+  }
+
+  .opt-card.active {
+    border-color: var(--accent);
+    background: rgba(255, 77, 36, 0.09);
+  }
+
+  .opt-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+  }
+
+  .opt-card-sub {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    color: var(--ink-dim);
+  }
+
+  .keycap-preview-dots {
+    display: inline-flex;
+    gap: 3px;
+  }
+
+  .keycap-preview-dots i {
+    width: 9px;
+    height: 9px;
+    border-radius: 2px;
+    display: block;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+  }
+
+  .opt-pills {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+
+  .opt-pill {
+    padding: 10px 8px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--line);
+    background: var(--bg-card);
+    text-align: center;
+    transition: all 0.2s ease;
+  }
+
+  .opt-pill:hover {
+    border-color: var(--line-strong);
+  }
+
+  .opt-pill.active {
+    border-color: var(--accent);
+    background: rgba(255, 77, 36, 0.1);
+  }
+
+  .opt-pill-name {
+    font-size: 0.78rem;
+    font-weight: 500;
+    display: block;
+  }
+
+  .opt-pill-meta {
+    font-family: var(--font-mono);
+    font-size: 0.625rem;
+    color: var(--ink-muted);
+    margin-top: 2px;
+    display: block;
+  }
+
+  .cfg-summary {
+    padding-top: 20px;
+    border-top: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .cfg-price-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+
+  .cfg-sku {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--ink-dim);
+    letter-spacing: 0.08em;
+  }
+
+  .cfg-price {
+    font-family: var(--font-mono);
+    font-size: 2rem;
+    font-weight: 600;
+    letter-spacing: -0.03em;
+  }
+
+  .cfg-meta-row {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    color: var(--ink-muted);
+  }
+
+  /* ==================== FOOTER ==================== */
+  .footer {
+    padding: 56px 0 48px;
+    background: #050507;
+  }
+
+  .footer-inner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 24px;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--ink-muted);
+  }
+
+  .footer-links {
+    display: flex;
+    gap: 24px;
+  }
+
+  .footer-links a:hover {
+    color: var(--ink);
+  }
+
+  /* ==================== RESERVATION MODAL ==================== */
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    background: rgba(4, 4, 6, 0.78);
+    backdrop-filter: blur(14px);
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+  }
+
+  .modal-backdrop.open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .modal-card {
+    width: 100%;
+    max-width: 520px;
+    border-radius: var(--radius-lg);
+    background: var(--bg-elevated);
+    border: 1px solid var(--line-strong);
+    padding: 32px;
+    transform: translateY(16px) scale(0.98);
+    transition: transform 0.3s var(--ease-out);
+    box-shadow: 0 40px 120px rgba(0, 0, 0, 0.8);
+  }
+
+  .modal-backdrop.open .modal-card {
+    transform: translateY(0) scale(1);
+  }
+
+  .modal-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    gap: 16px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .modal-close {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 1px solid var(--line-strong);
+    display: grid;
+    place-items: center;
+    color: var(--ink-dim);
+  }
+
+  .modal-close:hover {
+    color: var(--ink);
+    border-color: var(--ink);
+  }
+
+  .modal-rows {
+    margin: 18px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+  }
+
+  .modal-row {
+    display: flex;
+    justify-content: space-between;
+    color: var(--ink-dim);
+  }
+
+  .modal-row strong {
+    color: var(--ink);
+    font-weight: 500;
+  }
+
+  .modal-total {
+    padding-top: 14px;
+    border-top: 1px solid var(--line);
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-family: var(--font-mono);
+    margin-bottom: 22px;
+  }
+
+  .modal-total span {
+    font-size: 0.75rem;
+    color: var(--ink-muted);
+    letter-spacing: 0.1em;
+  }
+
+  .modal-total strong {
+    font-size: 1.6rem;
+    color: var(--ink);
+  }
+
+  .modal-status {
+    display: none;
+    margin-top: 14px;
+    padding: 12px 14px;
+    border-radius: var(--radius-md);
+    background: rgba(53, 208, 127, 0.12);
+    border: 1px solid rgba(53, 208, 127, 0.35);
+    color: #9ff2c4;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    line-height: 1.5;
+  }
+
+  .modal-status.show {
+    display: block;
+  }
+
+  /* ==================== RESPONSIVE ==================== */
+  @media (max-width: 1080px) {
+    .nav-links, .nav-telemetry { display: none; }
+    .hero-bottom { grid-template-columns: repeat(2, 1fr); }
+    .scroll-cue { display: none; }
+    .section-head { grid-template-columns: 1fr; }
+    .section-desc { justify-self: start; }
+    .story-section { height: auto; }
+    .story-sticky { position: relative; top: 0; height: auto; padding: 64px 0; }
+    .story-grid { grid-template-columns: 1fr; max-height: none; }
+    .story-visual-wrap { height: 420px; }
+    .spec-layout { grid-template-columns: 1fr; }
+    .wireframe-card { min-height: 480px; }
+    .config-grid { grid-template-columns: 1fr; }
+    .config-stage { position: relative; top: 0; }
+  }
+
+  @media (max-width: 640px) {
+    .split-frame { aspect-ratio: 4 / 3; min-height: 320px; }
+    .option-cards { grid-template-columns: 1fr; }
+    .swatch-grid { grid-template-columns: repeat(5, 1fr); }
+    .hero-coords { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="scroll-progress-bar" id="scroll-progress"></div>
+
+<!-- ==================== NAVIGATION ==================== -->
+<header class="nav">
+  <div class="nav-inner">
+    <a href="#hero" class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <rect x="1.5" y="1.5" width="21" height="21" rx="4" stroke="rgba(243,241,236,0.35)" stroke-width="1.2"/>
+          <path d="M4.5 16.5C7 11.5 9.5 13 12 9.5C14.5 6 16.8 9.2 19.5 7.5" stroke="#ff4d24" stroke-width="1.6" stroke-linecap="round"/>
+          <path d="M4.5 19.2C7.2 14.8 9.6 16 12.2 13C14.8 10 17 12.6 19.5 11.2" stroke="#f3f1ec" stroke-width="1.2" stroke-linecap="round" opacity="0.7"/>
+        </svg>
+      </span>
+      STRATA 65
+    </a>
+
+    <nav aria-label="Primary">
+      <ul class="nav-links">
+        <li><a href="#story">Architecture</a></li>
+        <li><a href="#comparison">Acoustics</a></li>
+        <li><a href="#specs">Blueprints</a></li>
+        <li><a href="#configurator">Configure</a></li>
+      </ul>
+    </nav>
+
+    <div class="nav-right">
+      <div class="nav-telemetry" id="nav-elev">ELEV 000.0m</div>
+      <a href="#configurator" class="btn btn-primary btn-sm">Reserve — <span id="nav-price">$480</span></a>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- ==================== 1. WEBGL2 TOPOGRAPHIC SHADER HERO ==================== -->
+  <section class="hero" id="hero">
+    <canvas id="hero-canvas" aria-label="Interactive WebGL2 topographic elevation field"></canvas>
+    <div class="hero-vignette"></div>
+
+    <div class="container hero-content">
+      <div class="hero-top-bar">
+        <span class="eyebrow">Batch 01 // 500 Numbered Units</span>
+        <div class="hero-coords" aria-hidden="true">
+          <span>X <b id="hud-x">000.0</b></span>
+          <span>Y <b id="hud-y">000.0</b></span>
+          <span>CONTOUR <b id="hud-z">+14.2mm</b></span>
+        </div>
+      </div>
+
+      <div class="hero-center">
+        <div class="eyebrow">Atelier Kronos · CNC 6063-T6 Billet</div>
+        <h1 class="hero-title">
+          MILLED FROM<br>
+          <span class="stroke">SILENCE.</span>
+        </h1>
+        <p class="hero-sub">
+          STRATA 65 is a 2.42 kg monolithic 65% mechanical instrument carved from solid aerospace billet, suspended on silicone leaf springs, and tuned with a five-layer acoustic topography.
+        </p>
+        <div class="hero-actions">
+          <a href="#configurator" class="btn btn-accent">
+            Configure Edition 01
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+          <a href="#story" class="btn btn-ghost">Explore 4-Stage Engineering</a>
+        </div>
+      </div>
+
+      <div class="hero-bottom">
+        <div class="hero-metric">
+          <span class="hero-metric-val">2,420 g</span>
+          <span class="hero-metric-label">Unbuilt Chassis Mass</span>
+        </div>
+        <div class="hero-metric">
+          <span class="hero-metric-val">6.5° / 18.2mm</span>
+          <span class="hero-metric-label">Typing Angle &amp; Chin</span>
+        </div>
+        <div class="hero-metric">
+          <span class="hero-metric-val">8,000 Hz</span>
+          <span class="hero-metric-label">True USB-C Polling</span>
+        </div>
+        <div class="hero-metric">
+          <span class="hero-metric-val">44.1 dBA</span>
+          <span class="hero-metric-label">Tuned Acoustic Floor</span>
+        </div>
+        <div class="scroll-cue">
+          <span>Scroll</span>
+          <span class="scroll-cue-line"></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== 2. PINNED 4-STAGE SCROLLYTELLING ==================== -->
+  <section class="story-section" id="story" aria-label="Four-stage engineering scrollytelling">
+    <div class="story-sticky">
+      <div class="container">
+        <div class="story-grid">
+          <div class="story-left">
+            <div>
+              <span class="eyebrow">Engineering Breakdown</span>
+              <div class="story-steps-nav" role="tablist" aria-label="Engineering stages">
+                <button class="story-step-btn active" data-stage="0" role="tab" aria-selected="true">
+                  <span class="story-step-num">01</span>
+                  <span class="story-step-name">Monoblock CNC Chassis</span>
+                  <span class="story-step-tag">6063-T6</span>
+                </button>
+                <button class="story-step-btn" data-stage="1" role="tab" aria-selected="false">
+                  <span class="story-step-num">02</span>
+                  <span class="story-step-name">Five-Layer Acoustic Strata</span>
+                  <span class="story-step-tag">Dampening</span>
+                </button>
+                <button class="story-step-btn" data-stage="2" role="tab" aria-selected="false">
+                  <span class="story-step-num">03</span>
+                  <span class="story-step-name">Leaf-Spring Suspension</span>
+                  <span class="story-step-tag">2.2mm Flex</span>
+                </button>
+                <button class="story-step-btn" data-stage="3" role="tab" aria-selected="false">
+                  <span class="story-step-num">04</span>
+                  <span class="story-step-name">Brass Acoustic Core</span>
+                  <span class="story-step-tag">940g C36000</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="story-narrative">
+              <h2 class="story-stage-title" id="story-title">Monoblock 5-Axis CNC Chassis</h2>
+              <p class="story-stage-body" id="story-body">
+                Machined for 7.5 hours from a single 6.8 kg ingot of 6063-T6 architectural aluminum. Zero exposed fasteners on the exterior; invisible internal alignment pins hold tolerances to ±0.02 mm.
+              </p>
+              <div class="story-telemetry">
+                <div class="story-tel-box">
+                  <div class="story-tel-label" id="story-m1-k">Machining Tolerance</div>
+                  <div class="story-tel-val" id="story-m1-v">±0.02 mm</div>
+                </div>
+                <div class="story-tel-box">
+                  <div class="story-tel-label" id="story-m2-k">Cycle Time</div>
+                  <div class="story-tel-val" id="story-m2-v">450 min / unit</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="story-visual-wrap">
+            <div class="story-visual-hud">
+              <span id="story-hud-left">CAD VIEW // STAGE 01 — BILLET HOUSING</span>
+              <span id="story-hud-right">ISO 35.26° · Z-EXPLODE 0%</span>
+            </div>
+            <canvas id="story-canvas" aria-label="Interactive four-stage keyboard architecture diagram"></canvas>
+            <div class="story-rail">
+              <span class="mono" style="font-size:0.65rem;color:var(--ink-muted);" id="story-pct">00%</span>
+              <div class="story-rail-track"><div class="story-rail-fill" id="story-rail-fill"></div></div>
+              <span class="mono" style="font-size:0.65rem;color:var(--ink-dim);" id="story-index">01 / 04</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== 3. BEFORE / AFTER SPLIT SLIDER ==================== -->
+  <section class="comparison-section section-pad" id="comparison">
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <span class="eyebrow">Surface &amp; Acoustic Transformation</span>
+          <h2 class="section-title">From raw billet ping<br>to damped velvet thock.</h2>
+        </div>
+        <p class="section-desc">
+          Drag the divider to inspect the transformation from unfinished CNC toolpaths and hollow tray resonance to STRATA 65’s micro-bead blasted anodized finish and five-layer acoustic stack.
+        </p>
+      </div>
+
+      <div class="split-frame" id="split-frame" tabindex="0" role="slider" aria-label="Before and after keyboard comparison slider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50">
+        <div class="split-badge split-badge-left">
+          <span class="split-badge-dot" style="background:#8a94a6"></span>
+          BEFORE · Raw Milled / Hollow Tray
+        </div>
+        <div class="split-badge split-badge-right">
+          <span class="split-badge-dot" style="background:#ff4d24"></span>
+          AFTER · STRATA 65 Tuned Edition
+        </div>
+
+        <div class="split-layer split-after">
+          <canvas id="split-after-canvas"></canvas>
+        </div>
+        <div class="split-layer split-before">
+          <canvas id="split-before-canvas"></canvas>
+        </div>
+
+        <div class="split-divider"></div>
+        <div class="split-handle" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <path d="M7 5L2.5 10L7 15M13 5L17.5 10L13 15" stroke="#f3f1ec" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      </div>
+
+      <div class="split-controls-bar">
+        <div class="acoustic-compare-group">
+          <button class="sound-pill" id="btn-sound-before" type="button">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 6v4h3l4 3V3L6 6H3zM12.5 5.5a4 4 0 010 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Audition Before (Hollow Ping)
+          </button>
+          <button class="sound-pill" id="btn-sound-after" type="button">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 6v4h3l4 3V3L6 6H3zM12.5 5.5a4 4 0 010 5M14.2 3.8a6.5 6.5 0 010 8.4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Audition STRATA 65 (Tuned Thock)
+          </button>
+        </div>
+        <div class="split-metrics-row">
+          <span>Peak Resonance: <strong>4.1 kHz → 280 Hz</strong></span>
+          <span>Noise Floor: <strong>62.4 → 44.1 dBA</strong></span>
+          <span>Surface Grit: <strong>220-Mesh Glass Bead</strong></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== 4. 3D WIREFRAME SPEC CARD (WEBGL2) ==================== -->
+  <section class="spec-section section-pad" id="specs">
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <span class="eyebrow">Interactive Blueprint · WebGL2</span>
+          <h2 class="section-title">Inspect every millimeter<br>in real-time 3D.</h2>
+        </div>
+        <p class="section-desc">
+          Drag to orbit the true-scale 67-key STRATA 65 wireframe chassis. Switch camera projections or inspect internal depth and topographic elevation contours.
+        </p>
+      </div>
+
+      <div class="spec-layout">
+        <div class="wireframe-card" id="wireframe-card">
+          <canvas id="wireframe-canvas" aria-label="Interactive 3D WebGL2 wireframe keyboard blueprint"></canvas>
+
+          <!-- Live 3D-projected CAD callouts -->
+          <div class="wf-callout" id="wf-call-w">318.4 mm</div>
+          <div class="wf-callout" id="wf-call-d">114.2 mm</div>
+          <div class="wf-callout" id="wf-call-h">18.2 mm CHIN</div>
+          <div class="wf-callout" id="wf-call-a">6.5° SLOPE</div>
+
+          <div class="wireframe-topbar">
+            <div class="mono" style="font-size:0.6875rem;color:var(--ink-dim);letter-spacing:0.12em;">
+              CAD-01 // 67-KEY 65% BLOCKER LAYOUT
+            </div>
+            <div class="wf-mode-group" role="group" aria-label="Render mode">
+              <button class="wf-mode-btn active" data-wf-mode="0">Wireframe</button>
+              <button class="wf-mode-btn" data-wf-mode="1">X-Ray</button>
+              <button class="wf-mode-btn" data-wf-mode="2">Elevation</button>
+            </div>
+          </div>
+
+          <div class="wireframe-bottombar">
+            <div class="wf-camera-presets">
+              <button class="wf-preset-btn active" data-wf-view="iso">ISO 3/4</button>
+              <button class="wf-preset-btn" data-wf-view="top">TOP PLAN</button>
+              <button class="wf-preset-btn" data-wf-view="side">SIDE 6.5°</button>
+              <button class="wf-preset-btn" data-wf-view="bottom">BRASS CORE</button>
+            </div>
+            <div class="mono" style="font-size:0.6875rem;color:var(--ink-muted);" id="wf-angles">
+              YAW 034° · PITCH 026° · DRAG TO ORBIT
+            </div>
+          </div>
+        </div>
+
+        <aside class="spec-table-card">
+          <div>
+            <div class="spec-table-head">
+              <span class="eyebrow">Technical Sheet</span>
+              <span class="mono" style="font-size:0.6875rem;color:var(--ink-muted);">REV 1.04</span>
+            </div>
+
+            <ul class="spec-list">
+              <li><span class="spec-k">Layout</span><span class="spec-v">65% ANSI · 67 Keys + 0.5u Blocker</span></li>
+              <li><span class="spec-k">Footprint</span><span class="spec-v">318.4 × 114.2 × 18.2–31.1 mm</span></li>
+              <li><span class="spec-k">Typing Angle</span><span class="spec-v">6.5° Ergonomic Wedge</span></li>
+              <li><span class="spec-k">Chassis</span><span class="spec-v">CNC 6063-T6 Billet Aluminum</span></li>
+              <li><span class="spec-k">Acoustic Core</span><span class="spec-v">940 g C36000 Sandblasted Brass</span></li>
+              <li><span class="spec-k">Suspension</span><span class="spec-v">8-Point Silicone Leaf-Spring</span></li>
+              <li><span class="spec-k">PCB &amp; MCU</span><span class="spec-v">1.6mm Flex-Cut · ARM Cortex-M4</span></li>
+              <li><span class="spec-k">Firmware</span><span class="spec-v">QMK / VIA Open-Source Ready</span></li>
+              <li><span class="spec-k">Polling Rate</span><span class="spec-v">8,000 Hz Wired / 1,000 Hz 2.4G</span></li>
+            </ul>
+          </div>
+
+          <div class="spec-cert">
+            INCLUDED IN EDITION 01 CRATE:<br>
+            Machined brass artisan badge · Braided coiled LEMO-style cable · Custom molded EVA travel case · Individual frequency-response calibration card.
+          </div>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== 5. LIVE COLOR CONFIGURATOR ==================== -->
+  <section class="config-section section-pad" id="configurator">
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <span class="eyebrow">Atelier Studio · Live Build</span>
+          <h2 class="section-title">Compose your<br>STRATA 65.</h2>
+        </div>
+        <p class="section-desc">
+          Tailor the chassis anodization, double-shot PBT keycaps, solid acoustic core, and switch architecture. Click any key on the preview — or type on your keyboard — to audition your build live.
+        </p>
+      </div>
+
+      <div class="config-grid">
+        <div class="config-stage">
+          <div class="config-stage-top">
+            <div class="wf-mode-group" role="group" aria-label="Studio camera view">
+              <button class="wf-mode-btn active" data-cfg-view="top">Top Studio</button>
+              <button class="wf-mode-btn" data-cfg-view="profile">Side 6.5°</button>
+              <button class="wf-mode-btn" data-cfg-view="rear">Rear Weight</button>
+            </div>
+            <button class="sound-pill" id="cfg-test-sound" type="button" style="padding:6px 13px;font-size:0.65rem;">
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M3 6v4h3l4 3V3L6 6H3zM12.5 5.5a4 4 0 010 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+              Play Key Riff
+            </button>
+          </div>
+
+          <div class="config-canvas-wrap">
+            <canvas id="config-canvas" aria-label="Live interactive keyboard configurator preview"></canvas>
+          </div>
+
+          <div class="config-stage-bottom">
+            <div class="typing-indicator">
+              <span class="dot"></span>
+              <span id="cfg-key-readout">CLICK ANY KEY OR TYPE TO AUDITION SWITCHES</span>
+            </div>
+            <span id="cfg-weight-readout">EST. MASS 2,420 g</span>
+          </div>
+        </div>
+
+        <div class="config-panel">
+          <!-- Chassis Color -->
+          <div>
+            <div class="cfg-group-head">
+              <span class="cfg-label">01 · Chassis Finish</span>
+              <span class="cfg-selected" id="lbl-case">Obsidian Matte · Included</span>
+            </div>
+            <div class="swatch-grid" id="case-swatches"></div>
+          </div>
+
+          <!-- Keycaps -->
+          <div>
+            <div class="cfg-group-head">
+              <span class="cfg-label">02 · Double-Shot PBT Keycaps</span>
+              <span class="cfg-selected" id="lbl-keycap">Carbon Stealth</span>
+            </div>
+            <div class="option-cards" id="keycap-options"></div>
+          </div>
+
+          <!-- Weight Finish -->
+          <div>
+            <div class="cfg-group-head">
+              <span class="cfg-label">03 · Acoustic Weight &amp; Badge</span>
+              <span class="cfg-selected" id="lbl-weight">Sandblasted Brass · Included</span>
+            </div>
+            <div class="option-cards" id="weight-options"></div>
+          </div>
+
+          <!-- Switches -->
+          <div>
+            <div class="cfg-group-head">
+              <span class="cfg-label">04 · Switch Architecture</span>
+              <span class="cfg-selected" id="lbl-switch">Strata Linear 45g</span>
+            </div>
+            <div class="opt-pills" id="switch-options"></div>
+          </div>
+
+          <!-- Plate -->
+          <div>
+            <div class="cfg-group-head">
+              <span class="cfg-label">05 · Acoustic Plate</span>
+              <span class="cfg-selected" id="lbl-plate">Polycarbonate · Flexy</span>
+            </div>
+            <div class="opt-pills" id="plate-options"></div>
+          </div>
+
+          <!-- Summary -->
+          <div class="cfg-summary">
+            <div class="cfg-price-row">
+              <div>
+                <div class="cfg-label">Build Specification</div>
+                <div class="cfg-sku" id="cfg-sku">STR65-OBS-CAR-BRS-LIN-PC</div>
+              </div>
+              <div class="cfg-price" id="cfg-price">$480</div>
+            </div>
+            <div class="cfg-meta-row">
+              <span>BATCH 01 · SHIPS Q1 2027</span>
+              <span>LIFETIME CHASSIS WARRANTY</span>
+            </div>
+            <button class="btn btn-accent" id="btn-reserve" type="button" style="width:100%;padding:15px 22px;font-size:0.875rem;">
+              Reserve Custom Build
+              <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- ==================== FOOTER ==================== -->
+<footer class="footer">
+  <div class="container footer-inner">
+    <div>
+      <strong style="color:var(--ink);letter-spacing:0.14em;">ATELIER KRONOS // STRATA 65</strong>
+      <span style="margin-left:14px;">EDITION 01 · ALL VISUALS &amp; ACOUSTICS SYNTHESIZED LOCALLY</span>
+    </div>
+    <div class="footer-links">
+      <a href="#hero">Top</a>
+      <a href="#story">Architecture</a>
+      <a href="#comparison">Acoustics</a>
+      <a href="#specs">Blueprints</a>
+      <a href="#configurator">Configure</a>
+    </div>
+  </div>
+</footer>
+
+<!-- ==================== RESERVATION MODAL ==================== -->
+<div class="modal-backdrop" id="reserve-modal" aria-hidden="true">
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal-head">
+      <div>
+        <span class="eyebrow">Batch 01 Allocation</span>
+        <h3 id="modal-title" style="font-size:1.5rem;margin-top:8px;letter-spacing:-0.025em;">STRATA 65 Reservation</h3>
+      </div>
+      <button class="modal-close" id="modal-close" aria-label="Close modal">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 2l10 10M12 2L2 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+
+    <div class="modal-rows" id="modal-summary-rows"></div>
+
+    <div class="modal-total">
+      <span>ESTIMATED TOTAL (USD)</span>
+      <strong id="modal-total-price">$480</strong>
+    </div>
+
+    <button class="btn btn-accent" id="modal-confirm-btn" type="button" style="width:100%;padding:14px;">
+      Lock Serial Number Allocation
+    </button>
+    <div class="modal-status" id="modal-status"></div>
+  </div>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  /* =========================================================================
+     SHARED 67-KEY 65% BLOCKER LAYOUT DEFINITION
+     Total width per row = 16.0 units (exact luxury custom 65% geometry)
+  ========================================================================= */
+  const LAYOUT_65 = [
+    // Row 0
+    [
+      { l: 'ESC', w: 1, role: 'accent', code: 'Escape' },
+      { l: '1', w: 1, code: 'Digit1' }, { l: '2', w: 1, code: 'Digit2' }, { l: '3', w: 1, code: 'Digit3' },
+      { l: '4', w: 1, code: 'Digit4' }, { l: '5', w: 1, code: 'Digit5' }, { l: '6', w: 1, code: 'Digit6' },
+      { l: '7', w: 1, code: 'Digit7' }, { l: '8', w: 1, code: 'Digit8' }, { l: '9', w: 1, code: 'Digit9' },
+      { l: '0', w: 1, code: 'Digit0' }, { l: '-', w: 1, code: 'Minus' }, { l: '=', w: 1, code: 'Equal' },
+      { l: 'BKSP', w: 2, role: 'mod', code: 'Backspace' },
+      { l: 'DEL', w: 1, role: 'mod', code: 'Delete' }
+    ],
+    // Row 1
+    [
+      { l: 'TAB', w: 1.5, role: 'mod', code: 'Tab' },
+      { l: 'Q', w: 1, code: 'KeyQ' }, { l: 'W', w: 1, code: 'KeyW' }, { l: 'E', w: 1, code: 'KeyE' },
+      { l: 'R', w: 1, code: 'KeyR' }, { l: 'T', w: 1, code: 'KeyT' }, { l: 'Y', w: 1, code: 'KeyY' },
+      { l: 'U', w: 1, code: 'KeyU' }, { l: 'I', w: 1, code: 'KeyI' }, { l: 'O', w: 1, code: 'KeyO' },
+      { l: 'P', w: 1, code: 'KeyP' }, { l: '[', w: 1, code: 'BracketLeft' }, { l: ']', w: 1, code: 'BracketRight' },
+      { l: '\\', w: 1.5, role: 'mod', code: 'Backslash' },
+      { l: 'PGUP', w: 1, role: 'mod', code: 'PageUp' }
+    ],
+    // Row 2
+    [
+      { l: 'CAPS', w: 1.75, role: 'mod', code: 'CapsLock' },
+      { l: 'A', w: 1, code: 'KeyA' }, { l: 'S', w: 1, code: 'KeyS' }, { l: 'D', w: 1, code: 'KeyD' },
+      { l: 'F', w: 1, code: 'KeyF' }, { l: 'G', w: 1, code: 'KeyG' }, { l: 'H', w: 1, code: 'KeyH' },
+      { l: 'J', w: 1, code: 'KeyJ' }, { l: 'K', w: 1, code: 'KeyK' }, { l: 'L', w: 1, code: 'KeyL' },
+      { l: ';', w: 1, code: 'Semicolon' }, { l: "'", w: 1, code: 'Quote' },
+      { l: 'ENTER', w: 2.25, role: 'accent', code: 'Enter' },
+      { l: 'PGDN', w: 1, role: 'mod', code: 'PageDown' }
+    ],
+    // Row 3
+    [
+      { l: 'SHIFT', w: 2.25, role: 'mod', code: 'ShiftLeft' },
+      { l: 'Z', w: 1, code: 'KeyZ' }, { l: 'X', w: 1, code: 'KeyX' }, { l: 'C', w: 1, code: 'KeyC' },
+      { l: 'V', w: 1, code: 'KeyV' }, { l: 'B', w: 1, code: 'KeyB' }, { l: 'N', w: 1, code: 'KeyN' },
+      { l: 'M', w: 1, code: 'KeyM' }, { l: ',', w: 1, code: 'Comma' }, { l: '.', w: 1, code: 'Period' },
+      { l: '/', w: 1, code: 'Slash' },
+      { l: 'SHIFT', w: 1.75, role: 'mod', code: 'ShiftRight' },
+      { l: '↑', w: 1, role: 'arrow', code: 'ArrowUp' },
+      { l: 'END', w: 1, role: 'mod', code: 'End' }
+    ],
+    // Row 4 (with signature 0.5u blocker before arrows)
+    [
+      { l: 'CTRL', w: 1.25, role: 'mod', code: 'ControlLeft' },
+      { l: 'OPT', w: 1.25, role: 'mod', code: 'AltLeft' },
+      { l: 'CMD', w: 1.25, role: 'mod', code: 'MetaLeft' },
+      { l: '', w: 6.25, role: 'space', code: 'Space' },
+      { l: 'CMD', w: 1.25, role: 'mod', code: 'MetaRight' },
+      { l: 'FN', w: 1.25, role: 'mod', code: 'AltRight' },
+      { l: '', w: 0.5, role: 'blocker', code: null },
+      { l: '←', w: 1, role: 'arrow', code: 'ArrowLeft' },
+      { l: '↓', w: 1, role: 'arrow', code: 'ArrowDown' },
+      { l: '→', w: 1, role: 'arrow', code: 'ArrowRight' }
+    ]
+  ];
+
+  // Flatten keys with exact unit positions (x in [0..16], y in [0..5])
+  const KEYS_FLAT = [];
+  LAYOUT_65.forEach((row, rIdx) => {
+    let cx = 0;
+    row.forEach((k) => {
+      if (k.role !== 'blocker') {
+        KEYS_FLAT.push({
+          ...k,
+          row: rIdx,
+          x: cx,
+          y: rIdx,
+          role: k.role || 'alpha'
+        });
+      }
+      cx += k.w;
+    });
+  });
+
+  /* =========================================================================
+     PROCEDURAL WEB AUDIO ACOUSTIC ENGINE (Zero external audio files)
+  ========================================================================= */
+  const SoundEngine = (() => {
+    let ctx = null;
+    function ensureCtx() {
+      if (!ctx) {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return null;
+        ctx = new AudioCtx();
+      }
+      if (ctx.state === 'suspended') ctx.resume();
+      return ctx;
+    }
+
+    function playKeystroke({ mode = 'strata', sw = 'linear', plate = 'pc', isSpace = false } = {}) {
+      const ac = ensureCtx();
+      if (!ac) return;
+      const now = ac.currentTime;
+
+      // Noise transient for bottom-out impact
+      const dur = mode === 'hollow' ? 0.14 : 0.085;
+      const buf = ac.createBuffer(1, Math.floor(ac.sampleRate * dur), ac.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i = 0; i < data.length; i++) {
+        const t = i / ac.sampleRate;
+        const env = Math.exp(-t * (mode === 'hollow' ? 42 : 75));
+        data[i] = (Math.random() * 2 - 1) * env;
+      }
+
+      const noise = ac.createBufferSource();
+      noise.buffer = buf;
+
+      const bp = ac.createBiquadFilter();
+      bp.type = 'bandpass';
+      const baseNoiseFreq =
+        mode === 'hollow' ? 3200 :
+        sw === 'tactile' ? 1450 :
+        sw === 'silent' ? 520 : 920;
+      const plateMult = plate === 'brass' ? 1.28 : plate === 'fr4' ? 1.08 : 0.88;
+      bp.frequency.setValueAtTime(baseNoiseFreq * plateMult * (isSpace ? 0.78 : 1) * (0.94 + Math.random() * 0.12), now);
+      bp.Q.value = mode === 'hollow' ? 3.5 : 1.3;
+
+      const noiseGain = ac.createGain();
+      const vol = sw === 'silent' && mode !== 'hollow' ? 0.16 : 0.42;
+      noiseGain.gain.setValueAtTime(vol, now);
+      noiseGain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+
+      noise.connect(bp);
+      bp.connect(noiseGain);
+      noiseGain.connect(ac.destination);
+      noise.start(now);
+
+      // Body cavity resonance
+      const osc = ac.createOscillator();
+      const oscGain = ac.createGain();
+      if (mode === 'hollow') {
+        // Metallic high-Q ping
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(3850 + Math.random() * 350, now);
+        osc.frequency.exponentialRampToValueAtTime(2900, now + 0.13);
+        oscGain.gain.setValueAtTime(0.18, now);
+        oscGain.gain.exponentialRampToValueAtTime(0.0008, now + 0.14);
+      } else {
+        // Deep damped acoustic thock
+        osc.type = 'sine';
+        const f0 = (isSpace ? 195 : 275) * (plate === 'brass' ? 1.2 : plate === 'fr4' ? 1.05 : 0.92);
+        osc.frequency.setValueAtTime(f0 * (0.96 + Math.random() * 0.08), now);
+        osc.frequency.exponentialRampToValueAtTime(82, now + 0.065);
+        oscGain.gain.setValueAtTime(sw === 'silent' ? 0.14 : 0.36, now);
+        oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+      }
+      osc.connect(oscGain);
+      oscGain.connect(ac.destination);
+      osc.start(now);
+      osc.stop(now + (mode === 'hollow' ? 0.15 : 0.08));
+
+      // Subtle tactile bump click
+      if (mode !== 'hollow' && sw === 'tactile') {
+        const click = ac.createOscillator();
+        const cg = ac.createGain();
+        click.type = 'sine';
+        click.frequency.setValueAtTime(1950, now);
+        click.frequency.exponentialRampToValueAtTime(600, now + 0.015);
+        cg.gain.setValueAtTime(0.16, now);
+        cg.gain.exponentialRampToValueAtTime(0.001, now + 0.018);
+        click.connect(cg);
+        cg.connect(ac.destination);
+        click.start(now);
+        click.stop(now + 0.02);
+      }
+    }
+
+    function playRiff(opts, onTick) {
+      const pattern = [0, 95, 185, 290, 385, 505, 595, 720];
+      pattern.forEach((ms, idx) => {
+        setTimeout(() => {
+          playKeystroke({ ...opts, isSpace: idx === 4 || idx === 7 });
+          if (onTick) onTick(idx);
+        }, ms);
+      });
+    }
+
+    return { playKeystroke, playRiff };
+  })();
+
+  /* =========================================================================
+     GLOBAL SCROLL PROGRESS & NAV TELEMETRY
+  ========================================================================= */
+  const scrollProgressEl = document.getElementById('scroll-progress');
+  const navElevEl = document.getElementById('nav-elev');
+  const navLinks = Array.from(document.querySelectorAll('.nav-links a'));
+  const navSections = navLinks.map(a => document.querySelector(a.getAttribute('href')));
+
+  let globalScrollY = window.scrollY;
+  function updateGlobalScroll() {
+    globalScrollY = window.scrollY;
+    const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+    const ratio = Math.min(1, Math.max(0, globalScrollY / maxScroll));
+    scrollProgressEl.style.width = (ratio * 100).toFixed(2) + '%';
+    navElevEl.textContent = `ELEV ${(ratio * 420).toFixed(1).padStart(5, '0')}m`;
+
+    // Active nav highlight
+    let activeIdx = -1;
+    navSections.forEach((sec, i) => {
+      if (sec && sec.getBoundingClientRect().top <= window.innerHeight * 0.42) activeIdx = i;
+    });
+    navLinks.forEach((a, i) => a.classList.toggle('active', i === activeIdx));
+  }
+  window.addEventListener('scroll', updateGlobalScroll, { passive: true });
+  updateGlobalScroll();
+
+  /* =========================================================================
+     1. WEBGL2 TOPOGRAPHIC SHADER HERO
+  ========================================================================= */
+  function initHeroWebGL2() {
+    const canvas = document.getElementById('hero-canvas');
+    const gl = canvas.getContext('webgl2', { antialias: false, alpha: false, powerPreference: 'high-performance' });
+    if (!gl) {
+      canvas.style.background = 'radial-gradient(circle at 50% 40%, #1a1b22, #070709)';
+      return;
+    }
+
+    const vsSrc = `#version 300 es
+      precision highp float;
+      const vec2 POS[3] = vec2[3](vec2(-1.0, -1.0), vec2(3.0, -1.0), vec2(-1.0, 3.0));
+      void main() {
+        gl_Position = vec4(POS[gl_VertexID], 0.0, 1.0);
+      }
+    `;
+
+    const fsSrc = `#version 300 es
+      precision highp float;
+
+      uniform vec2 u_res;
+      uniform float u_time;
+      uniform vec2 u_mouse;
+      uniform float u_mouseAmt;
+      uniform float u_scroll;
+
+      out vec4 outColor;
+
+      // 2D Simplex Noise
+      vec3 permute(vec3 x) { return mod(((x * 34.0) + 1.0) * x, 289.0); }
+
+      float snoise(vec2 v) {
+        const vec4 C = vec4(0.211324865405187, 0.366025403784439,
+                           -0.577350269189626, 0.024390243902439);
+        vec2 i  = floor(v + dot(v, C.yy));
+        vec2 x0 = v - i + dot(i, C.xx);
+        vec2 i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
+        vec4 x12 = x0.xyxy + C.xxzz;
+        x12.xy -= i1;
+        i = mod(i, 289.0);
+        vec3 p = permute(permute(i.y + vec3(0.0, i1.y, 1.0)) + i.x + vec3(0.0, i1.x, 1.0));
+        vec3 m = max(0.5 - vec3(dot(x0, x0), dot(x12.xy, x12.xy), dot(x12.zw, x12.zw)), 0.0);
+        m = m * m;
+        m = m * m;
+        vec3 x = 2.0 * fract(p * C.www) - 1.0;
+        vec3 h = abs(x) - 0.5;
+        vec3 ox = floor(x + 0.5);
+        vec3 a0 = x - ox;
+        m *= 1.79284291400159 - 0.85373472095314 * (a0 * a0 + h * h);
+        vec3 g;
+        g.x  = a0.x * x0.x + h.x * x0.y;
+        g.yz = a0.yz * x12.xz + h.yz * x12.yw;
+        return 130.0 * dot(m, g);
+      }
+
+      float fbm(vec2 p) {
+        float val = 0.0;
+        float amp = 0.52;
+        mat2 rot = mat2(0.80, -0.60, 0.60, 0.80);
+        for (int i = 0; i < 5; i++) {
+          val += amp * snoise(p);
+          p = rot * p * 2.02 + vec2(1.7, 9.2);
+          amp *= 0.48;
+        }
+        return val;
+      }
+
+      float heightField(vec2 p, vec2 mp, float t) {
+        vec2 q = vec2(
+          fbm(p * 1.15 + vec2(t * 0.06, -t * 0.04)),
+          fbm(p * 1.15 + vec2(5.2 - t * 0.04, 1.3 + t * 0.05))
+        );
+        float h = fbm(p * 1.35 + q * 0.62 + vec2(0.0, u_scroll * 0.65));
+
+        // Architectural stepped terrace bias
+        h = h * 0.5 + 0.5;
+
+        // Interactive cursor acoustic wave + elevation lift
+        float d = length(p - mp);
+        float lift = exp(-d * d * 5.2) * 0.24 * u_mouseAmt;
+        float ripple = sin(d * 24.0 - t * 3.8) * exp(-d * 3.6) * 0.022 * u_mouseAmt;
+        return h + lift + ripple;
+      }
+
+      void main() {
+        float minDim = min(u_res.x, u_res.y);
+        vec2 p = (gl_FragCoord.xy - 0.5 * u_res) / minDim;
+        vec2 mp = (u_mouse * u_res - 0.5 * u_res) / minDim;
+        float t = u_time;
+
+        float h = heightField(p, mp, t);
+
+        // Analytical derivatives for razor-sharp anti-aliased topographic isolines
+        float levels = 26.0;
+        float v = h * levels;
+        float fw = max(fwidth(v), 0.0005);
+        float minorLine = 1.0 - smoothstep(0.0, fw * 1.3, abs(fract(v - 0.5) - 0.5));
+
+        float vMajor = h * (levels / 4.0);
+        float fwMajor = max(fwidth(vMajor), 0.0005);
+        float majorLine = 1.0 - smoothstep(0.0, fwMajor * 1.65, abs(fract(vMajor - 0.5) - 0.5));
+
+        // Subtle milled-obsidian surface relief shading via screen-space derivatives
+        vec3 nrm = normalize(vec3(-dFdx(h) * 32.0, -dFdy(h) * 32.0, 1.0));
+        vec3 lightDir = normalize(vec3(0.45, 0.55, 0.85));
+        float diff = clamp(dot(nrm, lightDir), 0.0, 1.0);
+
+        // Base dark anodized obsidian gradient
+        vec3 col = mix(vec3(0.025, 0.027, 0.035), vec3(0.068, 0.072, 0.088), h);
+        col += vec3(0.035, 0.038, 0.048) * pow(diff, 2.2);
+
+        // Cursor proximity warm anodized copper illumination
+        float md = length(p - mp);
+        float cursorGlow = exp(-md * md * 3.8) * u_mouseAmt;
+
+        // Topographic lines color blend
+        vec3 minorCol = mix(vec3(0.24, 0.26, 0.32), vec3(0.86, 0.44, 0.24), cursorGlow * 0.85);
+        vec3 majorCol = mix(vec3(0.56, 0.54, 0.50), vec3(1.0, 0.34, 0.16), clamp(cursorGlow * 1.15 + smoothstep(0.68, 0.92, h) * 0.45, 0.0, 1.0));
+
+        col = mix(col, minorCol, minorLine * (0.28 + cursorGlow * 0.35));
+        col = mix(col, majorCol, majorLine * (0.58 + cursorGlow * 0.38));
+
+        // Subtle architectural survey grid ticks
+        vec2 gridUV = fract(p * 6.0) - 0.5;
+        float gx = smoothstep(0.012, 0.002, abs(gridUV.x)) * smoothstep(0.07, 0.05, abs(gridUV.y));
+        float gy = smoothstep(0.012, 0.002, abs(gridUV.y)) * smoothstep(0.07, 0.05, abs(gridUV.x));
+        float crossMark = max(gx, gy);
+        col += vec3(0.35, 0.36, 0.42) * crossMark * 0.14;
+
+        // Subtle highlight glow around pointer
+        col += vec3(1.0, 0.32, 0.14) * exp(-md * md * 7.0) * 0.08 * u_mouseAmt;
+
+        // Fine dither grain to eliminate banding
+        float grain = fract(sin(dot(gl_FragCoord.xy + t * 17.0, vec2(12.9898, 78.233))) * 43758.5453);
+        col += (grain - 0.5) * 0.012;
+
+        outColor = vec4(col, 1.0);
+      }
+    `;
+
+    function compile(type, src) {
+      const sh = gl.createShader(type);
+      gl.shaderSource(sh, src);
+      gl.compileShader(sh);
+      if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) {
+        console.error(gl.getShaderInfoLog(sh));
+        return null;
+      }
+      return sh;
+    }
+
+    const vs = compile(gl.VERTEX_SHADER, vsSrc);
+    const fs = compile(gl.FRAGMENT_SHADER, fsSrc);
+    if (!vs || !fs) return;
+    const prog = gl.createProgram();
+    gl.attachShader(prog, vs);
+    gl.attachShader(prog, fs);
+    gl.linkProgram(prog);
+    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+      console.error(gl.getProgramInfoLog(prog));
+      return;
+    }
+
+    const uRes = gl.getUniformLocation(prog, 'u_res');
+    const uTime = gl.getUniformLocation(prog, 'u_time');
+    const uMouse = gl.getUniformLocation(prog, 'u_mouse');
+    const uMouseAmt = gl.getUniformLocation(prog, 'u_mouseAmt');
+    const uScroll = gl.getUniformLocation(prog, 'u_scroll');
+
+    const vao = gl.createVertexArray();
+    gl.bindVertexArray(vao);
+
+    let w = 0, h = 0;
+    function resize() {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const rect = canvas.getBoundingClientRect();
+      w = Math.max(1, Math.floor(rect.width * dpr));
+      h = Math.max(1, Math.floor(rect.height * dpr));
+      if (canvas.width !== w || canvas.height !== h) {
+        canvas.width = w;
+        canvas.height = h;
+        gl.viewport(0, 0, w, h);
+      }
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    let targetMX = 0.55, targetMY = 0.48;
+    let curMX = 0.55, curMY = 0.48;
+    let targetAmt = 0.55, curAmt = 0.55;
+
+    const hudX = document.getElementById('hud-x');
+    const hudY = document.getElementById('hud-y');
+    const hudZ = document.getElementById('hud-z');
+
+    const heroEl = document.getElementById('hero');
+    heroEl.addEventListener('pointermove', (e) => {
+      const rect = heroEl.getBoundingClientRect();
+      targetMX = (e.clientX - rect.left) / rect.width;
+      targetMY = 1.0 - (e.clientY - rect.top) / rect.height;
+      targetAmt = 1.0;
+      if (hudX) {
+        hudX.textContent = (targetMX * 318.4).toFixed(1).padStart(5, '0');
+        hudY.textContent = ((1 - targetMY) * 114.2).toFixed(1).padStart(5, '0');
+        const elev = (12.0 + Math.sin(targetMX * 7.3) * 4.2 + Math.cos(targetMY * 6.1) * 3.1).toFixed(1);
+        hudZ.textContent = `+${elev}mm`;
+      }
+    });
+    heroEl.addEventListener('pointerleave', () => {
+      targetAmt = 0.45;
+    });
+
+    let heroVisible = true;
+    new IntersectionObserver((entries) => {
+      heroVisible = entries[0].isIntersecting;
+    }, { threshold: 0.01 }).observe(heroEl);
+
+    const start = performance.now();
+    function frame(now) {
+      requestAnimationFrame(frame);
+      if (!heroVisible) return;
+
+      const t = (now - start) * 0.001;
+      curMX += (targetMX - curMX) * 0.075;
+      curMY += (targetMY - curMY) * 0.075;
+      curAmt += (targetAmt - curAmt) * 0.05;
+
+      const scrollNorm = Math.min(1.5, globalScrollY / Math.max(1, window.innerHeight));
+
+      gl.useProgram(prog);
+      gl.bindVertexArray(vao);
+      gl.uniform2f(uRes, w, h);
+      gl.uniform1f(uTime, t);
+      gl.uniform2f(uMouse, curMX, curMY);
+      gl.uniform1f(uMouseAmt, curAmt);
+      gl.uniform1f(uScroll, scrollNorm);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+    }
+    requestAnimationFrame(frame);
+  }
+
+  /* =========================================================================
+     2. PINNED FOUR-STAGE SCROLLYTELLING ENGINE
+  ========================================================================= */
+  function initScrollytelling() {
+    const section = document.getElementById('story');
+    const canvas = document.getElementById('story-canvas');
+    const ctx = canvas.getContext('2d');
+
+    const titleEl = document.getElementById('story-title');
+    const bodyEl = document.getElementById('story-body');
+    const m1k = document.getElementById('story-m1-k');
+    const m1v = document.getElementById('story-m1-v');
+    const m2k = document.getElementById('story-m2-k');
+    const m2v = document.getElementById('story-m2-v');
+    const hudLeft = document.getElementById('story-hud-left');
+    const hudRight = document.getElementById('story-hud-right');
+    const railFill = document.getElementById('story-rail-fill');
+    const pctEl = document.getElementById('story-pct');
+    const idxEl = document.getElementById('story-index');
+    const stepBtns = Array.from(document.querySelectorAll('.story-step-btn'));
+
+    const STAGES = [
+      {
+        title: 'Monoblock 5-Axis CNC Chassis',
+        body: 'Machined for 7.5 hours from a single 6.8 kg ingot of 6063-T6 architectural aluminum. Zero exposed exterior fasteners; invisible alignment dowels lock tolerances to ±0.02 mm.',
+        m1k: 'Machining Tolerance', m1v: '±0.02 mm',
+        m2k: 'CNC Cycle Time', m2v: '450 min / unit',
+        hud: 'CAD VIEW // STAGE 01 — BILLET HOUSING'
+      },
+      {
+        title: 'Five-Layer Acoustic Strata',
+        body: 'Sound travels through five calibrated impedance zones: double-shot PBT keycaps, 3.5 mm Poron plate foam, acoustic polycarbonate plate, 1.6 mm flex-cut PCB, and an IXPE + silicone floor.',
+        m1k: 'Acoustic Stack', m1v: '5 Tuned Layers',
+        m2k: 'High-Freq Absorption', m2v: '-18.3 dB @ 4kHz',
+        hud: 'CAD VIEW // STAGE 02 — EXPLODED STRATA'
+      },
+      {
+        title: 'Leaf-Spring Gasket Suspension',
+        body: 'Eight custom-molded 30A silicone leaf-spring tabs completely decouple the typing core from the aluminum enclosure, delivering 2.2 mm of buttery, uniform harmonic bounce across every row.',
+        m1k: 'Controlled Flex', m1v: '2.2 mm Uniform',
+        m2k: 'Gasket Durometer', m2v: '30A Silicone',
+        hud: 'CAD VIEW // STAGE 03 — HARMONIC SUSPENSION'
+      },
+      {
+        title: 'Sandblasted C36000 Brass Core',
+        body: 'Anchored beneath the PCB sits a 940 g solid C36000 brass weight etched with acoustic-diffusing topographic grooves that shatter standing waves and ground every keystroke in dense authority.',
+        m1k: 'Core Weight Mass', m1v: '940 g Solid Brass',
+        m2k: 'Fundamental Peak', m2v: '280 Hz Clean',
+        hud: 'CAD VIEW // STAGE 04 — BRASS RESONANCE CORE'
+      }
+    ];
+
+    let currentStage = 0;
+    let progress = 0;
+    let smoothProgress = 0;
+
+    function setStageUI(idx) {
+      if (idx === currentStage && titleEl.dataset.init) return;
+      titleEl.dataset.init = '1';
+      currentStage = idx;
+      const st = STAGES[idx];
+      titleEl.textContent = st.title;
+      bodyEl.textContent = st.body;
+      m1k.textContent = st.m1k;
+      m1v.textContent = st.m1v;
+      m2k.textContent = st.m2k;
+      m2v.textContent = st.m2v;
+      hudLeft.textContent = st.hud;
+      idxEl.textContent = `0${idx + 1} / 04`;
+      stepBtns.forEach((b, i) => {
+        b.classList.toggle('active', i === idx);
+        b.setAttribute('aria-selected', String(i === idx));
+      });
+    }
+    setStageUI(0);
+
+    // Clickable step buttons jump smoothly to that scroll position
+    stepBtns.forEach((btn, idx) => {
+      btn.addEventListener('click', () => {
+        if (window.innerWidth <= 1080) {
+          progress = idx / 3;
+          setStageUI(idx);
+          return;
+        }
+        const rect = section.getBoundingClientRect();
+        const sectionTop = window.scrollY + rect.top;
+        const scrollable = Math.max(1, section.offsetHeight - window.innerHeight);
+        const targetY = sectionTop + scrollable * ((idx + 0.15) / 4);
+        window.scrollTo({ top: targetY, behavior: 'smooth' });
+      });
+    });
+
+    function updateProgressFromScroll() {
+      if (window.innerWidth <= 1080) return;
+      const rect = section.getBoundingClientRect();
+      const scrollable = Math.max(1, section.offsetHeight - window.innerHeight);
+      const raw = -rect.top / scrollable;
+      progress = Math.min(1, Math.max(0, raw));
+    }
+    window.addEventListener('scroll', updateProgressFromScroll, { passive: true });
+    updateProgressFromScroll();
+
+    let cw = 0, ch = 0, dpr = 1;
+    function resize() {
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const rect = canvas.getBoundingClientRect();
+      cw = Math.max(1, rect.width);
+      ch = Math.max(1, rect.height);
+      canvas.width = Math.floor(cw * dpr);
+      canvas.height = Math.floor(ch * dpr);
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    // Isometric 3D projector (+z1 is toward viewer / lower on screen)
+    function project(x, y, z, yaw, pitch, scale, cx, cy) {
+      const cyw = Math.cos(yaw), syw = Math.sin(yaw);
+      const cpi = Math.cos(pitch), spi = Math.sin(pitch);
+      const x1 = x * cyw - z * syw;
+      const z1 = x * syw + z * cyw;
+      const y2 = y * cpi - z1 * spi;
+      const z2 = y * spi + z1 * cpi;
+      const persp = 950 / (950 - z2 * 0.55);
+      return {
+        x: cx + x1 * scale * persp,
+        y: cy - y2 * scale * persp,
+        z: z2
+      };
+    }
+
+    function drawSlab(cx, cy, yaw, pitch, scale, xOff, yOff, zOff, w, d, h, topFill, sideFill, strokeCol, glowCol) {
+      const x0 = xOff - w * 0.5, x1 = xOff + w * 0.5;
+      const z0 = zOff - d * 0.5, z1 = zOff + d * 0.5;
+      const ptsTop = [
+        project(x0, yOff + h, z0, yaw, pitch, scale, cx, cy),
+        project(x1, yOff + h, z0, yaw, pitch, scale, cx, cy),
+        project(x1, yOff + h, z1, yaw, pitch, scale, cx, cy),
+        project(x0, yOff + h, z1, yaw, pitch, scale, cx, cy)
+      ];
+      const ptsBot = [
+        project(x0, yOff, z0, yaw, pitch, scale, cx, cy),
+        project(x1, yOff, z0, yaw, pitch, scale, cx, cy),
+        project(x1, yOff, z1, yaw, pitch, scale, cx, cy),
+        project(x0, yOff, z1, yaw, pitch, scale, cx, cy)
+      ];
+
+      ctx.save();
+      if (glowCol) {
+        ctx.shadowColor = glowCol;
+        ctx.shadowBlur = 18;
+      }
+
+      // Front-left and front-right extruded faces (based on positive yaw ~0.6)
+      ctx.fillStyle = sideFill;
+      ctx.strokeStyle = strokeCol;
+      ctx.lineWidth = 1;
+
+      // Front face (2-3)
+      ctx.beginPath();
+      ctx.moveTo(ptsTop[3].x, ptsTop[3].y);
+      ctx.lineTo(ptsTop[2].x, ptsTop[2].y);
+      ctx.lineTo(ptsBot[2].x, ptsBot[2].y);
+      ctx.lineTo(ptsBot[3].x, ptsBot[3].y);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // Side face (1-2 or 0-3 depending on yaw sign)
+      const sideIdxA = Math.sin(yaw) >= 0 ? 1 : 3;
+      const sideIdxB = Math.sin(yaw) >= 0 ? 2 : 0;
+      ctx.beginPath();
+      ctx.moveTo(ptsTop[sideIdxA].x, ptsTop[sideIdxA].y);
+      ctx.lineTo(ptsTop[sideIdxB].x, ptsTop[sideIdxB].y);
+      ctx.lineTo(ptsBot[sideIdxB].x, ptsBot[sideIdxB].y);
+      ctx.lineTo(ptsBot[sideIdxA].x, ptsBot[sideIdxA].y);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // Top face
+      ctx.fillStyle = topFill;
+      ctx.beginPath();
+      ctx.moveTo(ptsTop[0].x, ptsTop[0].y);
+      ctx.lineTo(ptsTop[1].x, ptsTop[1].y);
+      ctx.lineTo(ptsTop[2].x, ptsTop[2].y);
+      ctx.lineTo(ptsTop[3].x, ptsTop[3].y);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+
+      return { ptsTop, ptsBot };
+    }
+
+    function smoothstep(a, b, x) {
+      const t = Math.max(0, Math.min(1, (x - a) / (b - a)));
+      return t * t * (3 - 2 * t);
+    }
+
+    let storyVisible = false;
+    new IntersectionObserver((entries) => {
+      storyVisible = entries[0].isIntersecting;
+    }, { threshold: 0.01 }).observe(section);
+
+    function render(now) {
+      requestAnimationFrame(render);
+      if (!storyVisible) return;
+
+      const t = now * 0.001;
+      smoothProgress += (progress - smoothProgress) * 0.09;
+
+      const stageIdx = Math.min(3, Math.floor(smoothProgress * 4));
+      setStageUI(stageIdx);
+
+      railFill.style.width = (smoothProgress * 100).toFixed(1) + '%';
+      pctEl.textContent = String(Math.round(smoothProgress * 100)).padStart(2, '0') + '%';
+
+      // Continuous stage blending weights
+      const explodeAmt =
+        smoothstep(0.18, 0.34, smoothProgress) * (1 - smoothstep(0.54, 0.68, smoothProgress) * 0.65)
+        * (1 - smoothstep(0.76, 0.90, smoothProgress) * 0.2);
+      const flexAmt = smoothstep(0.46, 0.60, smoothProgress) * (1 - smoothstep(0.74, 0.86, smoothProgress));
+      const brassAmt = smoothstep(0.72, 0.86, smoothProgress);
+      const cncScanAmt = 1 - smoothstep(0.18, 0.30, smoothProgress);
+
+      hudRight.textContent = `ISO 35.3° · Z-EXPLODE ${Math.round(explodeAmt * 100)}%`;
+
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, cw, ch);
+
+      const cx = cw * 0.5;
+      const cy = ch * 0.54;
+      const scale = Math.min(cw, ch) * 0.00175;
+      const yaw = 0.54 + Math.sin(t * 0.45) * 0.08 + smoothProgress * 0.45 - brassAmt * 0.35;
+      const pitch = 0.48 + brassAmt * 0.14;
+
+      // Subtle architectural coordinate grid on background floor
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.045)';
+      ctx.lineWidth = 1;
+      for (let gx = -260; gx <= 260; gx += 40) {
+        const a = project(gx, -85, -160, yaw, pitch, scale, cx, cy);
+        const b = project(gx, -85, 160, yaw, pitch, scale, cx, cy);
+        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+      }
+      for (let gz = -160; gz <= 160; gz += 40) {
+        const a = project(-260, -85, gz, yaw, pitch, scale, cx, cy);
+        const b = project(260, -85, gz, yaw, pitch, scale, cx, cy);
+        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+      }
+      ctx.restore();
+
+      const W = 318, D = 114;
+      const sep = explodeAmt * 42;
+      const bounce = flexAmt * Math.sin(t * 5.2) * 8.5;
+
+      // LAYER 0: Brass Weight Core (Bottom)
+      const brassY = -34 - sep * 1.35 + brassAmt * 28;
+      const brassGlow = brassAmt > 0.2 ? 'rgba(201, 166, 107, 0.45)' : null;
+      const brassTop = brassAmt > 0.2 ? 'rgba(201, 166, 107, 0.85)' : 'rgba(165, 134, 84, 0.55)';
+      const brassSide = brassAmt > 0.2 ? 'rgba(138, 109, 62, 0.95)' : 'rgba(95, 76, 44, 0.7)';
+      drawSlab(
+        cx, cy, yaw, pitch, scale,
+        0, brassY, 0, W * 0.78, D * 0.72, 10,
+        brassTop, brassSide, 'rgba(240, 210, 155, 0.6)', brassGlow
+      );
+
+      // Engraved topographic grooves on brass core
+      if (brassAmt > 0.1 || explodeAmt > 0.15) {
+        ctx.save();
+        ctx.strokeStyle = `rgba(30, 22, 12, ${0.25 + brassAmt * 0.45})`;
+        ctx.lineWidth = 1.2;
+        for (let k = -3; k <= 3; k++) {
+          ctx.beginPath();
+          for (let s = -110; s <= 110; s += 10) {
+            const zCurve = k * 9 + Math.sin(s * 0.045 + k * 0.8) * 6;
+            const pt = project(s, brassY + 10.5, zCurve, yaw, pitch, scale, cx, cy);
+            if (s === -110) ctx.moveTo(pt.x, pt.y);
+            else ctx.lineTo(pt.x, pt.y);
+          }
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      // LAYER 1: Bottom CNC Case + Silicone Dampener
+      const botY = -22 - sep * 0.65 - brassAmt * 38;
+      const botAlpha = 1 - brassAmt * 0.65;
+      drawSlab(
+        cx, cy, yaw, pitch, scale,
+        0, botY, 0, W, D, 16,
+        `rgba(26, 28, 35, ${botAlpha})`,
+        `rgba(16, 17, 22, ${botAlpha})`,
+        `rgba(255, 255, 255, ${0.14 * botAlpha})`
+      );
+
+      // LAYER 2: 1.6mm Flex-Cut PCB
+      const pcbY = -4 + sep * 0.05 + bounce * 0.85 - brassAmt * 55;
+      const pcbAlpha = 1 - brassAmt * 0.72;
+      drawSlab(
+        cx, cy, yaw, pitch, scale,
+        0, pcbY, 0, W * 0.92, D * 0.86, 4,
+        `rgba(20, 44, 42, ${0.82 * pcbAlpha})`,
+        `rgba(12, 28, 26, ${0.9 * pcbAlpha})`,
+        `rgba(96, 214, 185, ${0.35 * pcbAlpha})`
+      );
+
+      // Gold hot-swap socket pads on PCB
+      if (explodeAmt > 0.15 || flexAmt > 0.15) {
+        ctx.save();
+        ctx.fillStyle = `rgba(218, 178, 102, ${(explodeAmt * 0.7 + flexAmt * 0.5) * pcbAlpha})`;
+        for (let r = 0; r < 5; r++) {
+          for (let c = 0; c < 14; c++) {
+            const px = -W * 0.41 + c * (W * 0.82 / 13);
+            const pz = -D * 0.34 + r * (D * 0.68 / 4);
+            const p = project(px, pcbY + 4.5, pz, yaw, pitch, scale, cx, cy);
+            ctx.fillRect(p.x - 1.5, p.y - 1.5, 3, 3);
+          }
+        }
+        ctx.restore();
+      }
+
+      // LAYER 3: Polycarbonate Plate + Leaf-Spring Tabs
+      const plateY = 6 + sep * 0.72 + bounce - brassAmt * 62;
+      const plateAlpha = 1 - brassAmt * 0.76;
+      drawSlab(
+        cx, cy, yaw, pitch, scale,
+        0, plateY, 0, W * 0.92, D * 0.86, 3.5,
+        `rgba(215, 224, 240, ${0.16 * plateAlpha})`,
+        `rgba(160, 175, 200, ${0.18 * plateAlpha})`,
+        `rgba(220, 232, 255, ${0.36 * plateAlpha})`
+      );
+
+      // 8 Perimeter Silicone Leaf-Spring Gasket Tabs (Highlighted in Stage 3)
+      if (flexAmt > 0.05 || explodeAmt > 0.15) {
+        const tabStrength = Math.max(flexAmt, explodeAmt * 0.5) * plateAlpha;
+        const tabXs = [-115, -38, 38, 115];
+        tabXs.forEach((tx, idx) => {
+          [-1, 1].forEach((side) => {
+            const tz = side * (D * 0.46);
+            const tabWave = flexAmt * Math.sin(t * 5.2 - idx * 0.45) * 3.5;
+            drawSlab(
+              cx, cy, yaw, pitch, scale,
+              tx, plateY + tabWave, tz, 20, 8, 5,
+              `rgba(255, 77, 36, ${0.88 * tabStrength})`,
+              `rgba(170, 42, 16, ${0.95 * tabStrength})`,
+              `rgba(255, 165, 130, ${0.8 * tabStrength})`,
+              flexAmt > 0.2 ? 'rgba(255, 77, 36, 0.7)' : null
+            );
+          });
+        });
+
+        // Harmonic wave rings in Stage 3
+        if (flexAmt > 0.2) {
+          ctx.save();
+          for (let r = 0; r < 3; r++) {
+            const phase = (t * 0.9 + r * 0.33) % 1;
+            const rad = 25 + phase * 145;
+            ctx.strokeStyle = `rgba(255, 77, 36, ${(1 - phase) * 0.55 * flexAmt})`;
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            for (let a = 0; a <= Math.PI * 2 + 0.1; a += 0.22) {
+              const wp = project(Math.cos(a) * rad, plateY + 6 + bounce * 0.4, Math.sin(a) * rad * 0.48, yaw, pitch, scale, cx, cy);
+              if (a === 0) ctx.moveTo(wp.x, wp.y);
+              else ctx.lineTo(wp.x, wp.y);
+            }
+            ctx.stroke();
+          }
+          ctx.restore();
+        }
+      }
+
+      // LAYER 4: Top Bezel & Sculpted Keycap Matrix
+      const topY = 14 + sep * 1.45 + bounce * 0.95 + brassAmt * 52;
+      const topAlpha = 1 - brassAmt * 0.82;
+      drawSlab(
+        cx, cy, yaw, pitch, scale,
+        0, topY, 0, W, D, 12,
+        `rgba(32, 34, 42, ${0.92 * topAlpha})`,
+        `rgba(20, 21, 27, ${0.95 * topAlpha})`,
+        `rgba(255, 255, 255, ${0.18 * topAlpha})`
+      );
+
+      // Draw miniature 65% keycaps on top layer
+      if (topAlpha > 0.12) {
+        const uW = (W * 0.90) / 16;
+        const uD = (D * 0.78) / 5;
+        const startX = -W * 0.45;
+        const startZ = -D * 0.39;
+        KEYS_FLAT.forEach((k) => {
+          const kx = startX + (k.x + k.w * 0.5) * uW;
+          const kz = startZ + (k.y + 0.5) * uD;
+          const pressWave = flexAmt > 0.15 ? Math.max(0, Math.sin(t * 5.2 - k.x * 0.45)) * 2.8 * flexAmt : 0;
+          const isAcc = k.role === 'accent';
+          const fillTop = isAcc
+            ? `rgba(255, 77, 36, ${0.92 * topAlpha})`
+            : k.role === 'mod'
+              ? `rgba(45, 48, 58, ${0.94 * topAlpha})`
+              : `rgba(64, 68, 80, ${0.94 * topAlpha})`;
+          drawSlab(
+            cx, cy, yaw, pitch, scale,
+            kx, topY + 12 - pressWave, kz,
+            k.w * uW - 2.2, uD - 2.2, 6.5,
+            fillTop,
+            `rgba(18, 19, 24, ${0.92 * topAlpha})`,
+            `rgba(255, 255, 255, ${0.14 * topAlpha})`
+          );
+        });
+      }
+
+      // Stage 1: Animated CNC Laser Toolpath Sweep
+      if (cncScanAmt > 0.08) {
+        const scanX = Math.sin(t * 1.4) * (W * 0.48);
+        const pA = project(scanX, topY + 21, -D * 0.52, yaw, pitch, scale, cx, cy);
+        const pB = project(scanX, topY + 21, D * 0.52, yaw, pitch, scale, cx, cy);
+        ctx.save();
+        ctx.strokeStyle = `rgba(255, 77, 36, ${0.85 * cncScanAmt})`;
+        ctx.lineWidth = 2;
+        ctx.shadowColor = '#ff4d24';
+        ctx.shadowBlur = 16;
+        ctx.beginPath();
+        ctx.moveTo(pA.x, pA.y);
+        ctx.lineTo(pB.x, pB.y);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // Stage 2: Clean floating layer callout lines when exploded
+      if (explodeAmt > 0.35) {
+        const labels = [
+          { text: 'PBT KEYCAPS + BEZEL', y: topY + 12 },
+          { text: 'POLYCARBONATE PLATE', y: plateY + 2 },
+          { text: '1.6mm FLEX-CUT PCB', y: pcbY + 2 },
+          { text: '6063-T6 LOWER CASE', y: botY + 8 },
+          { text: '940g C36000 BRASS CORE', y: brassY + 5 }
+        ];
+        ctx.save();
+        ctx.globalAlpha = Math.min(1, (explodeAmt - 0.35) * 1.8) * (1 - brassAmt);
+        ctx.font = '500 10px "SF Mono", Menlo, monospace';
+        labels.forEach((lb) => {
+          const anchor = project(W * 0.52, lb.y, 0, yaw, pitch, scale, cx, cy);
+          const lx = Math.min(cw - 155, anchor.x + 24);
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.28)';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(anchor.x, anchor.y);
+          ctx.lineTo(lx - 6, anchor.y);
+          ctx.stroke();
+          ctx.fillStyle = '#ff4d24';
+          ctx.beginPath();
+          ctx.arc(anchor.x, anchor.y, 2.5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#d6d8e0';
+          ctx.fillText(lb.text, lx, anchor.y + 3.5);
+        });
+        ctx.restore();
+      }
+
+      // Stage 4: Live Acoustic Dampening Spectrum Overlay
+      if (brassAmt > 0.15) {
+        ctx.save();
+        ctx.globalAlpha = brassAmt;
+        const gx = 26, gy = ch - 118, gw = 220, gh = 60;
+        ctx.fillStyle = 'rgba(9, 10, 14, 0.78)';
+        ctx.strokeStyle = 'rgba(201, 166, 107, 0.4)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.roundRect(gx, gy, gw, gh, 8);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.font = '500 9.5px "SF Mono", Menlo, monospace';
+        ctx.fillStyle = '#c9a66b';
+        ctx.fillText('BRASS RESONANCE DAMPENING', gx + 12, gy + 16);
+
+        ctx.beginPath();
+        for (let i = 0; i <= 40; i++) {
+          const u = i / 40;
+          const x = gx + 12 + u * (gw - 24);
+          const peak = Math.exp(-Math.pow((u - 0.22) * 5.2, 2)) * 24;
+          const ripple = Math.sin(u * 20 - t * 4) * 1.8 * (1 - u);
+          const y = gy + gh - 12 - peak - Math.max(0, ripple);
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.strokeStyle = '#ff4d24';
+        ctx.lineWidth = 1.6;
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+    requestAnimationFrame(render);
+  }
+
+  /* =========================================================================
+     3. BEFORE / AFTER SPLIT SLIDER
+  ========================================================================= */
+  function initSplitComparison() {
+    const frame = document.getElementById('split-frame');
+    const cBefore = document.getElementById('split-before-canvas');
+    const cAfter = document.getElementById('split-after-canvas');
+    const ctxB = cBefore.getContext('2d');
+    const ctxA = cAfter.getContext('2d');
+
+    let splitPct = 50;
+    let dragging = false;
+
+    function setSplit(pct) {
+      splitPct = Math.max(4, Math.min(96, pct));
+      frame.style.setProperty('--split', splitPct.toFixed(2) + '%');
+      frame.setAttribute('aria-valuenow', String(Math.round(splitPct)));
+    }
+
+    function updateFromClientX(clientX) {
+      const rect = frame.getBoundingClientRect();
+      const pct = ((clientX - rect.left) / rect.width) * 100;
+      setSplit(pct);
+    }
+
+    frame.addEventListener('pointerdown', (e) => {
+      dragging = true;
+      frame.classList.add('dragging');
+      frame.setPointerCapture(e.pointerId);
+      updateFromClientX(e.clientX);
+    });
+    frame.addEventListener('pointermove', (e) => {
+      if (!dragging) return;
+      updateFromClientX(e.clientX);
+    });
+    frame.addEventListener('pointerup', () => {
+      dragging = false;
+      frame.classList.remove('dragging');
+    });
+    frame.addEventListener('pointercancel', () => {
+      dragging = false;
+      frame.classList.remove('dragging');
+    });
+    frame.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft') { e.preventDefault(); setSplit(splitPct - 3); }
+      if (e.key === 'ArrowRight') { e.preventDefault(); setSplit(splitPct + 3); }
+    });
+
+    // Sound audition buttons
+    const btnBefore = document.getElementById('btn-sound-before');
+    const btnAfter = document.getElementById('btn-sound-after');
+    let waveBoostBefore = 0, waveBoostAfter = 0;
+
+    btnBefore.addEventListener('click', () => {
+      btnBefore.classList.add('playing');
+      SoundEngine.playRiff({ mode: 'hollow' }, () => { waveBoostBefore = 1.0; });
+      setTimeout(() => btnBefore.classList.remove('playing'), 900);
+    });
+    btnAfter.addEventListener('click', () => {
+      btnAfter.classList.add('playing');
+      SoundEngine.playRiff({ mode: 'strata', sw: 'linear', plate: 'pc' }, () => { waveBoostAfter = 1.0; });
+      setTimeout(() => btnAfter.classList.remove('playing'), 900);
+    });
+
+    let w = 0, h = 0, dpr = 1;
+    function resize() {
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const rect = frame.getBoundingClientRect();
+      w = Math.max(1, rect.width);
+      h = Math.max(1, rect.height);
+      [cBefore, cAfter].forEach((c) => {
+        c.width = Math.floor(w * dpr);
+        c.height = Math.floor(h * dpr);
+      });
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    function drawKeyboardComparison(ctx, isAfter, t, boost) {
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, w, h);
+
+      // Studio backdrop
+      const bg = ctx.createRadialGradient(w * 0.5, h * 0.42, 20, w * 0.5, h * 0.5, Math.max(w, h) * 0.72);
+      if (isAfter) {
+        bg.addColorStop(0, '#181a22');
+        bg.addColorStop(1, '#08090c');
+      } else {
+        bg.addColorStop(0, '#22262e');
+        bg.addColorStop(1, '#0e1015');
+      }
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, w, h);
+
+      // Subtle desk grid
+      ctx.strokeStyle = isAfter ? 'rgba(255,255,255,0.025)' : 'rgba(160,185,220,0.04)';
+      ctx.lineWidth = 1;
+      for (let x = 0; x < w; x += 36) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+      }
+      for (let y = 0; y < h; y += 36) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+      }
+
+      // Keyboard dimensions centered identically on both canvases
+      const kbW = Math.min(w * 0.78, h * 1.92);
+      const kbH = kbW * 0.36;
+      const kbX = (w - kbW) * 0.5;
+      const kbY = (h - kbH) * 0.44;
+      const bezel = kbW * 0.032;
+
+      // Cast shadow
+      ctx.save();
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.75)';
+      ctx.shadowBlur = 46;
+      ctx.shadowOffsetY = 22;
+      ctx.fillStyle = isAfter ? '#14151a' : '#767d89';
+      ctx.beginPath();
+      ctx.roundRect(kbX, kbY, kbW, kbH, 14);
+      ctx.fill();
+      ctx.restore();
+
+      // Chassis surface finish
+      const chGrad = ctx.createLinearGradient(kbX, kbY, kbX + kbW, kbY + kbH);
+      if (isAfter) {
+        chGrad.addColorStop(0, '#23252d');
+        chGrad.addColorStop(0.5, '#15161b');
+        chGrad.addColorStop(1, '#0f1014');
+      } else {
+        chGrad.addColorStop(0, '#9ea6b3');
+        chGrad.addColorStop(0.45, '#7c8491');
+        chGrad.addColorStop(0.75, '#aeb5c2');
+        chGrad.addColorStop(1, '#68707d');
+      }
+      ctx.fillStyle = chGrad;
+      ctx.beginPath();
+      ctx.roundRect(kbX, kbY, kbW, kbH, 14);
+      ctx.fill();
+
+      // Outer chamfer rim
+      ctx.strokeStyle = isAfter ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.5)';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // Raw CNC concentric toolpaths on BEFORE chassis
+      if (!isAfter) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.roundRect(kbX, kbY, kbW, kbH, 14);
+        ctx.clip();
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.14)';
+        ctx.lineWidth = 1;
+        for (let r = 8; r < kbW; r += 9) {
+          ctx.beginPath();
+          ctx.ellipse(kbX + kbW * 0.35, kbY + kbH * 0.5, r, r * 0.42, 0, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      // Recessed inner well
+      const wellX = kbX + bezel;
+      const wellY = kbY + bezel;
+      const wellW = kbW - bezel * 2;
+      const wellH = kbH - bezel * 2;
+
+      ctx.fillStyle = isAfter ? '#08090c' : '#2e333b';
+      ctx.beginPath();
+      ctx.roundRect(wellX, wellY, wellW, wellH, 6);
+      ctx.fill();
+
+      const uW = wellW / 16;
+      const uH = wellH / 5;
+      const gap = Math.max(2, uW * 0.075);
+
+      if (!isAfter) {
+        // BEFORE: Exposed hollow tray interior + rigid brass standoffs + raw switch sockets
+        ctx.strokeStyle = 'rgba(180, 195, 215, 0.16)';
+        ctx.lineWidth = 1;
+        // Exposed screw standoffs
+        const standoffs = [
+          [0.18, 0.25], [0.5, 0.25], [0.82, 0.25],
+          [0.18, 0.78], [0.5, 0.78], [0.82, 0.78]
+        ];
+        KEYS_FLAT.forEach((k) => {
+          const kx = wellX + k.x * uW + gap * 0.5;
+          const ky = wellY + k.y * uH + gap * 0.5;
+          const kw = k.w * uW - gap;
+          const kh = uH - gap;
+
+          // Raw translucent wireframe/socket outline
+          ctx.fillStyle = 'rgba(140, 152, 170, 0.12)';
+          ctx.strokeStyle = 'rgba(190, 205, 225, 0.28)';
+          ctx.beginPath();
+          ctx.roundRect(kx, ky, kw, kh, 3);
+          ctx.fill();
+          ctx.stroke();
+
+          // Switch stem cross
+          const mx = kx + kw * 0.5, my = ky + kh * 0.5;
+          ctx.strokeStyle = 'rgba(215, 225, 240, 0.45)';
+          ctx.beginPath();
+          ctx.moveTo(mx - 4, my); ctx.lineTo(mx + 4, my);
+          ctx.moveTo(mx, my - 4); ctx.lineTo(mx, my + 4);
+          ctx.stroke();
+        });
+
+        // Harsh tray-mount screw posts with red stress rings
+        standoffs.forEach(([sx, sy]) => {
+          const px = wellX + wellW * sx;
+          const py = wellY + wellH * sy;
+          ctx.beginPath();
+          ctx.arc(px, py, 6, 0, Math.PI * 2);
+          ctx.fillStyle = '#d1a75c';
+          ctx.fill();
+          ctx.strokeStyle = 'rgba(255, 90, 90, 0.7)';
+          ctx.lineWidth = 1.4;
+          ctx.beginPath();
+          ctx.arc(px, py, 11 + Math.sin(t * 6) * 2.5, 0, Math.PI * 2);
+          ctx.stroke();
+        });
+      } else {
+        // AFTER: Finished Obsidian Anodized + Sculpted Double-Shot Keycaps + Brass Blocker Badge
+        KEYS_FLAT.forEach((k) => {
+          const kx = wellX + k.x * uW + gap * 0.5;
+          const ky = wellY + k.y * uH + gap * 0.5;
+          const kw = k.w * uW - gap;
+          const kh = uH - gap;
+
+          let baseCol = '#2a2d35', topCol = '#353842', legendCol = '#d7d5cf';
+          if (k.role === 'mod' || k.role === 'arrow') {
+            baseCol = '#1c1e24'; topCol = '#25272f'; legendCol = '#9396a2';
+          } else if (k.role === 'accent') {
+            baseCol = '#c83515'; topCol = '#ff4d24'; legendCol = '#fff6f2';
+          }
+
+          // Outer keycap skirt
+          ctx.fillStyle = baseCol;
+          ctx.beginPath();
+          ctx.roundRect(kx, ky, kw, kh, 4.5);
+          ctx.fill();
+
+          // Sculpted top dish
+          const pad = Math.max(2.5, uW * 0.11);
+          const dishGrad = ctx.createLinearGradient(kx, ky, kx, ky + kh);
+          dishGrad.addColorStop(0, topCol);
+          dishGrad.addColorStop(1, baseCol);
+          ctx.fillStyle = dishGrad;
+          ctx.beginPath();
+          ctx.roundRect(kx + pad, ky + pad * 0.85, kw - pad * 2, kh - pad * 2.1, 3);
+          ctx.fill();
+
+          // Subtle top specular edge
+          ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+          ctx.lineWidth = 0.8;
+          ctx.stroke();
+
+          if (k.l && uW > 20) {
+            ctx.fillStyle = legendCol;
+            ctx.font = `600 ${Math.max(7, Math.min(10.5, uW * 0.24))}px "SF Pro Display", sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(k.l, kx + kw * 0.5, ky + kh * 0.47);
+          }
+        });
+
+        // Signature 0.5u Brass Blocker Accent Badge
+        const bx = wellX + 12.5 * uW + 3;
+        const by = wellY + 4 * uH + 3;
+        const bw = 0.5 * uW - 6;
+        const bh = uH - 6;
+        const brassGrad = ctx.createLinearGradient(bx, by, bx + bw, by + bh);
+        brassGrad.addColorStop(0, '#e3c48c');
+        brassGrad.addColorStop(1, '#9c7b43');
+        ctx.fillStyle = brassGrad;
+        ctx.beginPath();
+        ctx.roundRect(bx, by, Math.max(4, bw), bh, 2.5);
+        ctx.fill();
+      }
+
+      // Live Synchronized Acoustic Spectrum Footer inside canvas
+      const wy = h - 44;
+      const wx0 = kbX;
+      const wx1 = kbX + kbW;
+      ctx.save();
+      ctx.strokeStyle = isAfter ? 'rgba(255, 77, 36, 0.82)' : 'rgba(150, 178, 220, 0.72)';
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      const steps = 90;
+      for (let i = 0; i <= steps; i++) {
+        const u = i / steps;
+        const x = wx0 + u * (wx1 - wx0);
+        let amp = 0;
+        if (isAfter) {
+          // Smooth low-frequency damped thock envelope
+          const env = Math.sin(u * Math.PI);
+          amp = Math.sin(u * 14 - t * 4.2) * (6 + boost * 16) * env;
+        } else {
+          // Harsh jagged high-frequency metallic ping
+          const env = Math.sin(u * Math.PI);
+          amp = (Math.sin(u * 68 - t * 14) * 0.65 + Math.sin(u * 125 + t * 21) * 0.35) * (9 + boost * 22) * env;
+        }
+        const y = wy + amp;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+
+      ctx.font = '500 10px "SF Mono", Menlo, monospace';
+      ctx.fillStyle = isAfter ? 'rgba(243,241,236,0.72)' : 'rgba(180,194,218,0.72)';
+      ctx.textAlign = isAfter ? 'right' : 'left';
+      ctx.fillText(
+        isAfter ? '280 Hz FUNDAMENTAL · 44.1 dBA · DAMPED' : '4,120 Hz METALLIC PING · 62.4 dBA · UNTREATED',
+        isAfter ? wx1 : wx0,
+        wy - 16
+      );
+      ctx.restore();
+    }
+
+    let compVisible = false;
+    new IntersectionObserver((entries) => {
+      compVisible = entries[0].isIntersecting;
+    }, { threshold: 0.01 }).observe(frame);
+
+    function loop(now) {
+      requestAnimationFrame(loop);
+      if (!compVisible) return;
+      const t = now * 0.001;
+      waveBoostBefore *= 0.93;
+      waveBoostAfter *= 0.93;
+      drawKeyboardComparison(ctxB, false, t, waveBoostBefore);
+      drawKeyboardComparison(ctxA, true, t, waveBoostAfter);
+    }
+    requestAnimationFrame(loop);
+  }
+
+  /* =========================================================================
+     4. 3D WIREFRAME SPEC CARD (RAW WEBGL2 ENGINE)
+  ========================================================================= */
+  function initWireframeSpecWebGL2() {
+    const canvas = document.getElementById('wireframe-canvas');
+    const card = document.getElementById('wireframe-card');
+    const gl = canvas.getContext('webgl2', { antialias: true, alpha: true, powerPreference: 'high-performance' });
+    if (!gl) return;
+
+    // Minimal hand-written mat4 math
+    function mat4Perspective(fov, aspect, near, far) {
+      const f = 1.0 / Math.tan(fov * 0.5);
+      const nf = 1 / (near - far);
+      return new Float32Array([
+        f / aspect, 0, 0, 0,
+        0, f, 0, 0,
+        0, 0, (far + near) * nf, -1,
+        0, 0, 2 * far * near * nf, 0
+      ]);
+    }
+    function mat4Mul(a, b) {
+      const out = new Float32Array(16);
+      for (let i = 0; i < 4; i++) {
+        for (let j = 0; j < 4; j++) {
+          out[j * 4 + i] =
+            a[0 * 4 + i] * b[j * 4 + 0] +
+            a[1 * 4 + i] * b[j * 4 + 1] +
+            a[2 * 4 + i] * b[j * 4 + 2] +
+            a[3 * 4 + i] * b[j * 4 + 3];
+        }
+      }
+      return out;
+    }
+    function mat4Translate(x, y, z) {
+      return new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, x,y,z,1]);
+    }
+    function mat4RotateX(a) {
+      const c = Math.cos(a), s = Math.sin(a);
+      return new Float32Array([1,0,0,0, 0,c,s,0, 0,-s,c,0, 0,0,0,1]);
+    }
+    function mat4RotateY(a) {
+      const c = Math.cos(a), s = Math.sin(a);
+      return new Float32Array([c,0,-s,0, 0,1,0,0, s,0,c,0, 0,0,0,1]);
+    }
+    function projectVec3(v, mvp, w, h) {
+      const x = mvp[0]*v[0] + mvp[4]*v[1] + mvp[8]*v[2] + mvp[12];
+      const y = mvp[1]*v[0] + mvp[5]*v[1] + mvp[9]*v[2] + mvp[13];
+      const z = mvp[2]*v[0] + mvp[6]*v[1] + mvp[10]*v[2] + mvp[14];
+      const cw = mvp[3]*v[0] + mvp[7]*v[1] + mvp[11]*v[2] + mvp[15];
+      if (cw <= 0.001) return { x: -999, y: -999, visible: false };
+      return {
+        x: (x / cw * 0.5 + 0.5) * w,
+        y: (-y / cw * 0.5 + 0.5) * h,
+        visible: z / cw < 1.0
+      };
+    }
+
+    // Build procedural true-scale 3D geometry (1 unit = 100mm -> 3.184 x 1.142)
+    const linePos = [];
+    const lineKind = []; // 0: grid, 1: chassis, 2: keycap, 3: brass, 4: accent
+    const triPos = [];
+    const triKind = [];
+
+    const SLOPE = Math.tan(6.5 * Math.PI / 180);
+    const frontZ = 0.571;
+    const frontH = 0.182;
+    const topY = (z) => frontH + (frontZ - z) * SLOPE;
+
+    function addLine(a, b, kind) {
+      linePos.push(a[0], a[1], a[2], b[0], b[1], b[2]);
+      lineKind.push(kind, kind);
+    }
+
+    function addBox(x0, x1, z0, z1, yBot0, yBot1, yTop0, yTop1, kind, addFaces = false) {
+      // 8 corners: 0..3 bottom, 4..7 top (z0 is rear, z1 is front)
+      const c = [
+        [x0, yBot0, z0], [x1, yBot0, z0], [x1, yBot1, z1], [x0, yBot1, z1],
+        [x0, yTop0, z0], [x1, yTop0, z0], [x1, yTop1, z1], [x0, yTop1, z1]
+      ];
+      const edges = [
+        [0,1],[1,2],[2,3],[3,0],
+        [4,5],[5,6],[6,7],[7,4],
+        [0,4],[1,5],[2,6],[3,7]
+      ];
+      edges.forEach(([i, j]) => addLine(c[i], c[j], kind));
+
+      if (addFaces) {
+        const faces = [
+          [4,5,6],[4,6,7], // top
+          [0,2,1],[0,3,2], // bottom
+          [3,2,6],[3,6,7], // front
+          [0,1,5],[0,5,4], // rear
+          [0,4,7],[0,7,3], // left
+          [1,2,6],[1,6,5]  // right
+        ];
+        faces.forEach(([i, j, k]) => {
+          triPos.push(...c[i], ...c[j], ...c[k]);
+          triKind.push(kind, kind, kind);
+        });
+      }
+    }
+
+    // 1. CAD reference floor grid & concentric measurement ring
+    for (let x = -2.4; x <= 2.41; x += 0.4) {
+      addLine([x, -0.02, -1.4], [x, -0.02, 1.4], 0);
+    }
+    for (let z = -1.4; z <= 1.41; z += 0.35) {
+      addLine([-2.4, -0.02, z], [2.4, -0.02, z], 0);
+    }
+    const ringSegs = 64;
+    for (let i = 0; i < ringSegs; i++) {
+      const a0 = (i / ringSegs) * Math.PI * 2;
+      const a1 = ((i + 1) / ringSegs) * Math.PI * 2;
+      addLine([Math.cos(a0)*2.05, -0.015, Math.sin(a0)*2.05], [Math.cos(a1)*2.05, -0.015, Math.sin(a1)*2.05], 0);
+    }
+
+    // 2. Main CNC 6063-T6 Wedge Chassis
+    const W2 = 1.592, D2 = 0.571;
+    addBox(-W2, W2, -D2, D2, 0.0, 0.0, topY(-D2), topY(D2), 1, true);
+    // Inner keywell bezel lip
+    const inW = 1.49, inD = 0.475;
+    addBox(-inW, inW, -inD, inD, 0.14, 0.09, topY(-inD), topY(inD), 1, false);
+    // Rear USB-C port cutout
+    addBox(-0.14, 0.14, -D2 - 0.005, -D2 + 0.04, 0.09, 0.09, 0.16, 0.16, 4, false);
+
+    // 3. Underside Recessed C36000 Brass Acoustic Core + Topographic Engraving
+    const bw = 1.16, bd = 0.36;
+    addBox(-bw, bw, -bd, bd, -0.012, -0.012, 0.025, 0.025, 3, true);
+    for (let row = -3; row <= 3; row++) {
+      for (let seg = -12; seg < 12; seg++) {
+        const x0 = (seg / 12) * (bw - 0.08);
+        const x1 = ((seg + 1) / 12) * (bw - 0.08);
+        const z0 = row * 0.08 + Math.sin(x0 * 3.6 + row) * 0.032;
+        const z1 = row * 0.08 + Math.sin(x1 * 3.6 + row) * 0.032;
+        addLine([x0, -0.014, z0], [x1, -0.014, z1], 3);
+      }
+    }
+
+    // 4. All 67 Individual Tapered 3D Keycaps aligned to the 6.5° plane
+    const uX = (inW * 2 - 0.06) / 16;
+    const uZ = (inD * 2 - 0.04) / 5;
+    const startX = -inW + 0.03;
+    const startZ = -inD + 0.02;
+
+    KEYS_FLAT.forEach((k) => {
+      const gap = 0.016;
+      const x0 = startX + k.x * uX + gap;
+      const x1 = startX + (k.x + k.w) * uX - gap;
+      const z0 = startZ + k.y * uZ + gap;
+      const z1 = startZ + (k.y + 1) * uZ - gap;
+      const kind = k.role === 'accent' ? 4 : 2;
+      const taper = 0.024;
+      const kh = 0.082;
+
+      const b0 = [x0, topY(z0) - 0.01, z0];
+      const b1 = [x1, topY(z0) - 0.01, z0];
+      const b2 = [x1, topY(z1) - 0.01, z1];
+      const b3 = [x0, topY(z1) - 0.01, z1];
+
+      const t0 = [x0 + taper, topY(z0) + kh, z0 + taper];
+      const t1 = [x1 - taper, topY(z0) + kh, z0 + taper];
+      const t2 = [x1 - taper, topY(z1) + kh, z1 - taper];
+      const t3 = [x0 + taper, topY(z1) + kh, z1 - taper];
+
+      const pts = [b0, b1, b2, b3, t0, t1, t2, t3];
+      [[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]].forEach(([i, j]) => {
+        addLine(pts[i], pts[j], kind);
+      });
+      // Top cap face for X-Ray & Elevation shading
+      triPos.push(...t0, ...t1, ...t2, ...t0, ...t2, ...t3);
+      triKind.push(kind, kind, kind, kind, kind, kind);
+    });
+
+    // Shaders
+    const vsSrc = `#version 300 es
+      precision highp float;
+      layout(location = 0) in vec3 a_pos;
+      layout(location = 1) in float a_kind;
+      uniform mat4 u_mvp;
+      out float v_kind;
+      out vec3 v_worldPos;
+      out float v_depth;
+      void main() {
+        vec4 clip = u_mvp * vec4(a_pos, 1.0);
+        gl_Position = clip;
+        v_kind = a_kind;
+        v_worldPos = a_pos;
+        v_depth = clip.z / max(clip.w, 0.0001);
+      }
+    `;
+
+    const fsSrc = `#version 300 es
+      precision highp float;
+      in float v_kind;
+      in vec3 v_worldPos;
+      in float v_depth;
+      uniform int u_mode; // 0 = wireframe, 1 = xray, 2 = elevation
+      uniform float u_isFace;
+      uniform float u_time;
+      out vec4 outColor;
+
+      void main() {
+        float depthFade = clamp(1.15 - (v_depth * 0.5 + 0.5) * 0.55, 0.35, 1.0);
+        vec3 col = vec3(0.86, 0.88, 0.94);
+        float alpha = 0.88;
+
+        if (v_kind < 0.5) {
+          // Floor grid
+          float r = length(v_worldPos.xz);
+          col = vec3(0.32, 0.35, 0.44);
+          alpha = 0.24 * smoothstep(2.9, 0.6, r);
+        } else if (v_kind < 1.5) {
+          // Chassis
+          col = vec3(0.92, 0.91, 0.88);
+          alpha = u_isFace > 0.5 ? 0.08 : 0.9;
+        } else if (v_kind < 2.5) {
+          // Keycaps
+          col = vec3(0.62, 0.66, 0.76);
+          alpha = u_isFace > 0.5 ? 0.11 : 0.72;
+        } else if (v_kind < 3.5) {
+          // Brass weight core
+          col = vec3(0.84, 0.68, 0.42);
+          alpha = u_isFace > 0.5 ? 0.18 : 0.95;
+        } else {
+          // Accent Esc/Enter & USB-C
+          col = vec3(1.0, 0.32, 0.15);
+          alpha = u_isFace > 0.5 ? 0.28 : 1.0;
+        }
+
+        if (u_mode == 1) {
+          // X-Ray Depth mode
+          if (v_kind > 0.5) {
+            col = mix(vec3(0.24, 0.78, 0.96), col, v_kind > 2.5 ? 0.75 : 0.35);
+            alpha = u_isFace > 0.5 ? 0.16 : 0.88;
+          }
+        } else if (u_mode == 2) {
+          // Topographic Elevation Heatmap mode
+          if (v_kind > 0.5) {
+            float elev = clamp((v_worldPos.y + 0.02) / 0.42, 0.0, 1.0);
+            vec3 lowC = vec3(0.18, 0.42, 0.78);
+            vec3 midC = vec3(0.84, 0.68, 0.42);
+            vec3 hiC  = vec3(1.0, 0.30, 0.14);
+            col = elev < 0.5 ? mix(lowC, midC, elev * 2.0) : mix(midC, hiC, (elev - 0.5) * 2.0);
+            float contour = smoothstep(0.92, 1.0, abs(sin(v_worldPos.y * 95.0 - u_time * 1.4)));
+            col += vec3(0.25) * contour;
+            alpha = u_isFace > 0.5 ? 0.28 : 0.94;
+          }
+        }
+
+        outColor = vec4(col * depthFade, alpha);
+      }
+    `;
+
+    function compile(type, src) {
+      const s = gl.createShader(type);
+      gl.shaderSource(s, src);
+      gl.compileShader(s);
+      if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+        console.error(gl.getShaderInfoLog(s));
+        return null;
+      }
+      return s;
+    }
+
+    const vs = compile(gl.VERTEX_SHADER, vsSrc);
+    const fs = compile(gl.FRAGMENT_SHADER, fsSrc);
+    if (!vs || !fs) return;
+    const prog = gl.createProgram();
+    gl.attachShader(prog, vs);
+    gl.attachShader(prog, fs);
+    gl.linkProgram(prog);
+    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+      console.error(gl.getProgramInfoLog(prog));
+      return;
+    }
+
+    const uMvp = gl.getUniformLocation(prog, 'u_mvp');
+    const uMode = gl.getUniformLocation(prog, 'u_mode');
+    const uIsFace = gl.getUniformLocation(prog, 'u_isFace');
+    const uTime = gl.getUniformLocation(prog, 'u_time');
+
+    function createMeshVAO(posArr, kindArr) {
+      const vao = gl.createVertexArray();
+      gl.bindVertexArray(vao);
+      const bPos = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, bPos);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(posArr), gl.STATIC_DRAW);
+      gl.enableVertexAttribArray(0);
+      gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
+
+      const bKind = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, bKind);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(kindArr), gl.STATIC_DRAW);
+      gl.enableVertexAttribArray(1);
+      gl.vertexAttribPointer(1, 1, gl.FLOAT, false, 0, 0);
+      return { vao, count: posArr.length / 3 };
+    }
+
+    const lineMesh = createMeshVAO(linePos, lineKind);
+    const triMesh = createMeshVAO(triPos, triKind);
+
+    let wfMode = 0;
+    let targetYaw = 0.58, targetPitch = 0.44, targetDist = 4.45;
+    let curYaw = 0.58, curPitch = 0.44, curDist = 4.45;
+    let autoOrbit = true;
+    let dragging = false, lastX = 0, lastY = 0;
+
+    // Mode toggles
+    const modeBtns = Array.from(card.querySelectorAll('[data-wf-mode]'));
+    modeBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        wfMode = Number(btn.dataset.wfMode);
+        modeBtns.forEach(b => b.classList.toggle('active', b === btn));
+      });
+    });
+
+    // Camera presets
+    const presetBtns = Array.from(card.querySelectorAll('[data-wf-view]'));
+    const PRESETS = {
+      iso:    { yaw: 0.58, pitch: 0.44, dist: 4.45, auto: true },
+      top:    { yaw: 0.0,  pitch: 1.48, dist: 4.35, auto: false },
+      side:   { yaw: 1.57, pitch: 0.08, dist: 3.75, auto: false },
+      bottom: { yaw: 0.42, pitch: -0.68, dist: 4.35, auto: true }
+    };
+    presetBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const p = PRESETS[btn.dataset.wfView];
+        if (!p) return;
+        targetYaw = p.yaw;
+        targetPitch = p.pitch;
+        targetDist = p.dist;
+        autoOrbit = p.auto;
+        presetBtns.forEach(b => b.classList.toggle('active', b === btn));
+      });
+    });
+
+    canvas.addEventListener('pointerdown', (e) => {
+      dragging = true;
+      autoOrbit = false;
+      lastX = e.clientX;
+      lastY = e.clientY;
+      canvas.setPointerCapture(e.pointerId);
+    });
+    canvas.addEventListener('pointermove', (e) => {
+      if (!dragging) return;
+      const dx = e.clientX - lastX;
+      const dy = e.clientY - lastY;
+      lastX = e.clientX;
+      lastY = e.clientY;
+      targetYaw += dx * 0.008;
+      targetPitch = Math.max(-1.35, Math.min(1.52, targetPitch + dy * 0.008));
+    });
+    canvas.addEventListener('pointerup', () => { dragging = false; });
+    canvas.addEventListener('pointercancel', () => { dragging = false; });
+
+    let cssW = 1, cssH = 1;
+    function resize() {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const rect = canvas.getBoundingClientRect();
+      cssW = Math.max(1, rect.width);
+      cssH = Math.max(1, rect.height);
+      canvas.width = Math.floor(cssW * dpr);
+      canvas.height = Math.floor(cssH * dpr);
+      gl.viewport(0, 0, canvas.width, canvas.height);
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    const callW = document.getElementById('wf-call-w');
+    const callD = document.getElementById('wf-call-d');
+    const callH = document.getElementById('wf-call-h');
+    const callA = document.getElementById('wf-call-a');
+    const anglesEl = document.getElementById('wf-angles');
+
+    let wfVisible = false;
+    new IntersectionObserver((entries) => {
+      wfVisible = entries[0].isIntersecting;
+    }, { threshold: 0.01 }).observe(card);
+
+    function frame(now) {
+      requestAnimationFrame(frame);
+      if (!wfVisible) return;
+
+      const t = now * 0.001;
+      if (autoOrbit && !dragging) targetYaw += 0.0032;
+
+      curYaw += (targetYaw - curYaw) * 0.09;
+      curPitch += (targetPitch - curPitch) * 0.09;
+      curDist += (targetDist - curDist) * 0.09;
+
+      gl.clearColor(0, 0, 0, 0);
+      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      gl.enable(gl.BLEND);
+      gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+      const aspect = cssW / cssH;
+      const proj = mat4Perspective(36 * Math.PI / 180, aspect, 0.1, 40.0);
+      const view = mat4Mul(
+        mat4Translate(0, -0.1, -curDist),
+        mat4Mul(mat4RotateX(curPitch), mat4RotateY(curYaw))
+      );
+      const mvp = mat4Mul(proj, view);
+
+      gl.useProgram(prog);
+      gl.uniformMatrix4fv(uMvp, false, mvp);
+      gl.uniform1i(uMode, wfMode);
+      gl.uniform1f(uTime, t);
+
+      // Draw translucent faces first (for X-Ray & Elevation, subtle in Wireframe)
+      gl.enable(gl.DEPTH_TEST);
+      gl.depthMask(false);
+      gl.uniform1f(uIsFace, 1.0);
+      gl.bindVertexArray(triMesh.vao);
+      gl.drawArrays(gl.TRIANGLES, 0, triMesh.count);
+
+      // Draw crisp wireframe lines
+      gl.depthMask(true);
+      gl.uniform1f(uIsFace, 0.0);
+      gl.bindVertexArray(lineMesh.vao);
+      gl.drawArrays(gl.LINES, 0, lineMesh.count);
+
+      // Update 3D-projected CAD callouts
+      const anchors = [
+        { el: callW, pt: [0.0, 0.0, frontZ + 0.24] },
+        { el: callD, pt: [W2 + 0.26, 0.15, 0.0] },
+        { el: callH, pt: [-W2 - 0.15, 0.1, frontZ] },
+        { el: callA, pt: [W2 + 0.08, topY(-D2) + 0.16, -D2] }
+      ];
+      anchors.forEach(({ el, pt }) => {
+        const p = projectVec3(pt, mvp, cssW, cssH);
+        const inBounds = p.visible && p.x > 46 && p.x < cssW - 46 && p.y > 58 && p.y < cssH - 58;
+        el.style.opacity = inBounds ? '1' : '0';
+        if (inBounds) {
+          el.style.left = p.x.toFixed(1) + 'px';
+          el.style.top = p.y.toFixed(1) + 'px';
+        }
+      });
+
+      const degY = (((curYaw * 180 / Math.PI) % 360) + 360) % 360;
+      const degP = Math.round(curPitch * 180 / Math.PI);
+      anglesEl.textContent = `YAW ${String(Math.round(degY)).padStart(3,'0')}° · PITCH ${degP >= 0 ? '+' : ''}${degP}° · DRAG TO ORBIT`;
+    }
+    requestAnimationFrame(frame);
+  }
+
+  /* =========================================================================
+     5. LIVE COLOR CONFIGURATOR & INTERACTIVE STUDIO CANVAS
+  ========================================================================= */
+  function initConfigurator() {
+    const CASES = [
+      { id: 'obs', sku: 'OBS', name: 'Obsidian Matte', price: 0, main: '#181a20', hi: '#2a2d37', lo: '#0e0f13', rim: 'rgba(255,255,255,0.16)', glow: 'rgba(255,77,36,0.10)' },
+      { id: 'slv', sku: 'SLV', name: 'Bead-Blasted Silver', price: 0, main: '#cfd3da', hi: '#eef1f6', lo: '#9da3ae', rim: 'rgba(255,255,255,0.68)', glow: 'rgba(210,220,240,0.10)' },
+      { id: 'sag', sku: 'SAG', name: 'Alpine Sage', price: 25, main: '#46584f', hi: '#5f7469', lo: '#2f3d36', rim: 'rgba(220,240,228,0.22)', glow: 'rgba(110,160,132,0.12)' },
+      { id: 'cob', sku: 'COB', name: 'Midnight Cobalt', price: 25, main: '#1d2d44', hi: '#2d4466', lo: '#121c2c', rim: 'rgba(170,205,255,0.22)', glow: 'rgba(70,130,220,0.14)' },
+      { id: 'oxd', sku: 'OXD', name: 'Terracotta Oxide', price: 35, main: '#8c3b2b', hi: '#b1513d', lo: '#5f251a', rim: 'rgba(255,195,175,0.26)', glow: 'rgba(255,95,55,0.16)' }
+    ];
+
+    const KEYCAPS = [
+      { id: 'car', sku: 'CAR', name: 'Carbon Stealth', desc: 'Charcoal + Vermilion', alpha: '#2d3039', alphaTop: '#393d48', mod: '#1d1f26', modTop: '#262932', acc: '#c93414', accTop: '#ff4d24', leg: '#e4e2dc', modLeg: '#9498a4', accLeg: '#ffffff' },
+      { id: 'die', sku: 'DIE', name: 'Dieter Classic', desc: 'Warm Chalk + Braun Orange', alpha: '#e8e4da', alphaTop: '#f5f2ea', mod: '#b8b4aa', modTop: '#cac6bc', acc: '#cc4516', accTop: '#f25822', leg: '#262629', modLeg: '#36363b', accLeg: '#ffffff' },
+      { id: 'bot', sku: 'BOT', name: 'Botanical Mist', desc: 'Ivory + Eucalyptus', alpha: '#e4e7e2', alphaTop: '#f0f3ee', mod: '#3b4e46', modTop: '#4a6157', acc: '#947442', accTop: '#c29c5f', leg: '#26332d', modLeg: '#d8e3dc', accLeg: '#1b1610' },
+      { id: 'noi', sku: 'NOI', name: 'Monolith Noir', desc: 'Pure Stealth Blackout', alpha: '#17181c', alphaTop: '#202228', mod: '#111216', modTop: '#181a20', acc: '#24262e', accTop: '#2f323d', leg: '#666974', modLeg: '#4e515c', accLeg: '#ff4d24' }
+    ];
+
+    const WEIGHTS = [
+      { id: 'brs', sku: 'BRS', name: 'Sandblasted Brass', price: 0, c1: '#e0c088', c2: '#a68347', stroke: '#f3dcb0', engrave: 'rgba(42,30,14,0.45)' },
+      { id: 'cop', sku: 'COP', name: 'PVD Mirror Copper', price: 40, c1: '#e4926c', c2: '#9a4e30', stroke: '#ffbfa0', engrave: 'rgba(54,22,12,0.45)' },
+      { id: 'tit', sku: 'TIT', name: 'Bead-Blasted Titanium', price: 50, c1: '#b8bec7', c2: '#767d87', stroke: '#e2e6ec', engrave: 'rgba(30,34,40,0.45)' },
+      { id: 'dlc', sku: 'DLC', name: 'DLC Matte Black', price: 30, c1: '#31343d', c2: '#15171c', stroke: '#5c6170', engrave: 'rgba(255,255,255,0.16)' }
+    ];
+
+    const SWITCHES = [
+      { id: 'linear', sku: 'LIN', name: 'Strata Linear', meta: '45g · Deep Thock' },
+      { id: 'tactile', sku: 'TAC', name: 'Tactile Quartz', meta: '58g · Crisp Pop' },
+      { id: 'silent', sku: 'SIL', name: 'Studio Silent', meta: '42g · Whisper' }
+    ];
+
+    const PLATES = [
+      { id: 'pc', sku: 'PC', name: 'Polycarbonate', meta: 'Flexy · +$0', price: 0, massDelta: 0 },
+      { id: 'fr4', sku: 'FR4', name: 'FR4 Matte', meta: 'Balanced · +$0', price: 0, massDelta: 18 },
+      { id: 'brass', sku: 'BRP', name: 'CNC Brass', meta: 'Crisp · +$20', price: 20, massDelta: 145 }
+    ];
+
+    const state = {
+      caseIdx: 0,
+      keycapIdx: 0,
+      weightIdx: 0,
+      switchIdx: 0,
+      plateIdx: 0,
+      view: 'top'
+    };
+
+    const keyPressAnim = new Map(); // code -> press depth [0..1]
+    const keyRects = []; // hit-testing cache for top studio view
+
+    const canvas = document.getElementById('config-canvas');
+    const ctx = canvas.getContext('2d');
+
+    const lblCase = document.getElementById('lbl-case');
+    const lblKeycap = document.getElementById('lbl-keycap');
+    const lblWeight = document.getElementById('lbl-weight');
+    const lblSwitch = document.getElementById('lbl-switch');
+    const lblPlate = document.getElementById('lbl-plate');
+    const skuEl = document.getElementById('cfg-sku');
+    const priceEl = document.getElementById('cfg-price');
+    const navPriceEl = document.getElementById('nav-price');
+    const weightReadout = document.getElementById('cfg-weight-readout');
+    const keyReadout = document.getElementById('cfg-key-readout');
+
+    function getSummary() {
+      const c = CASES[state.caseIdx];
+      const k = KEYCAPS[state.keycapIdx];
+      const wt = WEIGHTS[state.weightIdx];
+      const sw = SWITCHES[state.switchIdx];
+      const pl = PLATES[state.plateIdx];
+      const price = 480 + c.price + wt.price + pl.price;
+      const mass = 2420 + pl.massDelta;
+      const sku = `STR65-${c.sku}-${k.sku}-${wt.sku}-${sw.sku}-${pl.sku}`;
+      return { c, k, wt, sw, pl, price, mass, sku };
+    }
+
+    function syncUI() {
+      const { c, k, wt, sw, pl, price, mass, sku } = getSummary();
+      lblCase.textContent = `${c.name} · ${c.price ? '+$' + c.price : 'Included'}`;
+      lblKeycap.textContent = k.name;
+      lblWeight.textContent = `${wt.name} · ${wt.price ? '+$' + wt.price : 'Included'}`;
+      lblSwitch.textContent = `${sw.name} (${sw.meta.split('·')[0].trim()})`;
+      lblPlate.textContent = `${pl.name} · ${pl.meta.split('·')[0].trim()}`;
+      skuEl.textContent = sku;
+      priceEl.textContent = `$${price}`;
+      navPriceEl.textContent = `$${price}`;
+      weightReadout.textContent = `EST. MASS ${mass.toLocaleString()} g`;
+    }
+
+    // Build DOM controls
+    const caseBox = document.getElementById('case-swatches');
+    CASES.forEach((c, i) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'swatch-btn' + (i === 0 ? ' active' : '');
+      btn.title = c.name;
+      btn.setAttribute('aria-label', c.name);
+      btn.innerHTML = `<span class="swatch-fill" style="background:linear-gradient(135deg,${c.hi},${c.lo})"></span>`;
+      btn.addEventListener('click', () => {
+        state.caseIdx = i;
+        Array.from(caseBox.children).forEach((el, j) => el.classList.toggle('active', j === i));
+        syncUI();
+      });
+      caseBox.appendChild(btn);
+    });
+
+    const keycapBox = document.getElementById('keycap-options');
+    KEYCAPS.forEach((k, i) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'opt-card' + (i === 0 ? ' active' : '');
+      btn.innerHTML = `
+        <div class="opt-card-top">
+          <span>${k.name}</span>
+          <span class="keycap-preview-dots">
+            <i style="background:${k.alphaTop}"></i>
+            <i style="background:${k.modTop}"></i>
+            <i style="background:${k.accTop}"></i>
+          </span>
+        </div>
+        <div class="opt-card-sub">${k.desc}</div>
+      `;
+      btn.addEventListener('click', () => {
+        state.keycapIdx = i;
+        Array.from(keycapBox.children).forEach((el, j) => el.classList.toggle('active', j === i));
+        syncUI();
+      });
+      keycapBox.appendChild(btn);
+    });
+
+    const weightBox = document.getElementById('weight-options');
+    WEIGHTS.forEach((wt, i) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'opt-card' + (i === 0 ? ' active' : '');
+      btn.innerHTML = `
+        <div class="opt-card-top">
+          <span>${wt.name}</span>
+          <span class="keycap-preview-dots"><i style="width:14px;background:linear-gradient(135deg,${wt.c1},${wt.c2})"></i></span>
+        </div>
+        <div class="opt-card-sub">${wt.price ? '+$' + wt.price : 'Included'}</div>
+      `;
+      btn.addEventListener('click', () => {
+        state.weightIdx = i;
+        Array.from(weightBox.children).forEach((el, j) => el.classList.toggle('active', j === i));
+        syncUI();
+      });
+      weightBox.appendChild(btn);
+    });
+
+    const swBox = document.getElementById('switch-options');
+    SWITCHES.forEach((sw, i) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'opt-pill' + (i === 0 ? ' active' : '');
+      btn.innerHTML = `<span class="opt-pill-name">${sw.name}</span><span class="opt-pill-meta">${sw.meta}</span>`;
+      btn.addEventListener('click', () => {
+        state.switchIdx = i;
+        Array.from(swBox.children).forEach((el, j) => el.classList.toggle('active', j === i));
+        syncUI();
+        SoundEngine.playKeystroke({ mode: 'strata', sw: sw.id, plate: PLATES[state.plateIdx].id });
+      });
+      swBox.appendChild(btn);
+    });
+
+    const plateBox = document.getElementById('plate-options');
+    PLATES.forEach((pl, i) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'opt-pill' + (i === 0 ? ' active' : '');
+      btn.innerHTML = `<span class="opt-pill-name">${pl.name}</span><span class="opt-pill-meta">${pl.meta}</span>`;
+      btn.addEventListener('click', () => {
+        state.plateIdx = i;
+        Array.from(plateBox.children).forEach((el, j) => el.classList.toggle('active', j === i));
+        syncUI();
+        SoundEngine.playKeystroke({ mode: 'strata', sw: SWITCHES[state.switchIdx].id, plate: pl.id });
+      });
+      plateBox.appendChild(btn);
+    });
+
+    // View buttons
+    const viewBtns = Array.from(document.querySelectorAll('[data-cfg-view]'));
+    viewBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        state.view = btn.dataset.cfgView;
+        viewBtns.forEach(b => b.classList.toggle('active', b === btn));
+      });
+    });
+
+    function triggerKey(keyObj) {
+      if (!keyObj) return;
+      keyPressAnim.set(keyObj.code, 1.0);
+      const sw = SWITCHES[state.switchIdx].id;
+      const pl = PLATES[state.plateIdx].id;
+      SoundEngine.playKeystroke({ mode: 'strata', sw, plate: pl, isSpace: keyObj.role === 'space' });
+      keyReadout.textContent = `ACTUATED: ${keyObj.l || 'SPACEBAR'} · ${SWITCHES[state.switchIdx].name.toUpperCase()} / ${PLATES[state.plateIdx].name.toUpperCase()}`;
+    }
+
+    // Play key riff button
+    const riffBtn = document.getElementById('cfg-test-sound');
+    const riffKeys = ['KeyS', 'KeyT', 'KeyR', 'KeyA', 'Space', 'KeyT', 'KeyA', 'Enter'];
+    riffBtn.addEventListener('click', () => {
+      riffBtn.classList.add('playing');
+      const sw = SWITCHES[state.switchIdx].id;
+      const pl = PLATES[state.plateIdx].id;
+      SoundEngine.playRiff({ mode: 'strata', sw, plate: pl }, (idx) => {
+        const code = riffKeys[idx % riffKeys.length];
+        keyPressAnim.set(code, 1.0);
+        const found = KEYS_FLAT.find(k => k.code === code);
+        if (found) keyReadout.textContent = `AUDITIONING: ${found.l || 'SPACEBAR'} · ${SWITCHES[state.switchIdx].name.toUpperCase()}`;
+      });
+      setTimeout(() => riffBtn.classList.remove('playing'), 900);
+    });
+
+    // Click on canvas to press keys
+    canvas.addEventListener('pointerdown', (e) => {
+      if (state.view !== 'top') {
+        SoundEngine.playKeystroke({ mode: 'strata', sw: SWITCHES[state.switchIdx].id, plate: PLATES[state.plateIdx].id });
+        return;
+      }
+      const rect = canvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      for (let i = 0; i < keyRects.length; i++) {
+        const r = keyRects[i];
+        if (mx >= r.x && mx <= r.x + r.w && my >= r.y && my <= r.y + r.h) {
+          triggerKey(r.key);
+          return;
+        }
+      }
+    });
+
+    // Physical keyboard support when configurator is in view
+    let cfgVisible = false;
+    new IntersectionObserver((entries) => {
+      cfgVisible = entries[0].isIntersecting;
+    }, { threshold: 0.01 }).observe(document.getElementById('configurator'));
+
+    window.addEventListener('keydown', (e) => {
+      if (!cfgVisible || e.metaKey || e.ctrlKey || e.altKey) return;
+      const modalOpen = document.getElementById('reserve-modal').classList.contains('open');
+      if (modalOpen) return;
+      const found = KEYS_FLAT.find(k => k.code === e.code);
+      if (found) {
+        if (e.code === 'Space') e.preventDefault();
+        triggerKey(found);
+      }
+    });
+
+    let cw = 1, ch = 1, dpr = 1;
+    function resize() {
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const rect = canvas.getBoundingClientRect();
+      cw = Math.max(1, rect.width);
+      ch = Math.max(1, rect.height);
+      canvas.width = Math.floor(cw * dpr);
+      canvas.height = Math.floor(ch * dpr);
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    function drawTopStudio(c, k, wt) {
+      const kbW = Math.min(cw * 0.86, ch * 2.02);
+      const kbH = kbW * 0.36;
+      const kbX = (cw - kbW) * 0.5;
+      const kbY = (ch - kbH) * 0.5;
+      const bezel = kbW * 0.034;
+
+      // Ambient desk-mat glow reflecting finish
+      const glow = ctx.createRadialGradient(cw * 0.5, ch * 0.52, 20, cw * 0.5, ch * 0.52, kbW * 0.72);
+      glow.addColorStop(0, c.glow);
+      glow.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, cw, ch);
+
+      // Soft studio drop shadow
+      ctx.save();
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.78)';
+      ctx.shadowBlur = 52;
+      ctx.shadowOffsetY = 26;
+      ctx.fillStyle = c.lo;
+      ctx.beginPath();
+      ctx.roundRect(kbX, kbY, kbW, kbH, 16);
+      ctx.fill();
+      ctx.restore();
+
+      // Main anodized chassis
+      const chGrad = ctx.createLinearGradient(kbX, kbY, kbX + kbW * 0.3, kbY + kbH);
+      chGrad.addColorStop(0, c.hi);
+      chGrad.addColorStop(0.55, c.main);
+      chGrad.addColorStop(1, c.lo);
+      ctx.fillStyle = chGrad;
+      ctx.beginPath();
+      ctx.roundRect(kbX, kbY, kbW, kbH, 16);
+      ctx.fill();
+
+      // Precision CNC chamfer highlight
+      ctx.strokeStyle = c.rim;
+      ctx.lineWidth = 1.6;
+      ctx.stroke();
+
+      // Inner keywell cavity
+      const wellX = kbX + bezel;
+      const wellY = kbY + bezel;
+      const wellW = kbW - bezel * 2;
+      const wellH = kbH - bezel * 2;
+      ctx.fillStyle = '#07080a';
+      ctx.beginPath();
+      ctx.roundRect(wellX, wellY, wellW, wellH, 7);
+      ctx.fill();
+
+      const uW = wellW / 16;
+      const uH = wellH / 5;
+      const gap = Math.max(2, uW * 0.072);
+
+      keyRects.length = 0;
+
+      KEYS_FLAT.forEach((key) => {
+        const press = keyPressAnim.get(key.code) || 0;
+        const kx = wellX + key.x * uW + gap * 0.5;
+        const ky = wellY + key.y * uH + gap * 0.5 + press * 2.2;
+        const kw = key.w * uW - gap;
+        const kh = uH - gap;
+
+        keyRects.push({ x: kx, y: ky, w: kw, h: kh, key });
+
+        let base = k.alpha, top = k.alphaTop, leg = k.leg;
+        if (key.role === 'mod' || key.role === 'arrow') {
+          base = k.mod; top = k.modTop; leg = k.modLeg;
+        } else if (key.role === 'accent') {
+          base = k.acc; top = k.accTop; leg = k.accLeg;
+        }
+
+        // Keycap body shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.45)';
+        ctx.beginPath();
+        ctx.roundRect(kx, ky + (2.5 - press * 1.8), kw, kh, 5);
+        ctx.fill();
+
+        // Skirt
+        ctx.fillStyle = base;
+        ctx.beginPath();
+        ctx.roundRect(kx, ky, kw, kh, 4.5);
+        ctx.fill();
+
+        // Sculpted top dish
+        const pad = Math.max(2.5, uW * 0.115);
+        const topGrad = ctx.createLinearGradient(kx, ky, kx, ky + kh);
+        topGrad.addColorStop(0, top);
+        topGrad.addColorStop(1, base);
+        ctx.fillStyle = topGrad;
+        ctx.beginPath();
+        ctx.roundRect(kx + pad, ky + pad * 0.8, kw - pad * 2, kh - pad * 2.05, 3);
+        ctx.fill();
+
+        ctx.strokeStyle = press > 0.1 ? 'rgba(255, 77, 36, 0.7)' : 'rgba(255, 255, 255, 0.12)';
+        ctx.lineWidth = press > 0.1 ? 1.2 : 0.75;
+        ctx.stroke();
+
+        // Legend
+        if (key.l && uW > 18) {
+          ctx.fillStyle = leg;
+          const fs = Math.max(7, Math.min(11, uW * (key.l.length > 2 ? 0.2 : 0.27)));
+          ctx.font = `600 ${fs}px "SF Pro Display", -apple-system, sans-serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(key.l, kx + kw * 0.5, ky + kh * 0.45);
+        }
+      });
+
+      // Signature 0.5u Blocker Acoustic Badge matching Weight Finish
+      const bx = wellX + 12.5 * uW + 3;
+      const by = wellY + 4 * uH + 3;
+      const bw = Math.max(5, 0.5 * uW - 6);
+      const bh = uH - 6;
+      const badgeGrad = ctx.createLinearGradient(bx, by, bx + bw, by + bh);
+      badgeGrad.addColorStop(0, wt.c1);
+      badgeGrad.addColorStop(1, wt.c2);
+      ctx.fillStyle = badgeGrad;
+      ctx.beginPath();
+      ctx.roundRect(bx, by, bw, bh, 3);
+      ctx.fill();
+      ctx.strokeStyle = wt.stroke;
+      ctx.lineWidth = 0.8;
+      ctx.stroke();
+    }
+
+    function drawSideProfile(c, k, wt) {
+      const len = Math.min(cw * 0.76, ch * 1.65);
+      const x0 = (cw - len) * 0.5;
+      const baseY = ch * 0.68;
+      const frontH = len * 0.088;
+      const rearH = frontH + len * Math.tan(6.5 * Math.PI / 180);
+
+      // Floor reflection shadow
+      const sh = ctx.createRadialGradient(cw * 0.5, baseY + 12, 10, cw * 0.5, baseY + 12, len * 0.58);
+      sh.addColorStop(0, 'rgba(0,0,0,0.75)');
+      sh.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = sh;
+      ctx.fillRect(x0 - 40, baseY - 10, len + 80, 48);
+
+      // Desk surface datum line
+      ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x0 - 36, baseY);
+      ctx.lineTo(x0 + len + 36, baseY);
+      ctx.stroke();
+
+      // Sculpted Cherry-profile keycap silhouettes along the 6.5° top line
+      const numRows = 5;
+      for (let i = 0; i < numRows; i++) {
+        const u0 = 0.07 + i * 0.172;
+        const u1 = u0 + 0.15;
+        const px0 = x0 + len * u0;
+        const px1 = x0 + len * u1;
+        const yAt = (u) => baseY - (rearH * (1 - u) + frontH * u);
+        const capH = 22 + (i === 0 ? 5 : i === 4 ? 1 : 0);
+
+        ctx.fillStyle = i === 0 ? k.accTop : (i === 4 ? k.modTop : k.alphaTop);
+        ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(px0, yAt(u0));
+        ctx.lineTo(px0 + 6, yAt(u0) - capH);
+        ctx.lineTo(px1 - 6, yAt(u1) - capH + 2);
+        ctx.lineTo(px1, yAt(u1));
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      }
+
+      // Main 6.5° wedge aluminum chassis
+      const grad = ctx.createLinearGradient(x0, baseY - rearH, x0, baseY);
+      grad.addColorStop(0, c.hi);
+      grad.addColorStop(0.55, c.main);
+      grad.addColorStop(1, c.lo);
+
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.moveTo(x0, baseY - rearH);
+      ctx.lineTo(x0 + len, baseY - frontH);
+      ctx.lineTo(x0 + len, baseY - 6);
+      ctx.lineTo(x0 + len - 14, baseY);
+      ctx.lineTo(x0 + 24, baseY);
+      ctx.lineTo(x0, baseY - 14);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = c.rim;
+      ctx.lineWidth = 1.4;
+      ctx.stroke();
+
+      // Side weight reveal chamfer accent
+      const wGrad = ctx.createLinearGradient(x0, baseY - 22, x0 + len * 0.52, baseY);
+      wGrad.addColorStop(0, wt.c1);
+      wGrad.addColorStop(1, wt.c2);
+      ctx.fillStyle = wGrad;
+      ctx.beginPath();
+      ctx.moveTo(x0 + 24, baseY);
+      ctx.lineTo(x0 + len * 0.58, baseY);
+      ctx.lineTo(x0 + len * 0.54, baseY - 14);
+      ctx.lineTo(x0 + 12, baseY - 14);
+      ctx.closePath();
+      ctx.fill();
+
+      // Dimension annotations
+      ctx.font = '500 10.5px "SF Mono", Menlo, monospace';
+      ctx.fillStyle = '#9ea2ae';
+      ctx.textAlign = 'left';
+      ctx.fillText('31.1 mm REAR', x0, baseY - rearH - 38);
+      ctx.textAlign = 'right';
+      ctx.fillText('18.2 mm FRONT CHIN', x0 + len, baseY - frontH - 32);
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#ff4d24';
+      ctx.fillText('6.5° ERGONOMIC WEDGE · LEAF-SPRING SUSPENDED', cw * 0.5, baseY + 34);
+    }
+
+    function drawRearWeight(c, k, wt) {
+      const kbW = Math.min(cw * 0.84, ch * 1.98);
+      const kbH = kbW * 0.36;
+      const kbX = (cw - kbW) * 0.5;
+      const kbY = (ch - kbH) * 0.5;
+
+      // Shadow
+      ctx.save();
+      ctx.shadowColor = 'rgba(0,0,0,0.78)';
+      ctx.shadowBlur = 50;
+      ctx.shadowOffsetY = 24;
+      ctx.fillStyle = c.lo;
+      ctx.beginPath();
+      ctx.roundRect(kbX, kbY, kbW, kbH, 16);
+      ctx.fill();
+      ctx.restore();
+
+      // Chassis bottom
+      const chGrad = ctx.createLinearGradient(kbX, kbY, kbX + kbW, kbY + kbH);
+      chGrad.addColorStop(0, c.hi);
+      chGrad.addColorStop(0.5, c.main);
+      chGrad.addColorStop(1, c.lo);
+      ctx.fillStyle = chGrad;
+      ctx.beginPath();
+      ctx.roundRect(kbX, kbY, kbW, kbH, 16);
+      ctx.fill();
+      ctx.strokeStyle = c.rim;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // Rubber acoustic feet (4 corners)
+      const footInsetX = kbW * 0.055, footInsetY = kbH * 0.14;
+      [[0,0],[1,0],[0,1],[1,1]].forEach(([fx, fy]) => {
+        const px = fx ? kbX + kbW - footInsetX - 24 : kbX + footInsetX;
+        const py = fy ? kbY + kbH - footInsetY - 7 : kbY + footInsetY;
+        ctx.fillStyle = '#090a0d';
+        ctx.beginPath();
+        ctx.roundRect(px, py, 24, 7, 3.5);
+        ctx.fill();
+      });
+
+      // Massive recessed topographic acoustic weight
+      const wW = kbW * 0.72, wH = kbH * 0.64;
+      const wX = (cw - wW) * 0.5, wY = (ch - wH) * 0.5;
+      const wGrad = ctx.createLinearGradient(wX, wY, wX + wW, wY + wH);
+      wGrad.addColorStop(0, wt.c1);
+      wGrad.addColorStop(0.52, wt.c2);
+      wGrad.addColorStop(1, wt.c1);
+      ctx.fillStyle = wGrad;
+      ctx.beginPath();
+      ctx.roundRect(wX, wY, wW, wH, 10);
+      ctx.fill();
+      ctx.strokeStyle = wt.stroke;
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+
+      // Engraved topographic contour lines inside brass/copper/titanium weight
+      ctx.save();
+      ctx.beginPath();
+      ctx.roundRect(wX, wY, wW, wH, 10);
+      ctx.clip();
+      ctx.strokeStyle = wt.engrave;
+      ctx.lineWidth = 1.2;
+      for (let i = -5; i <= 5; i++) {
+        ctx.beginPath();
+        for (let sx = 0; sx <= wW; sx += 8) {
+          const u = sx / wW;
+          const cy = wY + wH * 0.5 + i * 11 + Math.sin(u * 9.5 + i * 0.7) * 10 + Math.cos(u * 4.2 - i) * 5;
+          if (sx === 0) ctx.moveTo(wX + sx, cy);
+          else ctx.lineTo(wX + sx, cy);
+        }
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      // Laser-etched serial plaque
+      ctx.font = '600 10px "SF Mono", Menlo, monospace';
+      ctx.fillStyle = wt.engrave;
+      ctx.textAlign = 'center';
+      ctx.fillText(`ATELIER KRONOS // STRATA 65 · EDITION 01 · ${wt.name.toUpperCase()}`, cw * 0.5, wY + wH - 14);
+    }
+
+    function renderLoop() {
+      requestAnimationFrame(renderLoop);
+      if (!cfgVisible) return;
+
+      // Decay key press animations smoothly
+      keyPressAnim.forEach((val, code) => {
+        const next = val * 0.82;
+        if (next < 0.01) keyPressAnim.delete(code);
+        else keyPressAnim.set(code, next);
+      });
+
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, cw, ch);
+
+      const { c, k, wt } = getSummary();
+      if (state.view === 'top') drawTopStudio(c, k, wt);
+      else if (state.view === 'profile') drawSideProfile(c, k, wt);
+      else drawRearWeight(c, k, wt);
+    }
+
+    syncUI();
+    requestAnimationFrame(renderLoop);
+
+    // Reservation Modal Logic
+    const modal = document.getElementById('reserve-modal');
+    const modalRows = document.getElementById('modal-summary-rows');
+    const modalTotal = document.getElementById('modal-total-price');
+    const modalStatus = document.getElementById('modal-status');
+    const btnReserve = document.getElementById('btn-reserve');
+    const btnClose = document.getElementById('modal-close');
+    const btnConfirm = document.getElementById('modal-confirm-btn');
+
+    function openModal() {
+      const { c, k, wt, sw, pl, price, mass, sku } = getSummary();
+      modalRows.innerHTML = `
+        <div class="modal-row"><span>SKU CODE</span><strong>${sku}</strong></div>
+        <div class="modal-row"><span>CHASSIS FINISH</span><strong>${c.name}</strong></div>
+        <div class="modal-row"><span>KEYCAP SET</span><strong>${k.name}</strong></div>
+        <div class="modal-row"><span>ACOUSTIC CORE</span><strong>${wt.name}</strong></div>
+        <div class="modal-row"><span>SWITCHES</span><strong>${sw.name}</strong></div>
+        <div class="modal-row"><span>PLATE &amp; MASS</span><strong>${pl.name} · ${mass.toLocaleString()} g</strong></div>
+      `;
+      modalTotal.textContent = `$${price}`;
+      modalStatus.classList.remove('show');
+      btnConfirm.disabled = false;
+      btnConfirm.textContent = 'Lock Serial Number Allocation';
+      modal.classList.add('open');
+      modal.setAttribute('aria-hidden', 'false');
+    }
+
+    function closeModal() {
+      modal.classList.remove('open');
+      modal.setAttribute('aria-hidden', 'true');
+    }
+
+    btnReserve.addEventListener('click', openModal);
+    btnClose.addEventListener('click', closeModal);
+    modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+    window.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+
+    btnConfirm.addEventListener('click', () => {
+      const { sku } = getSummary();
+      const serial = String(Math.floor(14 + Math.random() * 420)).padStart(3, '0');
+      modalStatus.innerHTML = `ALLOCATION LOCKED · BATCH 01 UNIT <strong>#${serial} / 500</strong><br>SPEC: ${sku} — Local reservation preview confirmed.`;
+      modalStatus.classList.add('show');
+      btnConfirm.disabled = true;
+      btnConfirm.textContent = `Unit #${serial} Reserved`;
+      SoundEngine.playRiff({ mode: 'strata', sw: SWITCHES[state.switchIdx].id, plate: PLATES[state.plateIdx].id });
+    });
+  }
+
+  /* =========================================================================
+     BOOT ALL MODULES
+  ========================================================================= */
+  initHeroWebGL2();
+  initScrollytelling();
+  initSplitComparison();
+  initWireframeSpecWebGL2();
+  initConfigurator();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,3 @@
+Create a real-time WebGL2 water and glass visualizer built from pure math and signed distance functions: a glass object half-submerged in moving water, with refraction, reflection, chromatic dispersion and light absorption. Let the user orbit the camera with the mouse.
+
+Save the result as one self-contained file named index.html in the current directory. Use raw WebGL2 only, no external libraries or network requests. Do it in one go, do not ask questions.

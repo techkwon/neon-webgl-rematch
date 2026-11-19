@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Glass &amp; Water — SDF raymarcher</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #05090f; }
+  canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; }
+  canvas.drag { cursor: grabbing; }
+  #hud {
+    position: fixed; left: 14px; bottom: 12px; color: rgba(255,255,255,.78);
+    font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    text-shadow: 0 1px 3px rgba(0,0,0,.7); pointer-events: none; user-select: none;
+  }
+  #err {
+    position: fixed; inset: 0; display: none; padding: 24px; box-sizing: border-box; color: #ffb4b4;
+    font: 13px/1.5 ui-monospace, Menlo, monospace; white-space: pre-wrap; overflow: auto; background: #120808;
+  }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="hud"></div>
+<div id="err"></div>
+<script>
+"use strict";
+
+/* ───────────────────────── Shaders ───────────────────────── */
+
+const VERT = `#version 300 es
+void main() {
+  // single oversized triangle covering the viewport
+  vec2 p = vec2((gl_VertexID << 1) & 2, gl_VertexID & 2);
+  gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0);
+}`;
+
+const FRAG = `#version 300 es
+precision highp float;
+precision highp int;
+
+uniform vec2  uRes;
+uniform float uTime;
+uniform vec3  uCam;
+uniform mat3  uCamM;     // columns: right, up, forward
+uniform mat3  uObjM;     // world -> object rotation
+uniform vec3  uObjP;     // object centre (world)
+uniform float uDisp;     // dispersion strength (IOR spread)
+uniform float uBase;     // glass base IOR
+out vec4 fragColor;
+
+const vec3  SUN     = vec3(-0.3596, 0.3288, -0.8733);
+const float WIOR    = 1.333;
+const float FLOOR_Y = -4.0;
+const float AMAX    = 0.32;                    // bound on wave height
+const float FAR     = 60.0;
+const vec3  SIGW    = vec3(0.30, 0.065, 0.040); // water absorption  (1/unit)
+const vec3  SIGG    = vec3(0.20, 0.045, 0.130); // glass absorption  (1/unit)
+const vec3  SCAT    = vec3(0.012, 0.130, 0.165);// water in-scatter colour
+const float PHI     = 1.6180339;
+
+/* ---------- noise ---------- */
+float hash21(vec2 p) {
+  p = fract(p * vec2(123.34, 456.21));
+  p += dot(p, p + 45.32);
+  return fract(p.x * p.y);
+}
+float vnoise(vec2 p) {
+  vec2 i = floor(p), f = fract(p);
+  f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(hash21(i), hash21(i + vec2(1, 0)), f.x),
+             mix(hash21(i + vec2(0, 1)), hash21(i + vec2(1, 1)), f.x), f.y);
+}
+float fbm(vec2 p) {
+  float a = 0.5, s = 0.0;
+  for (int i = 0; i < 4; i++) { s += a * vnoise(p); p = p * 2.03 + vec2(7.3, 2.1); a *= 0.5; }
+  return s;
+}
+
+/* ---------- water height field ----------
+   returns (height, dh/dx, dh/dz).  Sum of sharpened directional waves with a
+   deep-water dispersion relation, plus ring ripples radiating from the glass. */
+vec3 waves(vec2 p) {
+  float h = 0.0;
+  vec2  g = vec2(0.0);
+  float a = 0.14, k = 1.1;
+  vec2  d = vec2(0.9394, 0.3429);
+  const mat2 ROT = mat2(-0.73739, 0.67546, -0.67546, -0.73739); // 2.4 rad
+  for (int i = 0; i < 6; i++) {
+    float ph = dot(d, p) * k - sqrt(9.8 * k) * uTime + float(i) * 1.9;
+    float e  = exp(sin(ph) - 1.0);
+    h += a * (e - 0.4658);
+    g += a * e * cos(ph) * k * d;
+    a *= 0.62; k *= 1.55; d = ROT * d;
+  }
+  vec2  q   = p - uObjP.xz;
+  float r   = length(q);
+  float env = smoothstep(0.8, 1.4, r) * exp(-0.35 * max(r - 1.4, 0.0));
+  float ph  = 8.0 * r - 4.5 * uTime;
+  h += 0.03 * env * sin(ph);
+  g += 0.03 * env * 8.0 * cos(ph) * q / max(r, 1e-3);
+  float fade = exp(-0.0008 * dot(p, p));
+  return vec3(h, g) * fade;
+}
+
+/* first intersection of a ray with the water surface in (0,tmax), or -1 */
+float waterHit(vec3 ro, vec3 rd, float tmax) {
+  float t0 = 0.0, t1 = tmax;
+  if (abs(rd.y) < 1e-4) {
+    if (abs(ro.y) > AMAX) return -1.0;
+  } else {
+    float ta = (-AMAX - ro.y) / rd.y, tb = (AMAX - ro.y) / rd.y;
+    t0 = max(0.0, min(ta, tb));
+    t1 = min(tmax, max(ta, tb));
+    if (t0 >= t1) return -1.0;
+  }
+  float t = t0;
+  vec3 p = ro + rd * t;
+  float f = p.y - waves(p.xz).x;
+  float s = f >= 0.0 ? 1.0 : -1.0;
+  float tp = t;
+  for (int i = 0; i < 72; i++) {
+    t += max(abs(f) * 0.5, 0.010 + 0.008 * t);
+    if (t > t1) return -1.0;
+    p = ro + rd * t;
+    f = p.y - waves(p.xz).x;
+    if (f * s < 0.0) {
+      float lo = tp, hi = t;
+      for (int j = 0; j < 6; j++) {
+        float m = 0.5 * (lo + hi);
+        vec3 pm = ro + rd * m;
+        if ((pm.y - waves(pm.xz).x) * s < 0.0) hi = m; else lo = m;
+      }
+      return hi;
+    }
+    tp = t;
+  }
+  return -1.0;
+}
+
+/* ---------- glass: rounded dodecahedron with clipped corners ---------- */
+float smax(float a, float b, float k) {
+  float h = max(k - abs(a - b), 0.0) / k;
+  return max(a, b) + h * h * k * 0.25;
+}
+float sdG(vec3 wp) {
+  vec3 p = uObjM * (wp - uObjP);
+  vec3 q = abs(p);
+  const vec3 n1 = vec3(0.0, 0.5257, 0.8507);
+  float d = smax(dot(q, n1), dot(q, n1.yzx), 0.08);
+  d = smax(d, dot(q, n1.zxy), 0.08) - 0.92;
+  return smax(d, length(p) - 1.16, 0.15);
+}
+vec3 gN(vec3 p) {
+  const vec2 e = vec2(1.0, -1.0) * 0.0015;
+  return normalize(e.xyy * sdG(p + e.xyy) + e.yyx * sdG(p + e.yyx) +
+                   e.yxy * sdG(p + e.yxy) + e.xxx * sdG(p + e.xxx));
+}
+float glassOut(vec3 ro, vec3 rd) {
+  vec3 oc = ro - uObjP;
+  float b = dot(oc, rd), c = dot(oc, oc) - 1.69;
+  float h = b * b - c;
+  if (h < 0.0) return -1.0;
+  h = sqrt(h);
+  float t = max(-b - h, 0.0), te = -b + h;
+  if (te < 0.0) return -1.0;
+  for (int i = 0; i < 80; i++) {
+    float d = sdG(ro + rd * t);
+    if (d < 0.0007) return t;
+    t += d;
+    if (t > te) break;
+  }
+  return -1.0;
+}
+float glassIn(vec3 ro, vec3 rd) {
+  float t = 0.0;
+  for (int i = 0; i < 64; i++) {
+    float d = -sdG(ro + rd * t);
+    if (d < 0.001 && t > 0.0) return t;
+    t += max(d, 0.004);
+  }
+  return t;
+}
+
+/* unpolarised Fresnel; n must face against rd, eta = n1/n2 */
+float fres(vec3 rd, vec3 n, float eta) {
+  float ci = clamp(-dot(rd, n), 0.0, 1.0);
+  float s2 = eta * eta * (1.0 - ci * ci);
+  if (s2 >= 1.0) return 1.0;
+  float ct = sqrt(1.0 - s2);
+  float rs = (eta * ci - ct) / (eta * ci + ct);
+  float rp = (ci - eta * ct) / (ci + eta * ct);
+  return 0.5 * (rs * rs + rp * rp);
+}
+
+/* ---------- sky ---------- */
+vec3 sky(vec3 rd) {
+  float y = max(rd.y, 0.0);
+  vec3 hor = vec3(0.74, 0.83, 0.94), zen = vec3(0.12, 0.32, 0.70);
+  vec3 c = mix(hor, zen, pow(y, 0.45));
+  float sd = max(dot(rd, SUN), 0.0);
+  c += vec3(1.0, 0.72, 0.42) * (pow(sd, 6.0) * 0.22 + pow(sd, 60.0) * 0.5);
+  c += vec3(1.0, 0.92, 0.75) * smoothstep(0.99965, 0.99985, sd) * 60.0;
+  if (rd.y > 0.01) {
+    vec2 uv = rd.xz / (rd.y + 0.18) * 1.1 + vec2(uTime * 0.012, 0.0);
+    float n = fbm(uv * 1.4);
+    float cl = smoothstep(0.50, 0.85, n) * smoothstep(0.0, 0.2, rd.y);
+    float lit = 0.8 + 0.5 * pow(sd, 3.0);
+    c = mix(c, vec3(0.88, 0.90, 0.95) * lit, cl * 0.85);
+  }
+  return c;
+}
+
+/* ---------- sea floor ---------- */
+float caustic(vec2 uv, float t) {
+  vec2 p = mod(uv * 6.28318, 6.28318) - 250.0;
+  vec2 i = p;
+  float c = 1.0, inten = 0.005;
+  for (int n = 0; n < 4; n++) {
+    float tt = t * (1.0 - (3.5 / float(n + 1)));
+    i = p + vec2(cos(tt - i.x) + sin(tt + i.y), sin(tt - i.y) + cos(tt + i.x));
+    c += 1.0 / length(vec2(p.x / (sin(i.x + tt) / inten), p.y / (cos(i.y + tt) / inten)));
+  }
+  c /= 4.0;
+  c = 1.17 - pow(c, 1.4);
+  return pow(abs(c), 8.0);
+}
+vec3 floorCol(vec3 q) {
+  vec2 uv = q.xz;
+  float n   = fbm(uv * 1.5) * 0.7 + 0.3 * vnoise(uv * 9.0);
+  float rip = 0.5 + 0.5 * sin(uv.x * 2.2 + fbm(uv * 0.8) * 6.0);
+  vec3 sand = mix(vec3(0.70, 0.58, 0.40), vec3(0.88, 0.78, 0.58), n * 0.6 + rip * 0.4);
+  vec3 L  = -refract(-SUN, vec3(0.0, 1.0, 0.0), 1.0 / WIOR);   // towards the sun, in water
+  vec3 Lt = exp(-SIGW * (-FLOOR_Y) / L.y);
+  vec3 oc = q - uObjP;
+  vec3 perp = oc - L * dot(oc, L);
+  float sh = smoothstep(0.35, 1.3, length(perp));
+  float c = caustic(uv * 0.22 + vec2(0.0, 0.3), uTime * 0.55);
+  vec3 sunL = vec3(1.0, 0.92, 0.78) * 2.4 * Lt * (0.30 + 1.7 * c) * mix(0.30, 1.0, sh);
+  vec3 amb  = vec3(0.30, 0.50, 0.65) * 0.5 * exp(-SIGW * 2.0);
+  return sand * (sunL + amb);
+}
+
+/* cheap environment lookups used for the reflected branches */
+vec3 envUnder(vec3 p, vec3 d) {
+  if (d.y > -0.03) return SCAT * 0.9;
+  float dist = min((FLOOR_Y - p.y) / d.y, 40.0);
+  vec3 T = exp(-SIGW * dist);
+  return floorCol(p + d * dist) * T + SCAT * (1.0 - T) * 0.8;
+}
+vec3 envAir(vec3 p, vec3 d) {
+  if (d.y < 0.0) return vec3(0.03, 0.15, 0.19) + sky(vec3(d.x, -d.y, d.z)) * 0.12;
+  float tg = glassOut(p, d);
+  if (tg > 0.0) {
+    vec3 q = p + d * tg;
+    vec3 n = gN(q);
+    float F = fres(d, n, 1.0 / 1.52);
+    vec3 rf = reflect(d, n);
+    vec3 refl = rf.y > 0.0 ? sky(rf) : vec3(0.03, 0.15, 0.19);
+    vec3 body = vec3(0.03, 0.09, 0.08) + 0.22 * sky(d) * vec3(0.6, 0.9, 0.8);
+    return mix(body, refl, clamp(F + 0.04, 0.0, 1.0));
+  }
+  return sky(d);
+}
+
+/* ---------- path through the scene for one glass IOR ---------- */
+vec3 trace(vec3 ro, vec3 rd, float gior, out bool touched) {
+  vec3 col = vec3(0.0), thr = vec3(1.0);
+  bool inG = false, inW = false;
+  touched = false;
+  for (int i = 0; i < 10; i++) {
+    inW = !inG && (ro.y < waves(ro.xz).x);
+    float tEv = FAR;
+    int ev = 0;
+    if (inG) {
+      tEv = glassIn(ro, rd); ev = 1;
+    } else {
+      float tg = glassOut(ro, rd);
+      if (tg > 0.0) { tEv = tg; ev = 1; }
+      float tw = waterHit(ro, rd, tEv);
+      if (tw > 0.0) { tEv = tw; ev = 2; }
+      if (inW && rd.y < 0.0) {
+        float tf = (FLOOR_Y - ro.y) / rd.y;
+        if (tf < tEv) { tEv = tf; ev = 3; }
+      }
+    }
+    vec3 p = ro + rd * tEv;
+
+    // Beer–Lambert absorption of the segment just travelled
+    if (inG) {
+      thr *= exp(-SIGG * tEv);
+    } else if (inW) {
+      vec3 T = exp(-SIGW * tEv);
+      float ld = exp(-0.15 * max(-(ro.y + 0.5 * rd.y * tEv), 0.0));
+      col += thr * SCAT * (1.0 - T) * ld;
+      thr *= T;
+    }
+
+    if (ev == 0) {
+      if (!inW) col += thr * sky(rd);
+      thr = vec3(0.0);
+      break;
+    }
+    if (ev == 3) {
+      col += thr * floorCol(p);
+      thr = vec3(0.0);
+      break;
+    }
+    if (ev == 2) {                              // water surface
+      vec3 g3 = waves(p.xz);
+      vec3 n = normalize(vec3(-g3.y, 1.0, -g3.z));
+      if (!inW) {                               // air -> water
+        float F = fres(rd, n, 1.0 / WIOR);
+        col += thr * F * envAir(p + n * 0.02, reflect(rd, n));
+        thr *= 1.0 - F;
+        rd = refract(rd, n, 1.0 / WIOR);
+        ro = p - n * 0.02;
+      } else {                                  // water -> air
+        vec3 nd = -n;
+        vec3 r = refract(rd, nd, WIOR);
+        vec3 rf = reflect(rd, nd);
+        if (dot(r, r) < 0.5) {                  // total internal reflection
+          rd = rf; ro = p + nd * 0.02;
+        } else {
+          float F = fres(rd, nd, WIOR);
+          col += thr * F * envUnder(p + nd * 0.02, rf);
+          thr *= 1.0 - F;
+          rd = r; ro = p + n * 0.02;
+        }
+      }
+      continue;
+    }
+    // glass surface
+    vec3 n = gN(p);
+    if (!inG) {                                 // entering
+      touched = true;
+      float eta = (inW ? WIOR : 1.0) / gior;
+      float F = fres(rd, n, eta);
+      vec3 rf = reflect(rd, n);
+      col += thr * F * (inW ? envUnder(p + n * 0.01, rf) : envAir(p + n * 0.01, rf));
+      thr *= 1.0 - F;
+      rd = refract(rd, n, eta);
+      ro = p - n * 0.008;
+      inG = true;
+    } else {                                    // leaving (or internal reflection)
+      bool wet = p.y < waves(p.xz).x;
+      float eta = gior / (wet ? WIOR : 1.0);
+      vec3 nin = -n;
+      vec3 r = refract(rd, nin, eta);
+      if (dot(r, r) < 0.5) {
+        rd = reflect(rd, nin); ro = p + nin * 0.008;
+      } else {
+        thr *= 1.0 - fres(rd, nin, eta);
+        rd = r; ro = p + n * 0.008;
+        inG = false;
+      }
+    }
+  }
+  if (thr.x + thr.y + thr.z > 0.0) {
+    col += thr * (inW ? SCAT : sky(rd));
+  }
+  return col;
+}
+
+vec3 aces(vec3 x) {
+  return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), 0.0, 1.0);
+}
+
+void main() {
+  vec2 uv = (gl_FragCoord.xy * 2.0 - uRes) / uRes.y;
+  vec3 rd = normalize(uCamM * vec3(uv, 1.7));
+  vec3 ro = uCam;
+
+  // Trace with the green-ish IOR first; only pixels that touch the glass are
+  // traced again for red and blue to produce chromatic dispersion.
+  vec3 col = vec3(0.0);
+  for (int c = 0; c < 3; c++) {
+    float ior = uBase + (c == 1 ? -uDisp : (c == 2 ? uDisp : 0.0));
+    bool tch;
+    vec3 r = trace(ro, rd, ior, tch);
+    if (c == 0) { col = r; if (!tch || uDisp <= 0.0) break; }
+    else if (c == 1) col.r = r.r;
+    else col.b = r.b;
+  }
+
+  col = aces(col * 0.95);
+  vec2 q = gl_FragCoord.xy / uRes;
+  col *= 0.55 + 0.45 * pow(16.0 * q.x * q.y * (1.0 - q.x) * (1.0 - q.y), 0.22);
+  col = pow(col, vec3(1.0 / 2.2));
+  col += (hash21(gl_FragCoord.xy + uTime) - 0.5) / 255.0;   // de-banding dither
+  fragColor = vec4(col, 1.0);
+}`;
+
+/* ───────────────────────── Setup ───────────────────────── */
+
+const canvas = document.getElementById("c");
+const hud = document.getElementById("hud");
+const errBox = document.getElementById("err");
+function fail(msg) { errBox.style.display = "block"; errBox.textContent = msg; }
+
+const gl = canvas.getContext("webgl2", { antialias: false, alpha: false, powerPreference: "high-performance" });
+if (!gl) { fail("WebGL2 is not available in this browser."); throw new Error("no webgl2"); }
+
+function compile(type, src) {
+  const s = gl.createShader(type);
+  gl.shaderSource(s, src);
+  gl.compileShader(s);
+  if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+    const log = gl.getShaderInfoLog(s);
+    fail("Shader compile error:\n" + log);
+    throw new Error(log);
+  }
+  return s;
+}
+const prog = gl.createProgram();
+gl.attachShader(prog, compile(gl.VERTEX_SHADER, VERT));
+gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, FRAG));
+gl.linkProgram(prog);
+if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+  fail("Program link error:\n" + gl.getProgramInfoLog(prog));
+  throw new Error("link");
+}
+gl.useProgram(prog);
+const U = {};
+for (const n of ["uRes", "uTime", "uCam", "uCamM", "uObjM", "uObjP", "uDisp", "uBase"]) U[n] = gl.getUniformLocation(prog, n);
+const vao = gl.createVertexArray();
+gl.bindVertexArray(vao);
+
+/* ───────────────────────── Camera control ───────────────────────── */
+
+const params = new URLSearchParams(location.search);
+const num = (k, d) => (params.has(k) && isFinite(+params.get(k))) ? +params.get(k) : d;
+
+const cam = {
+  yaw:   num("yaw", 0.35),
+  pitch: num("pitch", 0.30),
+  dist:  num("dist", 7.2),
+  tYaw: null, tPitch: null, tDist: null,
+};
+cam.tYaw = cam.yaw; cam.tPitch = cam.pitch; cam.tDist = cam.dist;
+const TARGET = [0, -0.35, 0];
+let lastInput = -1e9;
+const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+
+const pointers = new Map();
+let pinchDist = 0;
+canvas.addEventListener("pointerdown", e => {
+  canvas.setPointerCapture(e.pointerId);
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  canvas.classList.add("drag");
+  if (pointers.size === 2) { const [a, b] = [...pointers.values()]; pinchDist = Math.hypot(a.x - b.x, a.y - b.y); }
+  lastInput = performance.now();
+});
+canvas.addEventListener("pointermove", e => {
+  const p = pointers.get(e.pointerId);
+  if (!p) return;
+  const dx = e.clientX - p.x, dy = e.clientY - p.y;
+  p.x = e.clientX; p.y = e.clientY;
+  if (pointers.size === 1) {
+    cam.tYaw   -= dx * 0.006;
+    cam.tPitch += dy * 0.006;
+    cam.tPitch = clamp(cam.tPitch, -0.55, 1.5);
+  } else if (pointers.size === 2) {
+    const [a, b] = [...pointers.values()];
+    const d = Math.hypot(a.x - b.x, a.y - b.y);
+    cam.tDist = clamp(cam.tDist * pinchDist / Math.max(d, 1), 3.2, 16);
+    pinchDist = d;
+  }
+  lastInput = performance.now();
+});
+const endPtr = e => { pointers.delete(e.pointerId); if (!pointers.size) canvas.classList.remove("drag"); };
+canvas.addEventListener("pointerup", endPtr);
+canvas.addEventListener("pointercancel", endPtr);
+canvas.addEventListener("wheel", e => {
+  e.preventDefault();
+  cam.tDist = clamp(cam.tDist * Math.exp(e.deltaY * 0.0012), 3.2, 16);
+  lastInput = performance.now();
+}, { passive: false });
+
+const dispLevels = [0.0, 0.025, 0.05, 0.09];
+let dispIdx = clamp(Math.round(num("disp", 1)), 0, dispLevels.length - 1);
+addEventListener("keydown", e => {
+  if (e.key === "d" || e.key === "D") dispIdx = (dispIdx + 1) % dispLevels.length;
+});
+
+/* ───────────────────────── Math helpers ───────────────────────── */
+
+function mul3(a, b) {              // row-major 3x3 product
+  const r = [[0,0,0],[0,0,0],[0,0,0]];
+  for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++)
+    for (let k = 0; k < 3; k++) r[i][j] += a[i][k] * b[k][j];
+  return r;
+}
+const rotX = a => { const c = Math.cos(a), s = Math.sin(a); return [[1,0,0],[0,c,-s],[0,s,c]]; };
+const rotY = a => { const c = Math.cos(a), s = Math.sin(a); return [[c,0,s],[0,1,0],[-s,0,c]]; };
+const rotZ = a => { const c = Math.cos(a), s = Math.sin(a); return [[c,-s,0],[s,c,0],[0,0,1]]; };
+const norm = v => { const l = Math.hypot(v[0], v[1], v[2]); return [v[0]/l, v[1]/l, v[2]/l]; };
+const cross = (a, b) => [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]];
+
+/* ───────────────────────── Resize / adaptive resolution ───────────────────────── */
+
+const fixedScale = params.has("scale");
+let renderScale = fixedScale ? clamp(num("scale", 1), 0.2, 2) : 0.65;
+let growBlockedUntil = 0;
+let cw = 0, ch = 0;
+function resize() {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const w = Math.max(2, Math.floor(canvas.clientWidth  * dpr * renderScale));
+  const h = Math.max(2, Math.floor(canvas.clientHeight * dpr * renderScale));
+  if (w !== cw || h !== ch) { canvas.width = w; canvas.height = h; cw = w; ch = h; }
+}
+addEventListener("resize", resize);
+
+/* ───────────────────────── Main loop ───────────────────────── */
+
+const frozenT = params.has("t") ? num("t", 0) : null;
+const t0 = performance.now();
+let prev = t0, acc = 0, frames = 0, fps = 0;
+
+function frame(now) {
+  const dt = Math.min((now - prev) / 1000, 0.1);
+  prev = now;
+
+  // adaptive resolution: keep the frame rate near display refresh
+  acc += dt; frames++;
+  if (acc > 0.8) {
+    fps = frames / acc;
+    if (!fixedScale) {
+      if (fps < 40 && renderScale > 0.3) {
+        renderScale = Math.max(0.3, renderScale * Math.max(0.8, fps / 55));
+        growBlockedUntil = now + 8000;
+      } else if (fps > 57 && renderScale < 1 && now > growBlockedUntil) {
+        renderScale = Math.min(1, renderScale * 1.08);
+      }
+    }
+    acc = 0; frames = 0;
+  }
+  resize();
+
+  // slow auto-orbit when idle
+  if (now - lastInput > 6000 && !pointers.size) cam.tYaw += dt * 0.05;
+  const k = 1 - Math.exp(-dt * 10);
+  cam.yaw   += (cam.tYaw   - cam.yaw)   * k;
+  cam.pitch += (cam.tPitch - cam.pitch) * k;
+  cam.dist  += (cam.tDist  - cam.dist)  * k;
+
+  const time = frozenT !== null ? frozenT : (now - t0) / 1000;
+
+  const cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch);
+  let pos = [
+    TARGET[0] + cam.dist * cp * Math.sin(cam.yaw),
+    TARGET[1] + cam.dist * sp,
+    TARGET[2] + cam.dist * cp * Math.cos(cam.yaw),
+  ];
+  pos[1] = Math.max(pos[1], -3.4);
+  const fwd = norm([TARGET[0]-pos[0], TARGET[1]-pos[1], TARGET[2]-pos[2]]);
+  const right = norm(cross(fwd, [0, 1, 0]));
+  const up = cross(right, fwd);
+
+  // glass object bobbing and slowly tumbling in the water
+  const objP = [0.25 * Math.sin(time * 0.31), 0.05 + 0.07 * Math.sin(time * 0.9), 0.2 * Math.cos(time * 0.27)];
+  const R = mul3(mul3(rotY(time * 0.13 + 0.4), rotX(0.42 + 0.09 * Math.sin(time * 0.7))), rotZ(0.22 + 0.07 * Math.sin(time * 0.53 + 1)));
+  // shader needs world->object (= R^T); column-major flatten of R^T == row-major flatten of R
+  const objM = new Float32Array([R[0][0],R[0][1],R[0][2], R[1][0],R[1][1],R[1][2], R[2][0],R[2][1],R[2][2]]);
+
+  gl.viewport(0, 0, canvas.width, canvas.height);
+  gl.uniform2f(U.uRes, canvas.width, canvas.height);
+  gl.uniform1f(U.uTime, time);
+  gl.uniform3f(U.uCam, pos[0], pos[1], pos[2]);
+  gl.uniformMatrix3fv(U.uCamM, false, new Float32Array([...right, ...up, ...fwd]));
+  gl.uniformMatrix3fv(U.uObjM, false, objM);
+  gl.uniform3f(U.uObjP, objP[0], objP[1], objP[2]);
+  gl.uniform1f(U.uDisp, dispLevels[dispIdx]);
+  gl.uniform1f(U.uBase, 1.52);
+  gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+  hud.textContent = "drag: orbit · wheel/pinch: zoom · D: dispersion [" + dispLevels[dispIdx].toFixed(3) + "] · " +
+    canvas.width + "×" + canvas.height + " · " + Math.round(fps) + " fps";
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

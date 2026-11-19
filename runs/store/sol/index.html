@@ -1,0 +1,1074 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'">
+<meta name="theme-color" content="#eeece6">
+<title>STRATA 01 — Mechanical Keyboard</title>
+<style>
+:root{--paper:#eeece6;--ink:#20211f;--muted:#605f58;--line:#c9c6bd;--hot:#e95131;--dark:#151b20;--gutter:clamp(22px,5.35vw,100px);--mono:ui-monospace,"SFMono-Regular",Consolas,monospace}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.5 "Helvetica Neue",Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+button,input{font:inherit}
+button,a,input{-webkit-tap-highlight-color:transparent}
+button{color:inherit}
+a{color:inherit;text-decoration:none}
+button{cursor:pointer}
+button:focus-visible,a:focus-visible,input:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--hot);outline-offset:5px}
+canvas{display:block;width:100%;height:100%}
+h1,h2,h3,p,figure{margin:0}
+h1,h2,h3{font-weight:600;line-height:.96;letter-spacing:-.075em}
+p{line-height:1.5}
+.mono,.eyebrow{font:600 11px/1.35 var(--mono);letter-spacing:.10em;text-transform:uppercase}
+.num{font:500 11px/1.4 var(--mono);letter-spacing:.08em;color:#a5321c}
+.eyebrow{display:flex;align-items:center;gap:11px}
+.eyebrow::before{content:"";width:7px;height:7px;background:var(--hot);transform:rotate(45deg);flex:none}
+.button{display:inline-flex;align-items:center;justify-content:space-between;gap:27px;min-height:45px;padding:0 15px;border:1px solid currentColor;background:none;color:inherit;font:600 11px/1 var(--mono);letter-spacing:.07em;text-transform:uppercase;transition:background .2s,color .2s,border-color .2s}
+.button:hover{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+.arrow{font:500 17px/1 Arial,sans-serif;letter-spacing:0}
+.skip{position:fixed;top:12px;left:12px;transform:translateY(-160%);z-index:10;background:var(--paper);padding:10px 15px}
+.skip:focus{transform:none}
+.topbar{height:68px;padding:0 var(--gutter);display:grid;grid-template-columns:1fr auto 1fr;align-items:center;border-bottom:1px solid var(--line)}
+.brand{display:inline-flex;align-items:center;gap:10px;width:max-content;font-size:23px;font-weight:760;line-height:1;letter-spacing:-.082em}
+.mark{display:grid;gap:2px;align-content:center;justify-items:center;width:22px;height:23px;background:var(--hot);transform:skewY(-8deg)}
+.mark i{display:block;height:1px;background:#231b18;width:13px}
+.mark i:nth-child(2){width:10px}.mark i:nth-child(3){width:7px}
+.nav{display:flex;gap:clamp(24px,4vw,62px);font-size:12px;font-weight:600;color:#4d4e49}
+.nav a{padding:10px 0;transition:color .2s}.nav a:hover{color:#a5321c}
+.topbar>.button{justify-self:end;min-height:36px;gap:20px}
+.hero{height:clamp(610px,calc(100svh - 126px),890px);min-height:610px;isolation:isolate;position:relative;overflow:hidden;background:#172028;color:#f4f0e8}
+.hero canvas,.stage-art canvas,.comparison canvas,.spec-art canvas,.config-art canvas{position:absolute;inset:0}
+.hero::after{content:"";position:absolute;inset:0;z-index:0;pointer-events:none;background:linear-gradient(90deg,rgba(10,14,18,.46),rgba(10,14,18,.12) 38%,transparent 61%)}
+.hero-inner{position:relative;z-index:1;height:100%;padding:0 var(--gutter);display:flex;flex-direction:column;align-items:flex-start;justify-content:center;pointer-events:none}
+.hero-copy{max-width:45vw;margin-top:-24px;animation:enter .85s both;pointer-events:auto}
+@keyframes enter{from{opacity:.76;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.hero .eyebrow{color:#ff997d;margin-bottom:26px}
+.hero h1{font-size:clamp(82px,10.5vw,178px);font-weight:650;letter-spacing:-.082em;line-height:.81}
+.hero h1 span{display:block;margin-left:.018em}
+.hero p{font-size:clamp(15px,1.45vw,21px);font-weight:400;color:#d6d8d7;margin-top:27px;max-width:285px}
+.hero .button{margin-top:30px;background:#f0ede5;border-color:#f0ede5;color:#1e211f}
+.hero .button:hover{background:var(--hot);border-color:var(--hot);color:#181815}
+.hero-foot{position:absolute;z-index:2;left:var(--gutter);right:var(--gutter);bottom:23px;display:flex;align-items:center;justify-content:space-between;gap:12px;color:#adb4b5;pointer-events:none}
+.hero-foot a{pointer-events:auto;display:flex;gap:9px;align-items:center}
+.hero-foot a:hover{color:#fff}.hero-foot a span{font:14px/1 Arial,sans-serif;color:#ff997d}
+.hero-meta{display:flex;gap:9px;align-items:center}.hero-meta::before{content:"";width:20px;height:1px;background:#ff997d}
+.fact-strip{display:grid;grid-template-columns:repeat(4,1fr);padding:0 var(--gutter);min-height:58px;border-bottom:1px solid var(--line)}
+.fact-strip span{display:flex;align-items:center;justify-content:center;gap:8px;text-align:center;padding:12px 8px}
+.fact-strip span+span{border-left:1px solid var(--line)}
+.fact-strip b{color:#a5321c;font-weight:600}
+.wrap{padding-inline:var(--gutter);max-width:1760px;margin-inline:auto}
+.section-intro{padding-top:clamp(65px,8.5vw,144px);padding-bottom:clamp(30px,4.1vw,67px);display:grid;grid-template-columns:1fr minmax(230px,330px);column-gap:30px;align-items:end}
+.section-intro .eyebrow{grid-column:1/-1;margin-bottom:17px}
+.section-intro h2{font-size:clamp(52px,8vw,120px)}
+.section-intro>p{color:var(--muted);max-width:310px;font-size:clamp(15px,1.43vw,19px);padding-bottom:3px}
+.story{height:365svh;position:relative}
+.story-pin{position:sticky;top:0;height:100svh;display:flex;align-items:center;padding-block:16px}
+.story-inner{display:grid;grid-template-columns:minmax(214px,.72fr) minmax(0,2fr);width:100%;min-width:0}
+.story-detail{border:1px solid var(--line);border-right:0;display:flex;flex-direction:column;justify-content:space-between;padding:clamp(17px,3vw,48px);min-height:490px;min-height:min(490px,calc(100svh - 32px))}
+.stage-copy{margin:24px 0 25px}
+.stage-copy h3{font-size:clamp(34px,4vw,61px);letter-spacing:-.065em;margin:12px 0 13px;max-width:260px}
+.stage-copy p{font-size:clamp(13px,1.17vw,16px);color:var(--muted);max-width:230px}
+.steps{display:grid;border-top:1px solid var(--line)}
+.steps button{display:flex;gap:11px;align-items:center;min-height:35px;padding:6px 0;text-align:left;border:0;border-bottom:1px solid var(--line);background:none;color:#5d5b54;font:600 10px/1.25 var(--mono);letter-spacing:.05em;text-transform:uppercase}
+.steps button .step-no{font-weight:400;color:#6b665d}
+.steps button::after{content:"";margin-left:auto;width:6px;height:6px;background:transparent;transform:rotate(45deg);margin-right:3px}
+.steps button[aria-current="step"]{color:var(--ink)}.steps button[aria-current="step"]::after{background:var(--hot)}
+.steps button[aria-current="step"] .step-no,.steps button:hover{color:#a5321c}
+.stage-art{min-width:0;position:relative;overflow:hidden;background:#d6d3ca;height:min(66vw,70svh);min-height:490px;min-height:min(490px,calc(100svh - 32px))}
+.art-meta{position:absolute;z-index:1;left:19px;top:16px;pointer-events:none;color:#454541}
+.art-counter{position:absolute;z-index:1;right:19px;bottom:16px;pointer-events:none;color:#454541}
+.progress{position:absolute;z-index:1;bottom:0;left:0;width:100%;height:3px;background:#827e722e;pointer-events:none}
+.progress i{display:block;width:100%;height:100%;transform:scaleX(0);transform-origin:left;background:var(--hot)}
+.compare-section{padding-bottom:clamp(70px,9.4vw,150px)}
+.comparison{--split:50%;height:clamp(310px,37vw,620px);position:relative;overflow:hidden;background:linear-gradient(90deg,#c6c0b6 50%,#283138 50%);isolation:isolate}
+.comparison .side{position:absolute;top:15px;z-index:1;padding:8px 10px;font:600 10px/1.2 var(--mono);letter-spacing:.08em;text-transform:uppercase;pointer-events:none}
+.side-a{left:15px;background:#eae6de;color:#292924}
+.side-b{right:15px;background:#141b20;color:#f6ede0}
+.comparison-line{position:absolute;z-index:1;top:0;bottom:0;left:var(--split);width:1px;background:#ffe9db;pointer-events:none}
+.comparison-knob{position:absolute;top:50%;left:0;transform:translate(-50%,-50%);display:grid;place-content:center;width:45px;height:45px;border-radius:50%;background:#f2eae0;color:#271f1b;box-shadow:0 3px 12px #0005;font:17px/1 Arial,sans-serif;letter-spacing:2px}
+.comparison input{margin:0;position:absolute;inset:0;width:100%;height:100%;z-index:2;opacity:0;cursor:ew-resize;touch-action:pan-y}
+.comparison:focus-within .comparison-knob{outline:2px solid var(--hot);outline-offset:4px}
+.comparison-caption{display:flex;justify-content:space-between;gap:15px;border-bottom:1px solid var(--line);padding:14px 0;color:var(--muted)}
+.spec-section{background:#192126;color:#f1eee5;padding-bottom:clamp(65px,8vw,120px)}
+.spec-section .section-intro p{color:#b5bcb9}
+.spec-section .eyebrow{color:#ffc4ad}
+.spec-card{border:1px solid #687275;display:grid;grid-template-columns:minmax(0,1.7fr) minmax(236px,1fr)}
+.spec-art{height:clamp(340px,36vw,580px);position:relative;overflow:hidden;background:#10191d;touch-action:pan-y;cursor:grab}
+.spec-art:active{cursor:grabbing}
+.spec-art .art-meta,.spec-art .art-counter{color:#bac5bd}
+.spec-art .axis{position:absolute;left:18px;bottom:16px;color:#ff987b;pointer-events:none}
+.spec-data{margin:0;padding:clamp(19px,3.2vw,52px);display:flex;flex-direction:column;justify-content:center;border-left:1px solid #687275}
+.spec-data div{display:grid;grid-template-columns:1fr 1.15fr;gap:9px;padding:12px 0;border-bottom:1px solid #505b5e}
+.spec-data div:first-child{border-top:1px solid #505b5e}
+.spec-data dt{color:#b5bebb;font:600 10px/1.5 var(--mono);letter-spacing:.08em;text-transform:uppercase}
+.spec-data dd{margin:0;font-size:13px;line-height:1.35}
+.configure-section{padding-bottom:clamp(65px,9vw,145px)}
+.config-grid{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(278px,1fr);border:1px solid var(--line)}
+.config-art{position:relative;min-height:450px;overflow:hidden;background:#d7d0c2}
+.config-art .art-meta{color:#413c35}
+.config-settings{padding:clamp(24px,4vw,62px);display:flex;flex-direction:column;justify-content:center}
+.config-heading{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:25px}
+.config-heading h3{font-size:clamp(34px,4.45vw,69px);white-space:nowrap}
+.price{font:600 14px/1 var(--mono)}
+fieldset{border:0;margin:0;padding:0;min-inline-size:0}
+fieldset+fieldset{margin-top:24px}
+legend{padding:0;margin-bottom:10px}
+.choices{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.choice{position:relative}
+.choice input{position:absolute;inset:0;opacity:0;width:100%;height:100%;margin:0;cursor:pointer}
+.choice span{min-height:40px;border:1px solid var(--line);background:transparent;color:#36352f;display:flex;align-items:center;gap:7px;padding:5px 8px;font-size:11px;line-height:1.2;font-weight:600;transition:border .15s,background .15s}
+.choice span::before{content:"";width:13px;height:13px;border:1px solid #0003;background:var(--swatch)}
+.choice input:checked+span{border-color:#272623;background:#e2dfd5}
+.choice input:hover+span{border-color:#5a574e}
+.choice input:focus-visible+span{outline:2px solid var(--hot);outline-offset:3px}
+.purchase{margin-top:29px}
+.purchase .button{width:100%;background:#252523;color:#f7f2e7;border-color:#252523}
+.purchase .button:hover{background:var(--hot);color:#1c1b16;border-color:var(--hot)}
+#build-status{margin-top:10px;min-height:15px;color:#545147;font:500 10px/1.4 var(--mono)}
+.footer{padding:26px var(--gutter);border-top:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:20px}
+.footer .brand{font-size:20px}.footer>a:last-child:hover{color:#a5321c}
+.fallback{display:none;position:absolute;left:50%;bottom:20%;width:min(85%,300px);transform:translateX(-50%);z-index:1;color:inherit;text-align:center;padding:10px;background:#ede9df;color:#272521;font-size:13px}
+.unavailable canvas{visibility:hidden}.unavailable .fallback{display:block}.hero.unavailable .fallback{left:auto;right:var(--gutter);transform:none;bottom:13%}
+dialog{width:min(calc(100% - 32px),480px);border:1px solid var(--ink);background:var(--paper);color:var(--ink);padding:28px}
+dialog::backdrop{background:#11191ac0}
+.bag-top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:28px}
+.bag-top h2{font-size:40px}
+.close{background:none;border:1px solid var(--line);width:38px;height:38px;padding:0;font-size:21px}
+.bag-item{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:15px 0;border-block:1px solid var(--line)}
+.bag-item strong{display:block}
+.bag-item small{color:var(--muted)}
+.bag-bottom{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:18px}
+.bag-bottom button{background:none;border:0;text-decoration:underline;padding:5px 0}
+@media(max-width:900px){
+ .topbar{height:62px}
+ .hero{height:clamp(600px,calc(100svh - 116px),800px)}
+ .hero h1{font-size:clamp(76px,12vw,118px)}
+ .story-inner{grid-template-columns:minmax(185px,.77fr) minmax(0,2fr)}
+ .story-detail{padding:19px}
+ .config-settings{padding:26px 21px}
+}
+@media(max-width:660px){
+ :root{--gutter:20px}
+ .topbar{grid-template-columns:1fr auto;height:59px}.nav{display:none}
+ .topbar>.button{gap:12px}
+ .hero{height:clamp(610px,calc(100svh - 59px),770px);min-height:0}
+ .hero::after{background:linear-gradient(180deg,#0f151a80,transparent 65%)}
+ .hero-inner{justify-content:flex-start;padding-top:clamp(39px,8svh,67px)}
+ .hero-copy{margin:0;max-width:none}
+ .hero .eyebrow{margin-bottom:18px}
+ .hero h1{font-size:clamp(70px,15.7vw,110px);line-height:.8}
+ .hero p{margin-top:21px;max-width:235px}
+ .hero .button{margin-top:19px;min-height:41px}
+ .hero-foot{bottom:16px;font-size:9px}
+ .fact-strip{padding:0;grid-template-columns:repeat(2,1fr);min-height:0}
+ .fact-strip span{padding:10px 7px;font-size:9px}
+ .fact-strip span:nth-child(3){border-left:0}
+ .fact-strip span:nth-child(n+3){border-top:1px solid var(--line)}
+ .section-intro{display:block;padding-top:57px;padding-bottom:26px}
+ .section-intro h2{font-size:clamp(51px,11vw,74px)}
+ .section-intro>p{margin-top:12px;max-width:315px}
+ .section-intro .eyebrow{margin-bottom:14px}
+ .story{height:350svh}
+ .story-pin{padding-top:10px;padding-bottom:10px}
+ .story-inner{grid-template-columns:minmax(0,1fr)}
+ .stage-art{grid-row:1;min-height:0;height:min(82vw,43svh)}
+ .story-detail{padding:14px;min-height:0;border-right:1px solid var(--line)}
+ .stage-copy{margin:10px 0 13px;min-height:83px}
+ .stage-copy h3{margin:4px 0 6px;max-width:none;font-size:37px}
+ .stage-copy p{max-width:300px}
+ .steps{grid-template-columns:1fr 1fr;column-gap:13px}
+ .steps button{min-height:31px;gap:6px;font-size:9px}
+ .art-meta,.art-counter{font-size:9px}
+ .comparison{height:clamp(270px,72vw,400px)}
+ .comparison .side{font-size:9px;top:10px}.side-a{left:10px}.side-b{right:10px}
+ .comparison-caption{font-size:9px}
+ .spec-card,.config-grid{grid-template-columns:minmax(0,1fr)}
+ .spec-art{height:clamp(255px,70vw,390px)}
+ .spec-data{border-left:none;border-top:1px solid #687275;padding:19px}
+ .config-art{min-height:0;height:clamp(260px,77vw,430px)}
+ .config-settings{padding:25px 19px}
+ .config-heading{margin-bottom:20px}.config-heading h3{font-size:47px}
+}
+@media(max-width:660px) and (max-height:590px){
+ .story-pin{height:auto;top:0;min-height:0}
+ .stage-art{height:32svh}
+ .stage-copy{min-height:0}
+}
+@media(max-width:390px){.hero-meta{display:none}}
+@media(prefers-reduced-motion:reduce){
+ *,*::before,*::after{scroll-behavior:auto!important;animation:none!important;transition:none!important}
+}
+</style>
+</head>
+<body id="top">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <a class="brand" href="#top" aria-label="Strata home"><span class="mark" aria-hidden="true"><i></i><i></i><i></i></span>STRATA.</a>
+  <nav class="nav" aria-label="Product"><a href="#design">Design</a><a href="#compare">Compare</a><a href="#specs">Specs</a></nav>
+  <a class="button" href="#configure">Configure <span class="arrow" aria-hidden="true">↗</span></a>
+</header>
+<main id="main">
+  <section class="hero" aria-labelledby="product-name">
+    <canvas id="hero-gl" role="img" aria-label="Strata 01 in Basalt above a topographic contour map"></canvas>
+    <div class="fallback">The 3D product preview requires WebGL2.</div>
+    <div class="hero-inner">
+      <div class="hero-copy">
+        <div class="eyebrow">65% mechanical keyboard</div>
+        <h1 id="product-name">STRATA<span>01.</span></h1>
+        <p>A compact mechanical keyboard, machined for a softer landing.</p>
+        <a class="button" href="#configure">Configure yours <span class="arrow" aria-hidden="true">↗</span></a>
+      </div>
+    </div>
+    <div class="hero-foot mono"><a href="#design"><span aria-hidden="true">↓</span> Explore the build</a><span class="hero-meta">Basalt / Anodized aluminum</span></div>
+  </section>
+  <div class="fact-strip mono" aria-label="Highlights">
+    <span><b>67</b> keys</span><span><b>6063</b> aluminum</span><span>Gasket mounted</span><span>Hot-swappable</span>
+  </div>
+
+  <section id="design" aria-labelledby="design-title">
+    <div class="section-intro wrap">
+      <div class="eyebrow">Construction</div>
+      <h2 id="design-title">Built in layers.</h2>
+      <p>From machined aluminum to textured PBT, each layer shapes the feel of a keystroke.</p>
+    </div>
+    <div class="story" id="story">
+      <div class="story-pin wrap">
+        <div class="story-inner">
+          <div class="story-detail">
+            <span class="mono">Inside STRATA 01</span>
+            <div class="stage-copy">
+              <span class="num" id="stage-number">01 / 04</span>
+              <h3 id="stage-title">Milled to feel solid.</h3>
+              <p id="stage-description">A CNC-machined aluminum chassis gives the board its weight and keeps it planted on the desk.</p>
+            </div>
+            <div class="steps" aria-label="Construction chapters">
+              <button type="button" aria-current="step"><span class="step-no">01</span> Chassis</button>
+              <button type="button"><span class="step-no">02</span> Gasket</button>
+              <button type="button"><span class="step-no">03</span> Switches</button>
+              <button type="button"><span class="step-no">04</span> Keycaps</button>
+            </div>
+          </div>
+          <figure class="stage-art">
+            <canvas id="story-gl" role="img" aria-label="Three-dimensional keyboard assembly"></canvas>
+            <div class="fallback">The assembly preview requires WebGL2.</div>
+            <figcaption class="art-meta mono" id="stage-caption">6063 aluminum chassis</figcaption>
+            <span class="art-counter mono" aria-hidden="true" id="stage-view">Assembled</span>
+            <div class="progress" aria-hidden="true"><i id="story-progress"></i></div>
+          </figure>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="compare-section wrap" id="compare" aria-labelledby="compare-title">
+    <div class="section-intro">
+      <div class="eyebrow">Side by side</div>
+      <h2 id="compare-title">The desk upgrade.</h2>
+      <p>Slide from a standard plastic board to the machined chassis and textured caps of STRATA 01.</p>
+    </div>
+    <figure>
+      <div class="comparison" id="comparison">
+        <canvas id="compare-gl" role="img" aria-label="A plastic keyboard compared with Strata 01"></canvas>
+        <div class="fallback">The comparison preview requires WebGL2.</div>
+        <span class="side side-a">Before / Plastic</span><span class="side side-b">After / STRATA 01</span>
+        <div class="comparison-line" aria-hidden="true"><span class="comparison-knob">‹ ›</span></div>
+        <input id="split" type="range" min="0" max="100" value="50" aria-label="Before and after split" aria-valuetext="50 percent before, 50 percent after">
+      </div>
+      <figcaption class="comparison-caption mono"><span>Drag to compare</span><span>Plastic / Anodized aluminum</span></figcaption>
+    </figure>
+  </section>
+
+  <section class="spec-section" id="specs" aria-labelledby="spec-title">
+    <div class="wrap">
+      <div class="section-intro">
+        <div class="eyebrow">Technical specifications</div>
+        <h2 id="spec-title">Down to the detail.</h2>
+        <p>A compact layout with dedicated arrow keys and a wired USB-C connection.</p>
+      </div>
+      <div class="spec-card">
+        <figure class="spec-art" tabindex="0" aria-label="Interactive wireframe. Drag or use the arrow keys to rotate.">
+          <canvas id="wire-gl" aria-hidden="true"></canvas>
+          <div class="fallback">The wireframe preview requires WebGL2.</div>
+          <figcaption class="art-meta mono">STRATA 01 / Isometric</figcaption>
+          <span class="axis mono" aria-hidden="true">+ X / Y / Z</span>
+          <span class="art-counter mono">Drag to rotate</span>
+        </figure>
+        <dl class="spec-data">
+          <div><dt>Layout</dt><dd>65% ANSI · 67 keys</dd></div>
+          <div><dt>Enclosure</dt><dd>CNC 6063 aluminum</dd></div>
+          <div><dt>Mount</dt><dd>Gasket-mounted plate</dd></div>
+          <div><dt>Switches</dt><dd>Linear · 5-pin hot-swap</dd></div>
+          <div><dt>Keycaps</dt><dd>Double-shot PBT</dd></div>
+          <div><dt>Dimensions</dt><dd>325 × 112 × 34 mm</dd></div>
+          <div><dt>Connection</dt><dd>USB-C wired</dd></div>
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <section class="configure-section wrap" id="configure" aria-labelledby="configure-title">
+    <div class="section-intro">
+      <div class="eyebrow">Configuration</div>
+      <h2 id="configure-title">Make it yours.</h2>
+      <p>Choose an anodized finish and a keycap set. See your combination as you build it.</p>
+    </div>
+    <div class="config-grid">
+      <figure class="config-art">
+        <canvas id="config-gl" role="img" aria-label="Basalt enclosure with Glacier keycaps"></canvas>
+        <div class="fallback">The configuration preview requires WebGL2.</div>
+        <figcaption class="art-meta mono" id="config-label">Basalt / Glacier</figcaption>
+      </figure>
+      <div class="config-settings">
+        <div class="config-heading"><h3>STRATA 01</h3><span class="price">$249</span></div>
+        <fieldset id="finishes">
+          <legend class="mono">Case finish</legend>
+          <div class="choices">
+            <label class="choice" style="--swatch:#3e4c55"><input type="radio" name="finish" value="Basalt" checked><span>Basalt</span></label>
+            <label class="choice" style="--swatch:#b8af9e"><input type="radio" name="finish" value="Dune"><span>Dune</span></label>
+            <label class="choice" style="--swatch:#72816e"><input type="radio" name="finish" value="Lichen"><span>Lichen</span></label>
+          </div>
+        </fieldset>
+        <fieldset id="keysets">
+          <legend class="mono">Keycap set</legend>
+          <div class="choices">
+            <label class="choice" style="--swatch:#caced0"><input type="radio" name="keyset" value="Glacier" checked><span>Glacier</span></label>
+            <label class="choice" style="--swatch:#4f5351"><input type="radio" name="keyset" value="Obsidian"><span>Obsidian</span></label>
+          </div>
+        </fieldset>
+        <div class="purchase">
+          <button class="button" id="add-build" type="button">Add to bag <span class="arrow" aria-hidden="true">↗</span></button>
+          <p id="build-status" aria-live="polite"></p>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+<footer class="footer">
+  <a class="brand" href="#top" aria-label="Strata home"><span class="mark" aria-hidden="true"><i></i><i></i><i></i></span>STRATA.</a>
+  <a href="#top" class="mono">Back to top ↑</a>
+</footer>
+<dialog id="bag" aria-labelledby="bag-title">
+  <div class="bag-top"><h2 id="bag-title">Your bag.</h2><form method="dialog"><button class="close" aria-label="Close bag">×</button></form></div>
+  <div class="bag-item"><div><strong>STRATA 01</strong><small id="bag-finish"></small></div><span class="price">$249</span></div>
+  <div class="bag-bottom"><span class="mono">Storefront preview</span><button id="remove-build" type="button">Remove</button></div>
+</dialog>
+<script>
+"use strict";
+const byId = id => document.getElementById(id);
+const clamp = (value, low, high) => Math.min(high, Math.max(low, value));
+const mix = (a, b, t) => a + (b - a) * t;
+const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
+const phone = matchMedia("(max-width: 660px)");
+
+const chapters = [
+  {title:"Milled to feel solid.", description:"A CNC-machined aluminum chassis gives the board its weight and keeps it planted on the desk.", caption:"6063 aluminum chassis", view:"Assembled", lift:[0,0,0,0], slide:0, yaw:-.37, pitch:.69, spin:-.14, zoom:1},
+  {title:"A softer landing.", description:"Compressible gaskets suspend the plate inside the case, taking the edge off each bottom-out.", caption:"Gasket-mounted plate", view:"Exploded", lift:[0,.75,1.47,2.43], slide:0, yaw:-.30, pitch:.59, spin:-.12, zoom:.94},
+  {title:"Change the switch.", description:"Each 5-pin hot-swap socket accepts a new switch without soldering. Start with smooth factory-lubed linears.", caption:"5-pin hot-swap sockets", view:"Exploded", lift:[0,.40,1.27,1.90], slide:-2.22, yaw:.28, pitch:.83, spin:.12, zoom:.96},
+  {title:"Texture you can feel.", description:"Double-shot PBT caps have a fine-grained finish and legends molded into the key.", caption:"Double-shot PBT keycaps", view:"Assembled", lift:[0,0,0,0], slide:0, yaw:.17, pitch:1.04, spin:.16, zoom:1.03}
+];
+
+const stageButtons = [...document.querySelectorAll(".steps button")];
+const storyTrack = byId("story");
+let stage = 0;
+let sceneProgress = -1;
+function updateStory() {
+  const scrollLength = storyTrack.offsetHeight - storyTrack.firstElementChild.offsetHeight;
+  sceneProgress = clamp(-storyTrack.getBoundingClientRect().top / Math.max(1, scrollLength), 0, 1);
+  byId("story-progress").style.transform = `scaleX(${sceneProgress})`;
+  const next = Math.min(3, Math.floor(sceneProgress * 4));
+  if (next === stage) return;
+  stage = next;
+  const chapter = chapters[stage];
+  byId("stage-number").textContent = `0${stage + 1} / 04`;
+  byId("stage-title").textContent = chapter.title;
+  byId("stage-description").textContent = chapter.description;
+  byId("stage-caption").textContent = chapter.caption;
+  byId("stage-view").textContent = chapter.view;
+  stageButtons.forEach((button, index) => {
+    if (index === stage) button.setAttribute("aria-current", "step");
+    else button.removeAttribute("aria-current");
+  });
+  if (scenes.story) scenes.story.dirty = true;
+}
+stageButtons.forEach((button, index) => button.addEventListener("click", () => {
+  const length = storyTrack.offsetHeight - storyTrack.firstElementChild.offsetHeight;
+  window.scrollTo({top:window.scrollY + storyTrack.getBoundingClientRect().top + length * (index / 4 + .025), behavior:reducedMotion.matches ? "auto" : "smooth"});
+}));
+
+const range = byId("split");
+let split = .5;
+function changeSplit() {
+  split = Number(range.value) / 100;
+  byId("comparison").style.setProperty("--split", range.value + "%");
+  range.setAttribute("aria-valuetext", `${range.value} percent before, ${100 - Number(range.value)} percent after`);
+  if (scenes.compare) scenes.compare.dirty = true;
+}
+range.addEventListener("input", changeSplit);
+
+const build = {finish:"Basalt", keyset:"Glacier"};
+function changeBuild(event) {
+  build[event.target.name] = event.target.value;
+  byId("config-label").textContent = `${build.finish} / ${build.keyset}`;
+  byId("config-gl").setAttribute("aria-label", `${build.finish} enclosure with ${build.keyset} keycaps`);
+  if (scenes.config) scenes.config.dirty = true;
+}
+byId("finishes").addEventListener("change", changeBuild);
+byId("keysets").addEventListener("change", changeBuild);
+const bag = byId("bag");
+byId("add-build").addEventListener("click", () => {
+  byId("bag-finish").textContent = `${build.finish} / ${build.keyset}`;
+  byId("build-status").textContent = `${build.finish} / ${build.keyset} added to your bag.`;
+  bag.showModal();
+});
+byId("remove-build").addEventListener("click", () => {
+  byId("build-status").textContent = "Build removed from your bag.";
+  bag.close();
+});
+
+const wire = {yaw:-.40, pitch:.72, spin:-.08};
+const wireArt = document.querySelector(".spec-art");
+let wireDrag = null;
+wireArt.addEventListener("pointerdown", event => {
+  if (!event.isPrimary || event.button !== 0) return;
+  wireDrag = {id:event.pointerId, x:event.clientX, y:event.clientY};
+  wireArt.setPointerCapture(event.pointerId);
+});
+function turnWire(dx, dy) {
+  wire.yaw += dx;
+  wire.pitch = clamp(wire.pitch + dy, .19, 1.46);
+  if (scenes.wire) scenes.wire.dirty = true;
+}
+wireArt.addEventListener("pointermove", event => {
+  if (wireDrag?.id !== event.pointerId) return;
+  turnWire((event.clientX - wireDrag.x)*.011, (event.clientY - wireDrag.y)*.009);
+  wireDrag.x = event.clientX;
+  wireDrag.y = event.clientY;
+});
+wireArt.addEventListener("lostpointercapture", () => { wireDrag = null; });
+wireArt.addEventListener("keydown", event => {
+  const direction = {ArrowLeft:[-.13,0], ArrowRight:[.13,0], ArrowUp:[0,.11], ArrowDown:[0,-.11]}[event.key];
+  if (!direction) return;
+  event.preventDefault();
+  turnWire(...direction);
+});
+
+const palette = {
+  Basalt:[.25,.32,.38], Dune:[.66,.57,.44], Lichen:[.39,.47,.34],
+  glacier:[.66,.71,.74], glacierMod:[.36,.44,.49], glacierSpace:[.51,.61,.64],
+  obsidian:[.29,.31,.31], obsidianMod:[.19,.23,.25], obsidianSpace:[.34,.36,.34],
+  orange:[.90,.32,.20], legend:[.145,.175,.19], lightInk:[.82,.87,.84],
+  pcb:[.22,.34,.29], gasket:[.71,.36,.23],
+  switchHousing:[.46,.49,.44], stems:[.81,.50,.30], metal:[.56,.61,.61]
+};
+const materials = {
+  body:0, rim:1, well:2, alpha:3, mod:4, space:5, accent:6, ink:7, lightInk:8,
+  plate:9, gasket:10, switchHousing:11, stem:12, metal:13
+};
+const glyphs = {
+  A:[14,17,17,31,17,17,17],B:[30,17,17,30,17,17,30],C:[14,17,16,16,16,17,14],
+  D:[30,17,17,17,17,17,30],E:[31,16,16,30,16,16,31],F:[31,16,16,30,16,16,16],
+  G:[14,17,16,23,17,17,14],H:[17,17,17,31,17,17,17],I:[14,4,4,4,4,4,14],
+  J:[7,2,2,2,18,18,12],K:[17,18,20,24,20,18,17],L:[16,16,16,16,16,16,31],
+  M:[17,27,21,21,17,17,17],N:[17,25,21,19,17,17,17],O:[14,17,17,17,17,17,14],
+  P:[30,17,17,30,16,16,16],Q:[14,17,17,17,21,18,13],R:[30,17,17,30,20,18,17],
+  S:[15,16,16,14,1,1,30],T:[31,4,4,4,4,4,4],U:[17,17,17,17,17,17,14],
+  V:[17,17,17,17,17,10,4],W:[17,17,17,21,21,27,17],X:[17,17,10,4,10,17,17],
+  Y:[17,17,10,4,4,4,4],Z:[31,1,2,4,8,16,31],
+  0:[14,17,19,21,25,17,14],1:[4,12,4,4,4,4,14],2:[14,17,1,2,4,8,31],
+  3:[30,1,1,14,1,1,30],4:[2,6,10,18,31,2,2],5:[31,16,16,30,1,1,30],
+  6:[14,16,16,30,17,17,14],7:[31,1,2,4,8,8,8],8:[14,17,17,14,17,17,14],
+  9:[14,17,17,15,1,1,14],".":[0,0,0,0,0,12,12],",":[0,0,0,0,0,12,8],
+  "-":[0,0,0,31,0,0,0],"=":[0,0,31,0,31,0,0],"/":[1,1,2,4,8,16,16],
+  "\\":[16,16,8,4,2,1,1],"[":[14,8,8,8,8,8,14],"]":[14,2,2,2,2,2,14],
+  ";":[0,12,12,0,12,12,8],"'":[12,12,8,0,0,0,0],"`":[12,4,0,0,0,0,0],
+  "↑":[4,14,21,4,4,4,4],"↓":[4,4,4,4,21,14,4],
+  "←":[0,4,8,31,8,4,0],"→":[0,4,2,31,2,4,0]
+};
+
+const unit = .79;
+const rows = [
+  ["ESC","1","2","3","4","5","6","7","8","9","0","-","=",["BKSP",2],"DEL"],
+  [["TAB",1.5],"Q","W","E","R","T","Y","U","I","O","P","[","]",["\\",1.5],"PGUP"],
+  [["CAPS",1.75],"A","S","D","F","G","H","J","K","L",";","'",["ENTER",2.25],"PGDN"],
+  [["SHIFT",2.25],"Z","X","C","V","B","N","M",",",".","/",["SHIFT",1.75],"↑","END"],
+  [["CTRL",1.25],["WIN",1.25],["ALT",1.25],["",6.25],"ALT","FN",[null,1],"←","↓","→"]
+];
+const keys = [];
+rows.forEach((row, rowIndex) => {
+  let column = -8;
+  row.forEach(entry => {
+    const [label, size] = Array.isArray(entry) ? entry : [entry,1];
+    if (label === null) { column += size; return; }
+    const mod = label.length > 1 || ["↑","↓","←","→"].includes(label);
+    const tone = label === "ESC" ? "accent" : label === "" ? "space" : mod ? "mod" : "alpha";
+    keys.push({x:(column + size/2)*unit, z:(rowIndex-2)*unit, w:size*unit-.066, label, tone, rowIndex});
+    column += size;
+  });
+});
+
+function normal(a,b,c){
+  const x=b[0]-a[0], y=b[1]-a[1], z=b[2]-a[2], u=c[0]-a[0], v=c[1]-a[1], w=c[2]-a[2];
+  return normalize([y*w-z*v,z*u-x*w,x*v-y*u]);
+}
+function normalize(a){const length=Math.hypot(...a)||1;return a.map(value=>value/length);}
+function cross(a,b){return [a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];}
+const dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+
+function triangle(out,a,b,c,kind,shade=1){
+  const n=normal(a,b,c);
+  for(const p of [a,b,c]) out.push(...p,...n,kind,shade);
+}
+function quad(out,a,b,c,d,kind,shade=1){
+  triangle(out,a,b,c,kind,shade);
+  triangle(out,a,c,d,kind,shade);
+}
+function line(out,a,b,kind,shade=1){
+  for(const p of [a,b]) out.push(...p,0,1,0,kind,shade);
+}
+function ring(x,z,w,d,y,r,segments=3){
+  const points=[];
+  for(let corner=0;corner<4;corner++){
+    const cx=x+(corner===0||corner===3?1:-1)*(w/2-r);
+    const cz=z+(corner<2?1:-1)*(d/2-r);
+    for(let k=0;k<=segments;k++){
+      const angle=(corner*90+k*90/segments)*Math.PI/180;
+      points.push([cx+Math.cos(angle)*r,y,cz+Math.sin(angle)*r]);
+    }
+  }
+  return points;
+}
+function solid(out, edges, kinds, shades=[], topCenter=null){
+  for(let level=0;level<edges.length-1;level++){
+    const low=edges[level], high=edges[level+1];
+    low.forEach((point,i)=>{
+      const j=(i+1)%low.length;
+      quad(out,point,high[i],high[j],low[j],kinds[level],shades[level]??1);
+    });
+  }
+  const top=edges.at(-1), bottom=edges[0], mid=topCenter || [top.reduce((s,p)=>s+p[0],0)/top.length,top[0][1],top.reduce((s,p)=>s+p[2],0)/top.length];
+  const base=[mid[0],bottom[0][1],mid[2]];
+  top.forEach((point,i)=>{
+    const j=(i+1)%top.length;
+    triangle(out,mid,top[j],point,kinds.at(-1),shades[edges.length-1]??1);
+    triangle(out,base,bottom[i],bottom[j],kinds[0],shades[0]??1);
+  });
+}
+function block(out,x,z,w,d,base,height,r,kind,bevel=.04){
+  solid(out,[
+    ring(x,z,w-bevel*2,d-bevel*2,base,r*.68),
+    ring(x,z,w,d,base+bevel,r),
+    ring(x,z,w,d,base+height-bevel,r),
+    ring(x,z,w-bevel*2,d-bevel*2,base+height,r*.68)
+  ],[kind,kind,kind,kind],[.83,.94,1,1]);
+}
+function addWire(out, rings, kind, shade=1){
+  rings.forEach((edge,level)=>{
+    edge.forEach((point,i)=>{
+      line(out,point,edge[(i+1)%edge.length],kind,shade);
+      if(level && i%4===0) line(out,point,rings[level-1][i],kind,shade*.72);
+    });
+  });
+}
+function makeBoard(){
+  const shell=[], plate=[], switches=[], caps=[], wire=[];
+  const M=materials;
+  const chassis=[
+    ring(0,0,13.06,4.46,-.41,.15),ring(0,0,13.35,4.70,-.29,.20),
+    ring(0,0,13.35,4.70,.08,.20),ring(0,0,13.23,4.59,.20,.19),
+    ring(0,0,13.11,4.47,.23,.17)
+  ];
+  solid(shell,chassis,[M.body,M.body,M.body,M.rim,M.body],[.72,.91,1.11,1.13,1]);
+  block(shell,0,0,12.90,4.18,.225,.059,.15,M.well,.024);
+  for(const x of [-6.16,6.16]){
+    block(shell,x,2.341,.36,.026,-.11,.052,.009,M.rim,.005);
+  }
+  block(shell,-1.9,-2.348,.44,.024,-.155,.13,.010,M.well,.006);
+  addWire(wire,[chassis[0],chassis[1],chassis[3],chassis[4]],0,.94);
+  addWire(wire,[ring(0,0,12.90,4.18,.285,.15)],1,.69);
+  block(plate,0,0,12.77,4.07,.276,.074,.11,M.plate,.026);
+  block(plate,0,0,12.39,3.82,.329,.037,.08,M.well,.013);
+  for(const x of [-4.5,0,4.5]){
+    for(const z of [-2.04,2.04]) block(plate,x,z,.69,.22,.29,.10,.039,M.gasket,.026);
+  }
+  for(const key of keys){
+    const {x,z,w,label,tone,rowIndex}=key;
+    block(switches,x,z,.49,.48,.352,.27,.054,M.switchHousing,.036);
+    block(switches,x,z,.23,.23,.609,.095,.026,M.stem,.021);
+    block(switches,x,z,.34,.075,.681,.051,.012,M.stem,.012);
+    if(w>1.08){
+      for(const sign of [-1,1]) block(switches,x+sign*(w*.29),z,.15,.32,.356,.27,.024,M.metal,.019);
+    }
+    const top=.918+[.068,.027,0,-.017,.003][rowIndex];
+    const capRings=[
+      ring(x,z,w-.018,.705,.61,.062),ring(x,z,w,.724,.68,.071),
+      ring(x,z-.028,w-.125,.610,top-.067,.073),ring(x,z-.035,w-.173,.567,top,.064)
+    ];
+    const color=M[tone];
+    solid(caps,capRings,[color,color,color,color],[.62,.81,1.03,1],[x,top-.017,z-.035]);
+    addWire(wire,[capRings[0],capRings[3]],tone==="accent"?0:1,tone==="accent"?1:.61);
+    const ink = tone==="mod" || tone==="accent" ? M.lightInk : M.ink;
+    const size=label.length===1?.034:.023;
+    const startX=x-(label.length*6-1)*size/2, startZ=z-.166;
+    for(let letter=0;letter<label.length;letter++){
+      const pixels=glyphs[label[letter]];
+      if(!pixels) continue;
+      for(let row=0;row<7;row++) for(let column=0;column<5;column++){
+        if(!(pixels[row]&(16>>column))) continue;
+        const px=startX+(letter*6+column)*size, pz=startZ+row*size;
+        const y=top+.0008, step=size*.98;
+        quad(caps,[px,y,pz],[px,y,pz+step],[px+step,y,pz+step],[px+step,y,pz],ink,1);
+      }
+    }
+  }
+  return [shell,plate,switches,caps,wire].map(data=>new Float32Array(data));
+}
+
+const backgroundVertex = `#version 300 es
+out vec2 screen;
+void main(){
+  vec2 p=vec2(float((gl_VertexID<<1)&2),float(gl_VertexID&2))*2.-1.;
+  screen=p;
+  gl_Position=vec4(p,0.,1.);
+}`;
+
+const backgroundFragment = `#version 300 es
+precision highp float;
+in vec2 screen;
+out vec4 frag;
+uniform float uAspect,uTime,uRotation;
+uniform vec2 uShadow;
+uniform vec3 uPaper;
+uniform int uStyle;
+
+float hash(vec2 p){
+  p=fract(p*vec2(123.34,456.21));
+  p+=dot(p,p+45.32);
+  return fract(p.x*p.y);
+}
+float noise(vec2 p){
+  vec2 i=floor(p), f=fract(p);
+  f=f*f*(3.-2.*f);
+  return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+1.),f.x),f.y);
+}
+vec2 rotate(vec2 p,float angle){
+  float c=cos(angle),s=sin(angle);
+  return vec2(c*p.x-s*p.y,s*p.x+c*p.y);
+}
+float grid(vec2 p){
+  vec2 v=abs(fract(p+.5)-.5)/max(fwidth(p),vec2(.0001));
+  return 1.-smoothstep(.1,1.22,min(v.x,v.y));
+}
+float hill(vec2 p,vec2 origin,vec2 stretch,float h){
+  vec2 d=(p-origin)*stretch;
+  return exp(-dot(d,d))*h;
+}
+void main(){
+  vec2 q=vec2(screen.x*uAspect,screen.y);
+  float grain=hash(gl_FragCoord.xy)-.5;
+  vec3 rgb;
+  if(uStyle==0){
+    vec2 p=rotate(q, -.19);
+    p+=vec2(.035*sin(uTime*.16),.034*cos(uTime*.19));
+    p+=.27*vec2(noise(p*2.6+4.2),noise(p*2.6-7.3));
+    float height=hill(p,vec2(.63,.10),vec2(.91,1.80),1.35)
+                +hill(p,vec2(1.15,-.38),vec2(1.41,2.78),.61)
+                +hill(p,vec2(-.57,.48),vec2(1.70,2.72),.73)
+                +hill(p,vec2(-1.35,-.30),vec2(1.37,2.00),.82)
+                +hill(p,vec2(.09,-.74),vec2(.92,2.40),.48)
+                +.18*noise(p*2.65)+.065*noise(p*6.7)+.026*noise(p*13.);
+    float bands=height*24.;
+    float spacing=clamp(fwidth(bands),.012,.39);
+    float level=abs(fract(bands+.5)-.5);
+    float contour=1.-smoothstep(spacing*.10,spacing*.87+.009,level);
+    float major=1.-smoothstep(spacing*.18,spacing*1.04+.014,abs(fract(bands/5.+.5)-.5)*5.);
+    float zoned=smoothstep(-1.05,.82,q.x)*smoothstep(.0,.60,height);
+    rgb=mix(vec3(.062,.083,.102),vec3(.134,.218,.25),clamp(height*.61+.19*q.x,0.,1.));
+    rgb+=vec3(.105,.159,.165)*contour*mix(.32,1.,zoned)*(1.-smoothstep(.35,.67,spacing));
+    rgb+=mix(vec3(.08,.13,.15),vec3(.43,.30,.23),zoned*.64)*major*.57;
+    rgb+=grid(q*7.)*vec3(.033,.048,.05);
+    rgb-=smoothstep(.55,2.45,length(q*vec2(.59,1.03)))*.067;
+    rgb+=.018*grain;
+  } else if(uStyle==4){
+    float major=grid(q*4.);
+    float minor=grid(q*20.);
+    float vignette=1.-smoothstep(.23,2.15,length(q*vec2(.62,1.)));
+    rgb=vec3(.046,.080,.088)+vignette*vec3(.039,.057,.060);
+    rgb+=vec3(.048,.074,.074)*major+vec3(.016,.025,.026)*minor;
+    rgb+=.011*grain;
+  } else {
+    float light=1.-smoothstep(0.,2.1,length(q-vec2(-.52,.55)));
+    float dark=1.-smoothstep(0.,2.55,length(q-vec2(.50,-1.35)));
+    float chart=grid(q*5.);
+    rgb=uPaper+light*.09-dark*.064+chart*.027+grain*.015;
+    if(uStyle==3) rgb+=vec3(.018,.031,.035)*light;
+  }
+  if(uStyle!=4){
+    vec2 shadow=rotate(q-uShadow,-uRotation);
+    shadow/=vec2(min(uAspect*.72,.94),uStyle==0?.34:.24);
+    float fall=exp(-dot(shadow,shadow)*1.6);
+    rgb*=1.-fall*(uStyle==0?.61:.34);
+  }
+  frag=vec4(rgb,1.);
+}`;
+
+const objectVertex = `#version 300 es
+layout(location=0) in vec3 aPosition;
+layout(location=1) in vec3 aNormal;
+layout(location=2) in vec2 aMaterial;
+uniform mat3 uView;
+uniform vec2 uExtent, uOffset;
+uniform vec3 uTarget;
+uniform float uSpin,uLift,uSlide;
+uniform bool uBasic;
+out vec3 vPosition,vNormal;
+out float vShade;
+flat out int vMaterial;
+void main(){
+  vec3 position=aPosition+vec3(0.,uLift,uSlide);
+  if(uBasic && aPosition.y<.25){
+    float edge=1.-smoothstep(-.40,.24,aPosition.y);
+    position.x*=1.+edge*.014;
+    position.z*=1.+edge*.036;
+    position.y-=edge*.13;
+  }
+  vec3 view=uView*(position-uTarget);
+  float c=cos(uSpin),s=sin(uSpin);
+  vec2 p=vec2(c*view.x-s*view.y,s*view.x+c*view.y);
+  gl_Position=vec4(p/uExtent+uOffset,-view.z*.047,1.);
+  vPosition=position;
+  vNormal=aNormal;
+  vShade=aMaterial.y;
+  vMaterial=int(aMaterial.x+.5);
+}`;
+
+const objectFragment = `#version 300 es
+precision highp float;
+in vec3 vPosition,vNormal;
+in float vShade;
+flat in int vMaterial;
+out vec4 frag;
+uniform vec3 uColor[14],uEye;
+uniform bool uWire,uDarkKeys;
+float speck(vec2 q){return fract(sin(dot(q,vec2(12.9898,78.233)))*43758.5453);}
+void main(){
+  if(uWire){
+    vec3 signal=vMaterial==0?vec3(.98,.53,.40):vec3(.54,.78,.77);
+    frag=vec4(signal*vShade,1.);
+    return;
+  }
+  vec3 color=uColor[vMaterial];
+  if(vMaterial==7 || vMaterial==8){
+    frag=vec4(vMaterial==7 && uDarkKeys?uColor[8]:color,1.);
+    return;
+  }
+  vec3 n=normalize(vNormal);
+  vec3 light=normalize(vec3(-.43,.93,.66));
+  vec3 rim=normalize(vec3(.48,.57,-.74));
+  vec3 view=normalize(uEye-vPosition);
+  float key=max(dot(n,light),0.);
+  float bounce=max(dot(n,rim),0.);
+  float gleam=pow(max(dot(n,normalize(light+view)),0.),19.);
+  float edge=pow(1.-max(dot(n,view),0.),2.4)*bounce;
+  float metallic=vMaterial<=1 || vMaterial==13 ? 1. : .23;
+  float ambient=.58+.49*key+.15*bounce;
+  float grain=(speck(gl_FragCoord.xy)-.5)*.021;
+  vec3 rgb=color*ambient*vShade+vec3(.30,.36,.38)*metallic*(.44*gleam+.26*edge);
+  rgb+=vec3(.021,.023,.025)*bounce+grain;
+  frag=vec4(rgb,1.);
+}`;
+
+function compileProgram(gl, vertexSource, fragmentSource, uniforms){
+  function compile(type,source){
+    const shader=gl.createShader(type);
+    gl.shaderSource(shader,source);
+    gl.compileShader(shader);
+    if(!gl.getShaderParameter(shader,gl.COMPILE_STATUS)) throw Error(gl.getShaderInfoLog(shader));
+    return shader;
+  }
+  const vertex=compile(gl.VERTEX_SHADER,vertexSource), fragment=compile(gl.FRAGMENT_SHADER,fragmentSource);
+  const program=gl.createProgram();
+  gl.attachShader(program,vertex);
+  gl.attachShader(program,fragment);
+  gl.linkProgram(program);
+  gl.deleteShader(vertex);
+  gl.deleteShader(fragment);
+  if(!gl.getProgramParameter(program,gl.LINK_STATUS)) throw Error(gl.getProgramInfoLog(program));
+  return {program,uniform:Object.fromEntries(uniforms.map(name=>[name,gl.getUniformLocation(program,name)]))};
+}
+
+const board=makeBoard();
+function makeRenderer(canvas){
+  const options={alpha:false,antialias:true,depth:true,powerPreference:"low-power"};
+  const gl=canvas.getContext("webgl2",options);
+  if(!gl) throw Error("WebGL2 is unavailable.");
+  const background=compileProgram(gl,backgroundVertex,backgroundFragment,["uAspect","uTime","uRotation","uShadow","uStyle","uPaper"]);
+  const object=compileProgram(gl,objectVertex,objectFragment,["uView","uExtent","uOffset","uTarget","uSpin","uLift","uSlide","uBasic","uColor[0]","uEye","uWire","uDarkKeys"]);
+  const empty=gl.createVertexArray();
+  const meshes=board.map(vertices=>{
+    const array=gl.createVertexArray();
+    gl.bindVertexArray(array);
+    gl.bindBuffer(gl.ARRAY_BUFFER,gl.createBuffer());
+    gl.bufferData(gl.ARRAY_BUFFER,vertices,gl.STATIC_DRAW);
+    [[0,3,0],[1,3,12],[2,2,24]].forEach(([index,size,offset])=>{
+      gl.enableVertexAttribArray(index);
+      gl.vertexAttribPointer(index,size,gl.FLOAT,false,32,offset);
+    });
+    return {array,count:vertices.length/8};
+  });
+  gl.bindVertexArray(null);
+
+  function backdrop(style,aspect,time,offset,spin,paper){
+    gl.disable(gl.DEPTH_TEST);
+    gl.useProgram(background.program);
+    gl.bindVertexArray(empty);
+    const u=background.uniform;
+    gl.uniform1i(u.uStyle,style);
+    gl.uniform1f(u.uAspect,aspect);
+    gl.uniform1f(u.uTime,time);
+    gl.uniform1f(u.uRotation,spin);
+    gl.uniform2f(u.uShadow,offset[0]*aspect+.08,offset[1]-.21);
+    gl.uniform3fv(u.uPaper,paper);
+    gl.drawArrays(gl.TRIANGLES,0,3);
+  }
+  function drawBoard(pose,colors,aspect,lineMode,darkKeys,basic){
+    const {yaw,pitch,spin,width,offset,lift}=pose;
+    const target=[0,pose.target??.24,0];
+    const viewDirection=[Math.sin(yaw)*Math.cos(pitch),Math.sin(pitch),Math.cos(yaw)*Math.cos(pitch)];
+    const axisX=normalize(cross([0,1,0],viewDirection)),axisY=cross(viewDirection,axisX);
+    const matrix=[axisX[0],axisY[0],viewDirection[0],axisX[1],axisY[1],viewDirection[1],axisX[2],axisY[2],viewDirection[2]];
+    if(lineMode) gl.disable(gl.DEPTH_TEST);
+    else {gl.enable(gl.DEPTH_TEST);gl.clear(gl.DEPTH_BUFFER_BIT);}
+    gl.useProgram(object.program);
+    const u=object.uniform;
+    gl.uniformMatrix3fv(u.uView,false,matrix);
+    gl.uniform2f(u.uExtent,width/2,width/(2*aspect));
+    gl.uniform2fv(u.uOffset,offset);
+    gl.uniform3fv(u.uTarget,target);
+    gl.uniform3fv(u.uEye,viewDirection.map((value,index)=>value*34+target[index]));
+    gl.uniform1f(u.uSpin,spin);
+    gl.uniform3fv(u["uColor[0]"],colors);
+    gl.uniform1i(u.uDarkKeys,darkKeys);
+    gl.uniform1i(u.uBasic,basic);
+    gl.uniform1i(u.uWire,lineMode);
+    if(lineMode){
+      gl.uniform1f(u.uLift,0);
+      gl.uniform1f(u.uSlide,0);
+      gl.bindVertexArray(meshes[4].array);
+      gl.drawArrays(gl.LINES,0,meshes[4].count);
+    } else {
+      for(let layer=0;layer<4;layer++){
+        gl.uniform1f(u.uLift,lift?.[layer]||0);
+        gl.uniform1f(u.uSlide,layer===3 ? pose.slide||0 : 0);
+        gl.bindVertexArray(meshes[layer].array);
+        gl.drawArrays(gl.TRIANGLES,0,meshes[layer].count);
+      }
+    }
+  }
+  function surface(style,aspect,time,pose,colors,paper,darkKeys=false){
+    backdrop(style,aspect,time,pose.offset,pose.spin,paper);
+    drawBoard(pose,colors,aspect,style===4,darkKeys,style===2);
+  }
+  return {canvas,gl,surface};
+}
+
+function colors(finish=palette.Basalt,keyset="Glacier",basic=false){
+  const obsidian=keyset==="Obsidian";
+  const rim=finish.map((value,index)=>Math.min(1,value*1.23+[.06,.07,.074][index]));
+  const dark=finish.map(value=>value*.49);
+  const defaults=[finish,rim,dark,obsidian?palette.obsidian:palette.glacier,obsidian?palette.obsidianMod:palette.glacierMod,
+    obsidian?palette.obsidianSpace:palette.glacierSpace,palette.orange,palette.legend,palette.lightInk,
+    palette.pcb,palette.gasket,palette.switchHousing,palette.stems,palette.metal];
+  if(basic){
+    const plastic=[.62,.61,.55], pale=[.74,.72,.64], ink=[.25,.24,.21];
+    const housing=[.47,.45,.41];
+    defaults.splice(0,14,plastic,plastic,housing,pale,plastic,pale,plastic,ink,ink,housing,plastic,housing,housing,plastic);
+  }
+  return new Float32Array(defaults.flat());
+}
+
+const standard=colors(), plastic=colors(undefined,undefined,true);
+const blackPaper=[.16,.20,.23], creamPaper=[.73,.70,.64], storyPaper=[.72,.70,.65];
+const finishes = {
+  Basalt:[.73,.73,.70], Dune:[.78,.71,.62], Lichen:[.68,.72,.62]
+};
+const scenes={};
+let scheduled=false;
+let lastHeroFrame=-Infinity;
+function addScene(key,id){
+  const canvas=byId(id);
+  const container=canvas.parentElement;
+  try{
+    const scene=makeRenderer(canvas);
+    scenes[key]={...scene,visible:false,dirty:true};
+    container.classList.remove("unavailable");
+  } catch(error){
+    container.classList.add("unavailable");
+    canvas.setAttribute("aria-hidden","true");
+    console.warn(id+": "+error.message);
+  }
+  canvas.addEventListener("webglcontextlost",event=>{
+    event.preventDefault();
+    if(!scenes[key]) return;
+    scenes[key].lost=true;
+    container.classList.add("unavailable");
+  });
+  canvas.addEventListener("webglcontextrestored",()=>{
+    try{
+      Object.assign(scenes[key],makeRenderer(canvas),{dirty:true,lost:false});
+      container.classList.remove("unavailable");
+      requestFrame();
+    }catch(error){console.warn(id+": "+error.message);}
+  });
+}
+Object.entries({hero:"hero-gl",story:"story-gl",compare:"compare-gl",wire:"wire-gl",config:"config-gl"}).forEach(([key,id])=>addScene(key,id));
+
+const pointer={x:0,y:0,tx:0,ty:0};
+const hero=byId("hero-gl").parentElement;
+hero.addEventListener("pointermove",event=>{
+  if(reducedMotion.matches || event.pointerType==="touch") return;
+  const rect=hero.getBoundingClientRect();
+  pointer.tx=(event.clientX-rect.left)/rect.width-.5;
+  pointer.ty=(event.clientY-rect.top)/rect.height-.5;
+});
+hero.addEventListener("pointerleave",()=>{pointer.tx=0;pointer.ty=0;});
+
+let storyPose={...chapters[0],lift:[0,0,0,0],target:.22};
+const configTint={color:[...palette.Basalt],paper:[...finishes.Basalt],darkMix:0};
+let configColors=standard;
+const interpolation=(a,b,factor)=>Math.abs(a-b)<.001?b:mix(a,b,factor);
+function sizeCanvas(scene){
+  const {canvas,gl}=scene;
+  const ratio=Math.min(devicePixelRatio||1,1.5);
+  const width=Math.max(1,Math.round(canvas.clientWidth*ratio)),height=Math.max(1,Math.round(canvas.clientHeight*ratio));
+  if(canvas.width!==width || canvas.height!==height){
+    canvas.width=width;
+    canvas.height=height;
+    scene.dirty=true;
+  }
+  gl.viewport(0,0,width,height);
+  return width/height;
+}
+function renderScene(name,scene,elapsed){
+  const aspect=sizeCanvas(scene), {gl,surface}=scene;
+  const mobile=phone.matches;
+  const fill=(height,base)=>Math.max(base,height*aspect);
+  if(name==="hero"){
+    const tablet=aspect<1.27;
+    const time=reducedMotion.matches?0:elapsed;
+    pointer.x=interpolation(pointer.x,pointer.tx,.072);
+    pointer.y=interpolation(pointer.y,pointer.ty,.072);
+    const pose=mobile
+      ?{yaw:-.35+pointer.x*.11,pitch:.80+pointer.y*.10,spin:.21,width:16.1,offset:[.05,-.44]}
+      :{yaw:-.43+pointer.x*.13,pitch:.70+pointer.y*.13,spin:.23,width:Math.max(21.6,aspect*13.8),offset:[tablet?.32:.36,tablet?-.20:-.035]};
+    surface(0,aspect,time,pose,standard,blackPaper);
+    return !reducedMotion.matches;
+  }
+  if(name==="story"){
+    const to=chapters[stage];
+    const ease=reducedMotion.matches?1:.095;
+    let changed=false;
+    for (const property of ["yaw","pitch","spin","zoom","target","slide"]){
+      const target=property==="target"?.22+to.lift[3]*.32:to[property];
+      storyPose[property]=interpolation(storyPose[property],target,ease);
+      if(storyPose[property]!==target) changed=true;
+    }
+    storyPose.lift=storyPose.lift.map((value,index)=>{
+      const next=interpolation(value,to.lift[index],ease);
+      if(next!==to.lift[index]) changed=true;
+      return next;
+    });
+    const pose={...storyPose,width:fill(10.4,mobile?15.2:16.4)/storyPose.zoom,offset:[0,-.035]};
+    surface(1,aspect,0,pose,standard,storyPaper);
+    return changed;
+  }
+  if(name==="compare"){
+    const width=scene.canvas.width,height=scene.canvas.height,divider=Math.round(split*width);
+    const pose={yaw:-.12,pitch:mobile?.94:.92,spin:.095,width:fill(8.4,mobile?14.9:16.0),offset:[0,-.07]};
+    gl.enable(gl.SCISSOR_TEST);
+    if(divider>0){
+      gl.scissor(0,0,divider,height);
+      surface(2,aspect,0,pose,plastic,creamPaper);
+    }
+    if(divider<width){
+      gl.scissor(divider,0,width-divider,height);
+      surface(3,aspect,0,pose,standard,blackPaper);
+    }
+    gl.disable(gl.SCISSOR_TEST);
+    return false;
+  }
+  if(name==="wire"){
+    const pose={...wire,width:fill(9.7,14.9),offset:[0,-.055]};
+    surface(4,aspect,0,pose,standard,blackPaper);
+    return false;
+  }
+  const ease=reducedMotion.matches?1:.14;
+  const finishTarget=palette[build.finish],paperTarget=finishes[build.finish],darkTarget=Number(build.keyset==="Obsidian");
+  configTint.color=configTint.color.map((value,index)=>interpolation(value,finishTarget[index],ease));
+  configTint.paper=configTint.paper.map((value,index)=>interpolation(value,paperTarget[index],ease));
+  configTint.darkMix=interpolation(configTint.darkMix,darkTarget,ease);
+  configColors=colors(configTint.color);
+  const darkColors=colors(configTint.color,"Obsidian");
+  for(let index=9;index<18;index++) configColors[index]=mix(configColors[index],darkColors[index],configTint.darkMix);
+  const pose={yaw:-.40,pitch:.78,spin:.17,width:fill(9.5,mobile?15.1:16.2),offset:[0,-.022]};
+  surface(5,aspect,0,pose,configColors,configTint.paper,configTint.darkMix>.55);
+  return configTint.color.some((value,index)=>value!==finishTarget[index])
+    || configTint.paper.some((value,index)=>value!==paperTarget[index]) || configTint.darkMix!==darkTarget;
+}
+function requestFrame(){
+  if(scheduled || document.hidden) return;
+  scheduled=true;
+  requestAnimationFrame(draw);
+}
+function draw(time){
+  scheduled=false;
+  let running=false;
+  for(const [name,scene] of Object.entries(scenes)){
+    if(!scene.visible || !scene.dirty || scene.lost) continue;
+    if(name==="hero" && !reducedMotion.matches){
+      if(time-lastHeroFrame<30){running=true;continue;}
+      lastHeroFrame=time;
+    }
+    scene.dirty=renderScene(name,scene,time/1000);
+    running ||= scene.dirty;
+  }
+  if(running) requestFrame();
+}
+const intersection=new IntersectionObserver(entries=>{
+  for(const entry of entries){
+    const scene=Object.values(scenes).find(item=>item.canvas===entry.target);
+    scene.visible=entry.isIntersecting;
+    if(scene.visible) scene.dirty=true;
+  }
+  requestFrame();
+},{rootMargin:"80px"});
+const resize=new ResizeObserver(()=>{
+  Object.values(scenes).forEach(scene=>{scene.dirty=true;});
+  updateStory();
+  requestFrame();
+});
+Object.values(scenes).forEach(scene=>{intersection.observe(scene.canvas);resize.observe(scene.canvas);});
+window.addEventListener("scroll",()=>{updateStory();requestFrame();},{passive:true});
+window.addEventListener("resize",()=>{updateStory();requestFrame();},{passive:true});
+document.addEventListener("visibilitychange",requestFrame);
+reducedMotion.addEventListener("change",()=>{
+  if(scenes.hero) scenes.hero.dirty=true;
+  requestFrame();
+});
+[range,byId("finishes"),byId("keysets")].forEach(element=>{
+  element.addEventListener("input",requestFrame);
+  element.addEventListener("change",requestFrame);
+});
+wireArt.addEventListener("pointermove",requestFrame);
+wireArt.addEventListener("keydown",requestFrame);
+updateStory();
+changeSplit();
+for(const name of ["finish","keyset"]){
+  changeBuild({target:document.querySelector(`input[name="${name}"]:checked`)});
+}
+requestFrame();
+</script>
+</body>
+</html>

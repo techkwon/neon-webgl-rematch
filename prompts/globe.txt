@@ -1,0 +1,3 @@
+Build an interactive 3D Earth globe in WebGL2 where simulated lightning strikes appear around the world as glowing ripples, and each strike drives a Web Audio ambient music engine so the music reacts to the storm. Include a start button for audio and let the user drag to rotate the globe.
+
+Save the result as one self-contained file named index.html in the current directory. Use raw WebGL2 only, no external libraries or network requests. Do it in one go, do not ask questions.
