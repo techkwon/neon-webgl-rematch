@@ -1,0 +1,3 @@
+Recreate Alan Turing's 1936 study at King's College, Cambridge as an interactive 3D scene in WebGL2: inside the room (desk, books, papers, fireplace, period furniture, warm window light) with King's College Chapel visible through the window, and on the desk a working Universal Turing Machine the user can run and step through (tape, read/write head and current state shown). Let the user walk around the room with the keyboard and look with the mouse.
+
+Save the result as one self-contained file named index.html in the current directory. Use raw WebGL2 only, no external libraries or network requests. Do it in one go, do not ask questions.

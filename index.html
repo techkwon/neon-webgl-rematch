@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Gemini 4 Neon vs Hydrogen · Sonnet 5.5 · GPT-6.2 Sol — WebGL2 5라운드 재대결</title>
-<meta name="description" content="새로 나온 Gemini 4 Neon과 Hydrogen, Claude Sonnet 5.5, GPT-6.2 Sol이 한 번에 만든 WebGL2 결과물 20개를 직접 실행해 보고, 걸린 시간·비용·AI 심사 점수를 확인할 수 있습니다.">
+<title>Gemini 4 Neon vs Hydrogen · Sonnet 5.5 · GPT-6.2 Sol — WebGL2 5라운드 재대결 + 구글 데모 3라운드</title>
+<meta name="description" content="새로 나온 Gemini 4 Neon과 Hydrogen, Claude Sonnet 5.5, GPT-6.2 Sol이 한 번에 만든 결과물 32개(1부 WebGL2 5과제 + 2부 구글 Neon 데모 3과제)를 직접 실행해 보고, 걸린 시간·비용·AI 심사 점수를 확인할 수 있습니다.">
 <meta name="theme-color" content="#06070D">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Gemini 4 Neon vs Hydrogen · Sonnet 5.5 · GPT-6.2 Sol — WebGL2 5라운드 재대결">
-<meta property="og:description" content="새 Gemini vs 이전 Gemini. 네 모델이 한 번에 만든 WebGL2 결과물 20개, 프롬프트, 비용, 실패한 시도, AI 심사 점수 전부 공개.">
+<meta property="og:title" content="Gemini 4 Neon vs Hydrogen · Sonnet 5.5 · GPT-6.2 Sol — WebGL2 5라운드 재대결 + 구글 데모 3라운드">
+<meta property="og:description" content="새 Gemini vs 이전 Gemini. 1부 WebGL2 5과제에 구글이 고른 Neon 데모 3과제까지, 네 모델이 한 번에 만든 결과물 32개와 프롬프트, 비용, 실패한 시도, AI 심사 점수 전부 공개.">
 <meta property="og:image" content="https://techkwon.github.io/neon-webgl-rematch/poster/water-neon.jpg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -195,6 +195,13 @@ footer{padding:44px 0 56px;color:var(--faint);font-family:var(--mono);font-size:
 .pending b{color:#FFF1CC}
 .ballot.wait{display:flex;align-items:center;justify-content:center;min-height:120px;color:var(--faint);font-size:14px;border-style:dashed;text-align:center}
 .cnote{font-size:12.5px;color:var(--faint);line-height:1.5}
+.sub-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;margin:26px 0 10px}
+.sub-head h3{font-size:clamp(19px,2.6vw,23px);letter-spacing:-.02em;font-weight:700;line-height:1.25}
+.part-intro{padding:16px 18px;margin-bottom:16px;font-size:15px;color:var(--dim);border-left:3px solid var(--cy)}
+.part-intro b{color:var(--ink);font-weight:600}
+.part-intro p+p{margin-top:8px}
+.split{font-family:var(--mono);font-size:12px;color:var(--dim)}
+.split b{color:var(--ink);font-weight:500}
 .err{margin:24px 0;padding:16px 18px;border-color:rgba(255,90,78,.5);color:#FFC9C4}
 
 @media (max-width:1080px){
@@ -209,8 +216,12 @@ footer{padding:44px 0 56px;color:var(--faint);font-family:var(--mono);font-size:
 @media (max-width:560px){
   .grid4,.ballots,.rgrid{grid-template-columns:minmax(0,1fr)}
   .board{padding:4px 14px}
-  .sfig{gap:4px 10px}
+  .sfig{gap:4px 14px}
   .sfig .tot{font-size:34px}
+  .srow{grid-template-columns:minmax(0,1fr)}
+  .srow .sfig{grid-row:2;justify-content:flex-start;align-items:center}
+  .srow .sfig .sub{text-align:left}
+  .srow .bar{grid-row:3}
 }
 @media (prefers-reduced-motion:reduce){
   html{scroll-behavior:auto}
@@ -233,7 +244,8 @@ footer{padding:44px 0 56px;color:var(--faint);font-family:var(--mono);font-size:
     <div class="hero-row">
       <a id="yt-link" class="btn primary" target="_blank" rel="noopener" hidden>▶ 유튜브 영상 보기</a>
       <a class="chip" href="#scoreboard">점수판</a>
-      <a class="chip" href="#rounds">5라운드</a>
+      <a class="chip" href="#rounds">1부 · 5라운드</a>
+      <a class="chip" href="#part2">2부 · 구글 데모 3라운드</a>
       <a class="chip" href="#receipt">영수증</a>
       <a class="chip" href="#limits">한계</a>
       <a class="chip" href="#downloads">자료 받기</a>
@@ -245,33 +257,48 @@ footer{padding:44px 0 56px;color:var(--faint);font-family:var(--mono);font-size:
 
   <main id="app" hidden>
     <section id="scoreboard">
-      <div class="sec-head"><span class="label">01 · Scoreboard</span><h2>점수판</h2></div>
+      <div class="sec-head"><span class="label">01 · Scoreboard</span><h2 id="board-title">종합 점수판</h2></div>
       <p class="sec-note" id="scoring"></p>
       <p class="glass pending" id="judging" role="status" hidden></p>
       <div class="glass board" id="board"></div>
     </section>
 
     <section id="rounds">
-      <div class="sec-head"><span class="label">02 · Rounds</span><h2>다섯 라운드, 직접 돌려 보기</h2></div>
+      <div class="sec-head"><span class="label">02 · Part 1</span><h2 id="p1-title">1부 · 다섯 라운드, 직접 돌려 보기</h2></div>
+      <p class="sec-note" id="p1-intro"></p>
       <p class="sec-note">영상은 녹화본(소리 없음)입니다. 카드의 “직접 실행해 보기”를 누르면 모델이 만든 파일이 그대로 새 탭에서 열립니다. 화면을 한 번 눌러야 시작하는 것도 있고, 도시 라운드는 WASD와 마우스로 움직입니다.</p>
       <div class="glass tail">
-        <span class="label">모든 프롬프트 끝에 똑같이 붙인 문장</span>
+        <span class="label">모든 프롬프트 끝에 똑같이 붙인 문장 (1부·2부 같음)</span>
         <pre id="tail"></pre>
       </div>
-      <nav class="rnav" id="rnav" aria-label="라운드 바로 가기"></nav>
+      <div class="sub-head"><span class="label">Part 1 · Scoreboard</span><h3>1부 점수판</h3></div>
+      <div class="glass board" id="board-p1"></div>
+      <div class="sub-head"><span class="label">Part 1 · Rounds</span><h3>1부 라운드</h3></div>
+      <nav class="rnav" id="rnav" aria-label="1부 라운드 바로 가기"></nav>
       <div id="round-list"></div>
     </section>
 
+    <section id="part2" hidden>
+      <div class="sec-head"><span class="label">03 · Part 2</span><h2 id="p2-title">2부 · 구글이 고른 과제</h2></div>
+      <div class="glass part-intro" id="p2-intro"></div>
+      <div class="sub-head"><span class="label">Part 2 · Scoreboard</span><h3>2부 점수판</h3></div>
+      <div class="glass board" id="board-p2"></div>
+      <div class="sub-head"><span class="label">Part 2 · Rounds</span><h3>2부 라운드</h3></div>
+      <p class="sec-note">스키와 연구실은 키보드와 마우스로 움직이고, 실험대는 드래그로 돌려 봅니다(조작 키는 모델마다 조금씩 다릅니다). 소리가 있는 페이지는 시작 버튼을 눌러야 켜집니다. 녹화본은 스키 22초(키보드 조작 스크립트), 연구실 18초, 실험대 18초(드래그 회전)입니다.</p>
+      <nav class="rnav" id="rnav-p2" aria-label="2부 라운드 바로 가기"></nav>
+      <div id="round-list-p2"></div>
+    </section>
+
     <section id="receipt">
-      <div class="sec-head"><span class="label">03 · Receipt</span><h2>영수증</h2></div>
-      <p class="sec-note">과제 다섯 개를 모두 합친 값입니다. 비용 옆 꼬리표로 추정·보고값을 구분했습니다. 실패한 시도의 비용은 합계에 넣지 않고 아래에 따로 적었습니다.</p>
+      <div class="sec-head"><span class="label" id="receipt-label">04 · Receipt</span><h2>영수증</h2></div>
+      <p class="sec-note"><span id="receipt-scope">과제 다섯 개를 모두 합친 값입니다.</span> 비용 옆 꼬리표로 추정·보고값을 구분했습니다. 실패한 시도의 비용은 합계에 넣지 않고 아래에 따로 적었습니다.</p>
       <div class="rgrid" id="rgrid"></div>
       <div class="glass why" id="why"></div>
       <div class="glass aa" id="aa"></div>
     </section>
 
     <section id="limits">
-      <div class="sec-head"><span class="label">04 · Limits</span><h2>이 실험의 한계</h2></div>
+      <div class="sec-head"><span class="label" id="limits-label">05 · Limits</span><h2>이 실험의 한계</h2></div>
       <div class="two">
         <div class="glass box"><h3>알고 보셔야 할 점</h3><ol id="limit-list"></ol></div>
         <div class="glass box"><h3>출처</h3><ul id="source-list"></ul></div>
@@ -279,7 +306,7 @@ footer{padding:44px 0 56px;color:var(--faint);font-family:var(--mono);font-size:
     </section>
 
     <section id="downloads">
-      <div class="sec-head"><span class="label">05 · Downloads</span><h2>자료 받기</h2></div>
+      <div class="sec-head"><span class="label" id="dl-label">06 · Downloads</span><h2>자료 받기</h2></div>
       <p class="sec-note">프롬프트, 실행·녹화·심사 스크립트, 심사 시트와 투표 원본, 그리고 이 페이지의 모든 숫자가 들어 있는 data.json입니다.</p>
       <div class="glass box" id="dl"></div>
     </section>
@@ -465,6 +492,13 @@ footer{padding:44px 0 56px;color:var(--faint);font-family:var(--mono);font-size:
     var JG = d.judging || {};
     var pending = JG.complete === false;
     var FA = d.failed_attempts || {};
+    var partOf = function (r) { return r.part === 2 ? 2 : 1; };
+    var P = {};
+    (d.parts || []).forEach(function (p) { P[p.part] = p; });
+    var R1 = rounds.filter(function (r) { return partOf(r) === 1; });
+    var R2 = rounds.filter(function (r) { return partOf(r) === 2; });
+    var hasP2 = R2.length > 0;
+    var gIdx = function (r) { return rounds.indexOf(r); };          // R1..R8 numbering runs across both parts
 
     /* ----- hero ----- */
     if (d.title) document.title = d.title;
@@ -502,13 +536,15 @@ footer{padding:44px 0 56px;color:var(--faint);font-family:var(--mono);font-size:
     }
     KIND.mixed = '혼합';
     var pendTxt = pending ? ' (심사 진행 중: ' + JG.ballots + '/' + JG.expected_ballots + '표 집계)' : '';
+    var roundsTxt = hasP2 ? R1.length + '+' + R2.length + '개' : rounds.length + '개';
 
     fill($('lede'),
       h('b', null, H2.label || (short(A) + ' vs ' + short(B))), '. 새로 나온 ', h('b', null, name(A)), '은 출력 단가가 ', name(B), '의 ',
       h('span', { 'class': 'hl' }, fmtX(priceX) + '배'), '입니다. ',
-      '같은 프롬프트 ' + rounds.length + '개를 한 번씩 돌린 청구액은 ', h('b', null, costOf(A)), ' 대 ', h('b', null, costOf(B)),
+      (hasP2 ? '1부 WebGL2 과제 ' + R1.length + '개와 구글이 고른 2부 과제 ' + R2.length + '개, 모두 ' + rounds.length + '개 프롬프트를 한 번씩 돌린 청구액은 '
+        : '같은 프롬프트 ' + rounds.length + '개를 한 번씩 돌린 청구액은 '), h('b', null, costOf(A)), ' 대 ', h('b', null, costOf(B)),
       ' (', h('span', { 'class': 'hl' }, fmtX(costX) + '배'), '), 출력 토큰은 ', short(A), '이 ', short(B), '의 ', h('span', { 'class': 'hl' }, fmtX(tokX) + '배'), '. ',
-      'AI 심사 점수는 ', h('b', null, scoreTxt), pendTxt, '. ',
+      'AI 심사 점수' + (hasP2 ? '(' + rounds.length + '라운드 합계)' : '') + '는 ', h('b', null, scoreTxt), pendTxt, '. ',
       'Sonnet 5.5와 GPT-6.2 Sol도 같은 판에서 겨뤘습니다.');
 
     fill($('stats'),
@@ -517,12 +553,12 @@ footer{padding:44px 0 56px;color:var(--faint);font-family:var(--mono);font-size:
         h('div', { 'class': 'big num' }, xval(priceX), h('small', null, dear(priceX))),
         h('p', null, short(A) + ' vs ' + short(B) + ' · 100만 토큰당 입력/출력 ' + priceTxt(A) + ' vs ' + priceTxt(B))),
       h('div', { 'class': 'glass stat' },
-        h('span', { 'class': 'label' }, 'AI 심사 점수' + (pending ? ' · 진행 중' : '')),
+        h('span', { 'class': 'label' }, 'AI 심사 점수' + (hasP2 ? ' · ' + rounds.length + '라운드' : '') + (pending ? ' · 진행 중' : '')),
         h('div', { 'class': 'big num' },
           h('span', { style: 'color:' + col(A) }, pts[A]), h('span', { 'class': 'sep' }, ':'), h('span', { style: 'color:' + col(B) }, pts[B])),
         h('p', null, short(A) + ' vs ' + short(B) + ' · 전체 ' + scoreTxt + ' (' + maxTotal + '점 만점)' + pendTxt)),
       h('div', { 'class': 'glass stat key' },
-        h('span', { 'class': 'label' }, '실제 청구액 (' + rounds.length + '과제)'),
+        h('span', { 'class': 'label' }, '실제 청구액 (' + (hasP2 ? roundsTxt.replace('개', '') : rounds.length) + '과제)'),
         h('div', { 'class': 'big num' }, xval(costX), h('small', null, dear(costX))),
         h('p', null, costOf(A) + ' vs ' + costOf(B) + ' · 출력 토큰 ' + xval(tokX) + more(tokX)
           + (isNum(FA.usd) && FA.usd > 0 ? ' · ' + short(A) + ' 실패 시도 ' + fmtUSD(FA.usd) + ' 별도' : '')))
@@ -541,47 +577,66 @@ footer{padding:44px 0 56px;color:var(--faint);font-family:var(--mono);font-size:
         }).join(', '), '. 점수는 표가 다 모이면 바뀝니다.');
       $('judging').hidden = false;
     }
-    var selfFirst = {};
-    order.forEach(function (k) { selfFirst[k] = 0; });
-    rounds.forEach(function (r) {
-      (r.ballots || []).forEach(function (b) { if (b.ranking && b.ranking[0] === b.judge && b.judge in selfFirst) selfFirst[b.judge]++; });
-    });
     var excl = T.points_excluding_self || {};
-    var board = $('board');
-    fill(board,
-      h('div', { style: 'padding:14px 0 0' },
-        h('span', { 'class': 'label' }, '막대 칸 순서 (왼쪽부터)'),
-        h('ul', { 'class': 'legend', style: 'margin-top:8px' }, rounds.map(function (r, i) {
-          return h('li', null, h('b', null, 'R' + (i + 1)), r.name);
-        }))),
-      byScore.map(function (k) {
-        return h('div', { 'class': 'srow', style: cvar(k) },
-          h('div', { 'class': 'mname' }, h('i', { 'class': 'dot' }), name(k)),
-          h('div', { 'class': 'bar', role: 'img', 'aria-label': name(k) + ' 라운드별 점수: ' + rounds.map(function (r) { return r.name + ' ' + (r.points && r.points[k]); }).join(', ') },
-            rounds.map(function (r, i) {
-              var p = (r.points && r.points[k]) || 0;
-              return h('div', { 'class': 'seg', title: 'R' + (i + 1) + ' ' + r.name + ': ' + p + '점',
-                style: 'flex:0 0 calc(' + (p / maxTotal * 100).toFixed(3) + '% - 2px);background:' + col(k) + (i % 2 ? 'B3' : 'F2') }, p);
-            })),
-          h('div', { 'class': 'sfig' },
-            h('div', { 'class': 'tot num' }, pts[k], h('small', null, ' /' + maxTotal)),
-            h('div', { 'class': 'sub' },
-              '자기 표 제외 ', h('b', null, excl[k] != null ? excl[k] : '—'), ' /' + maxExcl, h('br'),
-              '자기를 1위로 ', h('b', null, selfFirst[k] + '번'), ' /' + rounds.length + '라운드')));
-      }),
-      h('div', { 'class': 'board-foot' },
-        '심사위원은 이름을 가린 A~D 시트만 봤습니다. 그래도 ' + (pending ? '지금까지 들어온 ' : '전체 '), h('b', null, (T.ballots != null ? T.ballots : '?') + '표'), ' 가운데 ',
-        h('b', null, (T.self_first_votes != null ? T.self_first_votes : '?') + '표'), '는 자기 작품을 1위로 뽑은 표였습니다. 그래서 ‘자기 표 제외’ 합계도 함께 적었습니다.')
-    );
+    function board(el, rs, TT, combined) {
+      TT = TT || {};
+      var bp = TT.points || {}, bx = TT.points_excluding_self || {};
+      var bMax = perRoundMax * rs.length, bMaxEx = (nJudge - 1) * order.length * rs.length;
+      var sf = {};
+      order.forEach(function (k) { sf[k] = 0; });
+      rs.forEach(function (r) {
+        (r.ballots || []).forEach(function (b) { if (b.ranking && b.ranking[0] === b.judge && b.judge in sf) sf[b.judge]++; });
+      });
+      var sorted = order.slice().sort(function (a, b) { return (bp[b] || 0) - (bp[a] || 0); });
+      var pp = function (n, k) { var t = P[n] && P[n].totals && P[n].totals.points; return t && t[k] != null ? t[k] : '—'; };
+      fill(el,
+        h('div', { style: 'padding:14px 0 0' },
+          h('span', { 'class': 'label' }, '막대 칸 순서 (왼쪽부터)'),
+          h('ul', { 'class': 'legend', style: 'margin-top:8px' }, rs.map(function (r) {
+            return h('li', null, h('b', null, 'R' + (gIdx(r) + 1)), r.name + (combined && hasP2 ? (partOf(r) === 2 ? ' · 2부' : ' · 1부') : ''));
+          }))),
+        sorted.map(function (k) {
+          return h('div', { 'class': 'srow', style: cvar(k) },
+            h('div', { 'class': 'mname' }, h('i', { 'class': 'dot' }), name(k)),
+            h('div', { 'class': 'bar', role: 'img', 'aria-label': name(k) + ' 라운드별 점수: ' + rs.map(function (r) { return r.name + ' ' + (r.points && r.points[k]); }).join(', ') },
+              rs.map(function (r, i) {
+                var p = (r.points && r.points[k]) || 0;
+                return h('div', { 'class': 'seg', title: 'R' + (gIdx(r) + 1) + ' ' + r.name + ': ' + p + '점',
+                  style: 'flex:0 0 calc(' + (p / bMax * 100).toFixed(3) + '% - 2px);background:' + col(k) + (i % 2 ? 'B3' : 'F2') }, p);
+              })),
+            h('div', { 'class': 'sfig' },
+              h('div', { 'class': 'tot num' }, bp[k] != null ? bp[k] : '—', h('small', null, ' /' + bMax)),
+              h('div', { 'class': 'sub' },
+                combined && hasP2 ? ['1부 ', h('b', null, pp(1, k)), ' · 2부 ', h('b', null, pp(2, k)), h('br')] : null,
+                '자기 표 제외 ', h('b', null, bx[k] != null ? bx[k] : '—'), ' /' + bMaxEx, h('br'),
+                '1위 표 ', h('b', null, ((TT.first_votes || {})[k] != null ? TT.first_votes[k] : '—') + '표'), h('br'),
+                '자기를 1위로 ', h('b', null, sf[k] + '번'), ' /' + rs.length + '라운드')));
+        }),
+        h('div', { 'class': 'board-foot' },
+          '심사위원은 이름을 가린 A~D 시트만 봤습니다. 그래도 ' + (pending ? '지금까지 들어온 ' : '') + (combined && hasP2 ? rounds.length + '라운드 ' : '') + '전체 ',
+          h('b', null, (TT.ballots != null ? TT.ballots : '?') + '표'), ' 가운데 ',
+          h('b', null, (TT.self_first_votes != null ? TT.self_first_votes : '?') + '표'), '는 자기 작품을 1위로 뽑은 표였습니다. 그래서 ‘자기 표 제외’ 합계도 함께 적었습니다.')
+      );
+    }
+    if (hasP2) {
+      $('board-title').textContent = '종합 점수판 · ' + rounds.length + '라운드 (1부 ' + R1.length + ' + 2부 ' + R2.length + ')';
+      $('scoring').textContent = (d.scoring || '') + ' 아래는 1부와 2부를 합친 ' + rounds.length + '라운드 점수입니다(' + (perRoundMax * rounds.length) + '점 만점). 부별 점수판은 각 부에 따로 있습니다.';
+    }
+    board($('board'), rounds, T, true);
+    board($('board-p1'), R1, (P[1] && P[1].totals) || (hasP2 ? {} : T), false);
+    if (P[1] && P[1].intro) $('p1-intro').textContent = P[1].intro; else $('p1-intro').remove();
+    if (!hasP2) { $('board-p1').previousElementSibling.remove(); $('board-p1').remove(); }
 
     /* ----- rounds ----- */
     var tail = d.common_tail || '';
     $('tail').textContent = tail;
-    fill($('rnav'), rounds.map(function (r, i) {
-      return h('a', { 'class': 'chip', href: '#r-' + r.id }, 'R' + (i + 1) + ' ' + r.name);
-    }));
     var videos = [];
-    fill($('round-list'), rounds.map(function (r, i) {
+    function roundList(listEl, navEl, rs) {
+    fill(navEl, rs.map(function (r) {
+      return h('a', { 'class': 'chip', href: '#r-' + r.id }, 'R' + (gIdx(r) + 1) + ' ' + r.name);
+    }));
+    fill(listEl, rs.map(function (r) {
+      var i = gIdx(r);
       var full = r.prompt || '';
       var shown = tail && full.slice(-tail.length) === tail ? full.slice(0, -tail.length).replace(/\s+$/, '') : full;
       var rp = r.points || {};
@@ -656,6 +711,22 @@ footer{padding:44px 0 56px;color:var(--faint);font-family:var(--mono);font-size:
               r.judge_sheet ? h('a', { 'class': 'chip', href: r.judge_sheet, target: '_blank', rel: 'noopener' }, '블라인드 심사 시트 (A~D) ↗') : null,
               h('a', { 'class': 'chip', href: 'judge/' + r.id + '/mapping.json', target: '_blank', rel: 'noopener' }, 'A~D 정답표 ↗')))));
     }));
+    }
+    roundList($('round-list'), $('rnav'), hasP2 ? R1 : rounds);
+    if (hasP2) {
+      var p2 = P[2] || {};
+      if (p2.name) $('p2-title').textContent = p2.name;
+      fill($('p2-intro'),
+        h('p', null, p2.intro || ''),
+        h('p', null, h('b', null, '2부 점수 '), (function () {
+          var t2 = (p2.totals || {}).points || {};
+          return order.slice().sort(function (a, b) { return (t2[b] || 0) - (t2[a] || 0); })
+            .map(function (k) { return short(k) + ' ' + (t2[k] != null ? t2[k] : '—'); }).join(' · ');
+        })() + ' (' + (perRoundMax * R2.length) + '점 만점)'));
+      board($('board-p2'), R2, p2.totals, false);
+      roundList($('round-list-p2'), $('rnav-p2'), R2);
+      $('part2').hidden = false;
+    }
 
     /* lazy video: load and play only while on screen */
     var playIf = function (v) {
@@ -679,6 +750,8 @@ footer{padding:44px 0 56px;color:var(--faint);font-family:var(--mono);font-size:
 
     /* ----- receipt ----- */
     var secs = T.seconds || {}, bytes = T.bytes || {};
+    var pcost = function (n, k) { var c = P[n] && P[n].totals && P[n].totals.cost_usd; return c && isNum(c[k]) ? fmtUSD(c[k]) : '—'; };
+    if (hasP2) $('receipt-scope').textContent = '1부 과제 ' + R1.length + '개와 2부 과제 ' + R2.length + '개, 모두 ' + rounds.length + '개를 합친 값입니다(부별 금액도 함께 적음).';
     fill($('rgrid'), order.map(function (k) {
       var kind = modelKind(k);
       return h('div', { 'class': 'glass rcpt', style: cvar(k) },
@@ -687,12 +760,19 @@ footer{padding:44px 0 56px;color:var(--faint);font-family:var(--mono);font-size:
           ? h('div', { 'class': 'cost num' }, fmtUSD(cost[k]))
           : h('div', { 'class': 'cost none' }, '금액 미확인'),
         h('div', null, h('span', { 'class': 'label' }, '과제 ' + rounds.length + '개 합계'), kindTag(kind)),
+        hasP2 ? h('p', { 'class': 'split', style: 'margin-top:6px' },
+          '1부 ', h('b', null, pcost(1, k)), ' · 2부 ', h('b', null, pcost(2, k))) : null,
         h('dl', null,
           h('div', null, h('dt', null, '출력 토큰'), h('dd', null, fmtInt(out[k]))),
           h('div', null, h('dt', null, '총 시간'), h('dd', null, fmtSec(secs[k]))),
           h('div', null, h('dt', null, '총 코드 크기'), h('dd', null, fmtKB(bytes[k]))),
           h('div', null, h('dt', null, '단가 (입력/출력)'), h('dd', null, priceTxt(k))),
-          h('div', null, h('dt', null, '실행 날짜'), h('dd', null, (M[k].run_date || '—') + (M[k].reused ? ' (11편)' : ''))),
+          h('div', null, h('dt', null, '실행 날짜'), h('dd', null, hasP2
+            ? [1, 2].map(function (n) {
+                var p = P[n] || {}, dt = (p.run_dates || {})[k], ru = (p.reused || {})[k];
+                return n + '부 ' + (dt || '—') + (ru ? ' (11편)' : '');
+              }).join(' · ')
+            : (M[k].run_date || '—') + (M[k].reused ? ' (11편)' : ''))),
           h('div', null, h('dt', null, '도구'), h('dd', null, M[k].tool || '—'))));
     }));
     fill($('why'),

@@ -1,0 +1,1072 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#151813">
+<link rel="icon" href="data:,">
+<title>The Elements — A Laboratory Study</title>
+<style>
+  :root { color-scheme: dark; --paper: #efe8d9; --muted: #b1a99b; --inset: clamp(20px, 4.4vw, 72px); }
+  * { box-sizing: border-box; }
+  body { margin: 0; overflow: hidden; background: #151813; color: var(--paper); font-family: Georgia, 'Times New Roman', serif; }
+  main { position: relative; isolation: isolate; width: 100%; height: 100vh; height: 100dvh; overflow: hidden; }
+  canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; cursor: grab; touch-action: none; outline: none; }
+  canvas:active { cursor: grabbing; }
+  canvas:focus-visible { outline: 1px solid #d6c098; outline-offset: -6px; }
+  header { position: absolute; top: clamp(26px, 6.5vh, 85px); left: var(--inset); pointer-events: none; }
+  .technical { font: 500 10px/1.35 ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .17em; text-transform: uppercase; }
+  .eyebrow { display: flex; align-items: center; gap: 12px; color: #d5b791; }
+  .eyebrow::before { content: ''; width: 27px; height: 1px; background: #bb9368; }
+  h1 { font-size: clamp(48px, 7.1vw, 110px); font-weight: 400; line-height: .94; letter-spacing: -.072em; margin: 12px 0 8px -.056em; }
+  header p { margin: 13px 0 0; font-size: clamp(13px, 1.45vw, 20px); font-style: italic; color: #ccc1ac; }
+  .specimens { position: absolute; inset: 0; margin: 0; padding: 0; list-style: none; pointer-events: none; visibility: hidden; }
+  main.ready .specimens { visibility: visible; }
+  .specimen { position: absolute; left: 0; top: 0; width: 84px; text-align: center; margin-left: -42px; color: #fff1d7; text-shadow: 0 2px 5px #0b0804, 0 0 16px #0b0804; will-change: transform; }
+  .specimen .symbol { color: var(--ink); display: inline-flex; align-items: center; gap: 5px; font: 600 11px/1.2 ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .13em; }
+  .specimen .symbol::before { content: ''; background: currentColor; width: 4px; height: 4px; border-radius: 50%; box-shadow: 0 0 8px currentColor; }
+  .specimen .name { display: block; margin-top: 3px; font-size: clamp(14px, 2.02vw, 27px); letter-spacing: -.035em; }
+  footer { position: absolute; left: var(--inset); right: var(--inset); bottom: clamp(16px, 3.5vh, 45px); display: flex; justify-content: space-between; align-items: center; gap: 12px; border-top: 1px solid #e3ca9b54; padding-top: 14px; pointer-events: none; }
+  .hint { color: #d2c6b1; }
+  .actions { display: flex; gap: 7px; pointer-events: auto; }
+  button { color: var(--paper); background: #1b1a17c9; border: 1px solid #9e866a6e; padding: 0 12px; min-height: 36px; cursor: pointer; transition: background .2s, border-color .2s; }
+  button:hover { background: #40372a; border-color: #caa77f; }
+  button:focus-visible { outline: 2px solid #e7bc87; outline-offset: 3px; }
+  #status { position: absolute; top: 50%; left: 50%; width: min(360px, 90vw); transform: translate(-50%, -50%); color: var(--paper); text-align: center; }
+  @media (max-width: 600px) {
+    header { top: max(26px, 6dvh); }
+    .specimen { width: 65px; margin-left: -32.5px; }
+    .specimen .symbol { font-size: 9px; }
+    .specimen .name { font-size: clamp(13px, 3.4vw, 19px); }
+    button { padding-inline: 9px; }
+    footer { padding-top: 10px; }
+    .technical { letter-spacing: .1em; }
+  }
+  @media (max-height: 510px) {
+    header { top: 16px; }
+    h1 { font-size: clamp(28px, 5.2vw, 54px); margin: 7px 0 4px; }
+    header p { display: none; }
+    footer { bottom: 9px; padding-top: 6px; }
+    .specimen .name { font-size: 15px; margin-top: 0; }
+    .specimen .symbol { font-size: 9px; }
+    button { min-height: 30px; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <canvas aria-label="Interactive laboratory bench. Drag or use the arrow keys to orbit." tabindex="0"></canvas>
+  <header>
+    <div class="eyebrow technical">A laboratory study</div>
+    <h1>The Elements</h1>
+    <p>Four AI models in flame and gas discharge.</p>
+  </header>
+  <ol class="specimens" aria-label="Models on the laboratory bench">
+    <li class="specimen" style="--ink:#ffbd73"><span class="symbol">C</span><span class="name">Carbon</span></li>
+    <li class="specimen" style="--ink:#91caff"><span class="symbol">H</span><span class="name">Hydrogen</span></li>
+    <li class="specimen" style="--ink:#d0a9ff"><span class="symbol">Ar</span><span class="name">Argon</span></li>
+    <li class="specimen" style="--ink:#ff9870"><span class="symbol">Ne</span><span class="name">Neon</span></li>
+  </ol>
+  <footer>
+    <div class="hint technical">Drag to orbit</div>
+    <div class="actions">
+      <button id="orbit" class="technical" type="button">Pause orbit</button>
+      <button id="reset" class="technical" type="button">Reset view</button>
+    </div>
+  </footer>
+  <p id="status" role="status">Preparing the laboratory…</p>
+</main>
+<script>
+(() => {
+  'use strict';
+
+  const canvas = document.querySelector('canvas');
+  const stage = document.querySelector('main');
+  const status = document.querySelector('#status');
+  const orbitButton = document.querySelector('#orbit');
+  const labels = Array.from(document.querySelectorAll('.specimen'));
+  const gl = canvas.getContext('webgl2', {alpha:false, antialias:false, powerPreference:'high-performance'});
+  if (!gl) {
+    status.textContent = 'This exhibit needs a browser with WebGL 2 enabled.';
+    return;
+  }
+
+  const TAU = Math.PI * 2;
+  const add = (a,b) => a.map((n,i) => n+b[i]);
+  const subtract = (a,b) => a.map((n,i) => n-b[i]);
+  const scale = (a,s) => a.map(n => n*s);
+  const dot = (a,b) => a.reduce((sum,n,i) => sum+n*b[i],0);
+  const cross = (a,b) => [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]];
+  const unit = a => scale(a,1/(Math.hypot(...a)||1));
+  const clamp = (n,lo,hi) => Math.min(hi,Math.max(lo,n));
+  const linear = hex => [16,8,0].map(shift => Math.pow(((hex >> shift)&255)/255,2.2));
+
+  function multiply(a,b) {
+    const m = new Float32Array(16);
+    for (let col=0; col<4; col++) {
+      for (let row=0; row<4; row++) {
+        for (let k=0; k<4; k++) m[col*4+row] += a[k*4+row]*b[col*4+k];
+      }
+    }
+    return m;
+  }
+
+  function lookAt(eye,target) {
+    const z = unit(subtract(eye,target));
+    const x = unit(cross([0,1,0],z));
+    const y = cross(z,x);
+    return new Float32Array([
+      x[0],y[0],z[0],0, x[1],y[1],z[1],0, x[2],y[2],z[2],0,
+      -dot(x,eye),-dot(y,eye),-dot(z,eye),1
+    ]);
+  }
+
+  function perspective(fov,aspect,near,far) {
+    const f = 1/Math.tan(fov/2);
+    return new Float32Array([f/aspect,0,0,0, 0,f,0,0, 0,0,(far+near)/(near-far),-1, 0,0,2*far*near/(near-far),0]);
+  }
+
+  function orthographic(left,right,bottom,top,near,far) {
+    return new Float32Array([
+      2/(right-left),0,0,0, 0,2/(top-bottom),0,0, 0,0,-2/(far-near),0,
+      -(right+left)/(right-left),-(top+bottom)/(top-bottom),-(far+near)/(far-near),1
+    ]);
+  }
+
+  function program(vertex,fragment) {
+    function shader(type,source) {
+      const handle = gl.createShader(type);
+      gl.shaderSource(handle,'#version 300 es\nprecision highp float;\n'+source);
+      gl.compileShader(handle);
+      if (!gl.getShaderParameter(handle,gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(handle));
+      return handle;
+    }
+    const vertexShader = shader(gl.VERTEX_SHADER,vertex);
+    const fragmentShader = shader(gl.FRAGMENT_SHADER,fragment);
+    const handle = gl.createProgram();
+    gl.attachShader(handle,vertexShader);
+    gl.attachShader(handle,fragmentShader);
+    gl.linkProgram(handle);
+    gl.deleteShader(vertexShader);
+    gl.deleteShader(fragmentShader);
+    if (!gl.getProgramParameter(handle,gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(handle));
+    return {handle, locations:new Map()};
+  }
+
+  function uniform(p,name) {
+    if (!p.locations.has(name)) p.locations.set(name,gl.getUniformLocation(p.handle,name));
+    return p.locations.get(name);
+  }
+
+  const f1 = (p,name,value) => gl.uniform1f(uniform(p,name),value);
+  const f2 = (p,name,x,y) => gl.uniform2f(uniform(p,name),x,y);
+  const f3 = (p,name,value) => gl.uniform3fv(uniform(p,name),value);
+  const integer = (p,name,value) => gl.uniform1i(uniform(p,name),value);
+  const matrix = (p,name,value) => gl.uniformMatrix4fv(uniform(p,name),false,value);
+
+  const meshVertex = `
+    layout(location=0) in vec3 position;
+    layout(location=1) in vec3 normal;
+    uniform mat4 viewProjection;
+    out vec3 point, surfaceNormal;
+    void main() {
+      point=position;
+      surfaceNormal=normal;
+      gl_Position=viewProjection*vec4(position,1.);
+    }`;
+
+  const noiseGLSL = `
+    float hash(vec3 p) {
+      p=fract(p*.3183099+vec3(.17,.31,.11));
+      p*=17.;
+      return fract(p.x*p.y*p.z*(p.x+p.y+p.z));
+    }
+    float noise(vec3 p) {
+      vec3 i=floor(p), f=fract(p);
+      f=f*f*(3.-2.*f);
+      return mix(mix(mix(hash(i),hash(i+vec3(1,0,0)),f.x),
+                     mix(hash(i+vec3(0,1,0)),hash(i+vec3(1,1,0)),f.x),f.y),
+                 mix(mix(hash(i+vec3(0,0,1)),hash(i+vec3(1,0,1)),f.x),
+                     mix(hash(i+vec3(0,1,1)),hash(i+vec3(1,1,1)),f.x),f.y),f.z);
+    }`;
+
+  const surfaceFragment = `
+    in vec3 point, surfaceNormal;
+    out vec4 color;
+    uniform vec3 eye, base, keyDirection;
+    uniform vec3 station[4];
+    uniform float metallic, roughness, emission, tick, storageScale;
+    uniform int kind;
+    uniform mat4 shadowMatrix;
+    uniform highp sampler2DShadow shadowMap;
+    ${noiseGLSL}
+
+    vec3 studio(vec3 d,float rough) {
+      float width=1.+7.*rough*rough;
+      vec3 left=normalize(vec3(-.58,.72,.39));
+      vec3 window=normalize(vec3(-.83,.3,-.44));
+      vec3 rim=normalize(vec3(.6,.74,-.55));
+      float softbox=exp(-20.*(1.-dot(d,left))/width);
+      float strip=exp(-(55.*pow(dot(d,normalize(vec3(.46,0.,-.89))),2.)
+                       + 10.*pow(d.y-.33,2.))/width)*smoothstep(.05,.58,dot(d,window));
+      float edge=exp(-38.*(1.-dot(d,rim))/width);
+      float ceiling=smoothstep(-.28,.94,d.y);
+      return vec3(.035,.045,.049)+vec3(.24,.25,.23)*ceiling+
+        vec3(2.1,1.5,.93)*softbox+vec3(.61,.82,1.12)*strip+vec3(.90,1.17,1.28)*edge;
+    }
+
+    float shadow(vec3 p,vec3 n) {
+      vec4 s=shadowMatrix*vec4(p+n*.013,1.);
+      vec3 uv=s.xyz*.5+.5;
+      if(any(lessThan(uv,vec3(0.)))||any(greaterThan(uv,vec3(1.)))) return 1.;
+      vec2 disk[12]=vec2[12](vec2(-.33,.07),vec2(.24,-.32),vec2(.82,.08),
+        vec2(-.39,-.56),vec2(.35,.56),vec2(-.87,.28),vec2(.16,.17),
+        vec2(-.09,-.89),vec2(.67,-.64),vec2(-.56,.72),vec2(.10,.91),vec2(.91,.5));
+      float total=0.;
+      for(int i=0;i<12;i++) total+=texture(shadowMap,vec3(uv.xy+disk[i]*.0042,uv.z-.0004));
+      return total/12.;
+    }
+
+    vec3 direct(vec3 albedo,vec3 f0,vec3 n,vec3 v,vec3 l,float r) {
+      float nl=max(dot(n,l),0.), nv=max(dot(n,v),.001);
+      vec3 h=normalize(v+l);
+      float nh=max(dot(n,h),0.);
+      float a2=r*r*r*r, d=nh*nh*(a2-1.)+1.;
+      float distribution=a2/(3.14159*d*d);
+      float k=(r+1.)*(r+1.)*.125;
+      float visibility=1./((nv*(1.-k)+k)*(nl*(1.-k)+k)*4.);
+      vec3 fresnel=f0+(1.-f0)*pow(clamp(1.-dot(v,h),0.,1.),5.);
+      return nl*(albedo*(1.-metallic)*(1.-fresnel)*.31831+
+        min(distribution*visibility,13.)*fresnel);
+    }
+
+    void main() {
+      vec3 n=normalize(surfaceNormal), v=normalize(eye-point);
+      vec3 r=reflect(-v,n);
+      if(kind==5) {
+        float fresnel=pow(1.-abs(dot(n,v)),3.6);
+        vec3 reflections=studio(r,.065);
+        float highlight=max(max(reflections.r,reflections.g),reflections.b);
+        float strip=exp(-pow(dot(r,normalize(vec3(.84,0.,.54)))*13.,2.))
+                    *smoothstep(-.23,.62,r.y)*smoothstep(0.,.5,r.z);
+        float alpha=.032+.51*fresnel+.23*smoothstep(.34,1.58,highlight)+.22*strip;
+        color=vec4((reflections*.87+base*.09+vec3(.61,.70,.78)*strip)*storageScale,alpha);
+        return;
+      }
+      if(kind==6) {
+        float slope=abs(dot(n,v));
+        float variation=.91+.085*sin(point.y*9.+tick*1.5)+.028*sin(tick*5.2+point.y*24.);
+        color=vec4(base*emission*mix(.55,1.,slope)*variation*storageScale,1.);
+        return;
+      }
+      if(kind==7) {
+        float edge=pow(clamp(abs(dot(n,v)),0.,1.),1.7);
+        float swirl=.78+.22*sin(point.y*25.+sin(point.x*30.)+tick*2.);
+        color=vec4(base*(edge*swirl*emission)*storageScale,edge*.44);
+        return;
+      }
+      if(kind==8) {
+        float wash=exp(-dot((point.xy-vec2(-4.4,5.3))*vec2(.16,.20),
+                            (point.xy-vec2(-4.4,5.3))*vec2(.16,.20)));
+        float bounce=exp(-dot((point.xy-vec2(5.3,2.0))*vec2(.19,.34),
+                              (point.xy-vec2(5.3,2.0))*vec2(.19,.34)));
+        float grain=.87+.21*noise(point*95.)+.11*noise(point*4.4);
+        vec3 plaster=base*(.71+1.29*wash)*grain
+                     + vec3(.016,.010,.004)*wash+vec3(.003,.007,.009)*bounce;
+        color=vec4(plaster*storageScale,1.);
+        return;
+      }
+
+      vec3 albedo=base;
+      float rough=roughness;
+      if(kind==1) {
+        vec3 p=point;
+        float board=floor((p.z+.36)/.73);
+        float flow=noise(vec3(p.x*.61,p.y*2.,p.z*2.5))*5.7;
+        float grain=noise(vec3(p.x*.92,p.y*25.,p.z*33.+flow));
+        float pores=noise(vec3(p.x*10.,p.y*114.,p.z*127.));
+        float bands=sin(p.z*58.+flow*3.9+sin(p.x*.75)*1.2+p.y*35.);
+        float panel=mix(.82,1.18,hash(vec3(board,1.2,4.)));
+        float seam=smoothstep(.0,.018,abs(fract((p.z+.36)/.73)-.5));
+        float streak=mix(.58,1.30,grain)+.07*bands+.10*(pores-.5);
+        albedo*=streak*mix(1.,mix(.42,panel,seam),max(n.y,0.));
+        n=normalize(n+vec3(.012,0.,.057)*(pores-.5));
+        rough=mix(.27,.39,grain);
+        r=reflect(-v,n);
+      }
+      if(kind==2) {
+        float polish=.71+.53*noise(vec3(point.x*85.,point.y*158.,point.z*80.));
+        float wear=noise(point*31.);
+        albedo*=polish*(.83+.28*wear);
+        rough*=.84+.36*wear;
+      }
+      if(kind==3) {
+        float grain=noise(point*80.);
+        albedo*=.80+.37*grain;
+      }
+      if(kind==4) {
+        float patina=.75+.41*noise(point*7.)+.13*noise(point*98.);
+        albedo*=patina;
+      }
+      vec3 f0=mix(vec3(.04),albedo,metallic);
+      float nv=max(dot(n,v),0.);
+      vec3 fresnel=f0+(max(vec3(1.-rough),f0)-f0)*pow(1.-nv,5.);
+      vec3 ambient=studio(n,.9)*albedo*(1.-metallic)*.58;
+      vec3 reflection=studio(r,rough)*fresnel;
+      float contact=1.;
+      if(kind==1) {
+        for(int i=0;i<4;i++) {
+          vec2 q=point.xz-station[i].xz;
+          contact*=1.-.46*exp(-dot(q,q)*3.7);
+        }
+      }
+      vec3 outLight=(ambient+reflection)*contact;
+      outLight+=direct(albedo,f0,n,v,keyDirection,rough)*vec3(4.9,3.84,2.68)*(.18+.82*shadow(point,n));
+      vec3 fill=normalize(vec3(.72,.38,.54));
+      outLight+=direct(albedo,f0,n,v,fill,max(.24,rough))*vec3(.60,.78,.95);
+      vec3 edge=normalize(vec3(.22,.68,-.69));
+      outLight+=direct(albedo,f0,n,v,edge,max(.19,rough))*vec3(1.10,1.27,1.36);
+
+      vec3 lampColor[4]=vec3[4](vec3(1.,.36,.075),vec3(.10,.35,1.),
+                                 vec3(.42,.15,1.),vec3(1.,.125,.027));
+      for(int i=0;i<4;i++) {
+        float low=i<2 ? 1.72 : .70;
+        float high=i<2 ? 1.72 : 3.60;
+        float spillHeight=clamp(point.y+.25,low,high);
+        vec3 delta=station[i]+vec3(0.,spillHeight,0.)-point;
+        float d2=dot(delta,delta);
+        float pulse=i<2 ? .93+.07*sin(tick*11.+float(i)*2.) : 1.;
+        float intensity=i==0 ? 1.64 : (i==1 ? .81 : 1.50);
+        outLight+=lampColor[i]*direct(albedo,f0,n,v,normalize(delta),max(.28,rough))*
+                  intensity*pulse/(.37+d2);
+        if(kind==1 && i>=2) {
+          vec2 center=station[i].xz-point.xz;
+          float hit=dot(center,r.xz)/max(.0001,dot(r.xz,r.xz));
+          vec2 miss=center-hit*r.xz;
+          float h=point.y+hit*r.y;
+          float spread=.028+.052*max(hit,0.);
+          float reflected=exp(-dot(miss,miss)/(spread*spread))*smoothstep(0.,.15,hit)*
+                          smoothstep(.45,1.13,h)*(1.-smoothstep(2.92,3.55,h));
+          outLight+=lampColor[i]*.118*reflected*smoothstep(.31,1.,n.y)*(.45+.75*nv);
+        }
+      }
+      color=vec4((outLight+emission*base)*storageScale,1.);
+    }`;
+
+  const flameVertex = `
+    uniform mat4 viewProjection;
+    uniform vec3 origin, horizontal, vertical;
+    uniform float height;
+    out vec3 world;
+    void main() {
+      vec2 corner=vec2((gl_VertexID&1)==0 ? -1.:1., gl_VertexID<2 ? -1.:1.);
+      world=origin+horizontal*corner.x*.68+vertical*(height*.49+corner.y*(height*.57+.15));
+      gl_Position=viewProjection*vec4(world,1.);
+    }`;
+
+  const flameFragment = `
+    in vec3 world;
+    out vec4 color;
+    uniform vec3 eye, origin;
+    uniform float tick, height, storageScale;
+    uniform int hydrogen;
+    ${noiseGLSL}
+    void main() {
+      vec3 d=normalize(world-eye);
+      vec3 e=eye-origin;
+      vec3 inv=1./d;
+      vec3 t0=(vec3(-.49,-.026,-.49)-e)*inv;
+      vec3 t1=(vec3(.49,height*1.23,.49)-e)*inv;
+      vec3 nearHit=min(t0,t1), farHit=max(t0,t1);
+      float start=max(max(nearHit.x,nearHit.y),max(0.,nearHit.z));
+      float end=min(min(farHit.x,farHit.y),farHit.z);
+      if(end<=start) discard;
+      float stepSize=(end-start)/39.;
+      float t=start+stepSize*(.25+.5*hash(vec3(gl_FragCoord.xy,1.)));
+      vec3 light=vec3(0.);
+      float transmission=1.;
+      for(int i=0;i<39;i++,t+=stepSize) {
+        vec3 p=e+t*d;
+        float y=p.y/height;
+        if(y<0. || y>1.19) continue;
+        float wobble=smoothstep(.035,.94,y);
+        vec2 flow=vec2(sin(9.2*y-3.8*tick)+.49*sin(19.*y-5.1*tick),
+                       cos(8.4*y-3.1*tick)+.43*sin(21.*y-6.8*tick));
+        vec2 drift=vec2(.044,-.019)*y+flow*wobble*.053;
+        float smoke=noise(vec3(p.xz*12.,y*9.-tick*3.8));
+        float eddy=noise(vec3(p.xz*25.+1.8,y*18.-tick*7.3));
+        float flicker=1.+.068*sin(tick*8.7)+.037*sin(tick*17.6)+.028*sin(tick*12.4);
+        float tip=y/(flicker+.12*(smoke-.5));
+        float width=(.107+.093*sin(min(y,1.)*3.4))*pow(max(0.,1.-tip),.64);
+        width*=1.+wobble*(smoke-.49)*.93+wobble*(eddy-.5)*.44;
+        float distance=length(p.xz-drift);
+        float edge=1.-smoothstep(.39,1.09,distance/max(width,.008));
+        float taper=smoothstep(.002,.06,y)*(1.-smoothstep(.81,1.14,tip));
+        float density=edge*taper*(.51+.80*smoke);
+        vec3 tint;
+        if(hydrogen==1) {
+          float innerTip=y/(.53+.021*sin(tick*9.));
+          float cone=.098*pow(max(0.,1.-innerTip),.72);
+          float shell=exp(-pow((distance-cone)/(.014+.009*y),2.))*
+                      (1.-smoothstep(.38,.58,y))*smoothstep(.005,.059,y);
+          density*=.7;
+          tint=mix(vec3(.012,.090,1.62),vec3(.064,.46,2.6),1.-smoothstep(.08,.72,y));
+          light+=transmission*stepSize*shell*vec3(.12,2.75,7.2)*5.2;
+        } else {
+          float hot=pow(1.-smoothstep(.0,.82,distance/max(width,.01)),.70);
+          hot*=smoothstep(.075,.30,y)*(1.-smoothstep(.64,1.04,y));
+          tint=mix(vec3(3.05,.29,.023),vec3(5.6,2.85,.44),hot);
+          tint=mix(tint,vec3(.13,.47,1.52),1.-smoothstep(.012,.14,y));
+          density*=1.+.27*eddy;
+        }
+        light+=transmission*stepSize*9.6*density*tint;
+        transmission*=exp(-stepSize*density*.83);
+      }
+      color=vec4(light*storageScale,1.);
+    }`;
+
+  const screenVertex = `
+    out vec2 uv;
+    void main() {
+      vec2 p=vec2((gl_VertexID<<1)&2,gl_VertexID&2);
+      uv=p;
+      gl_Position=vec4(p*2.-1.,0.,1.);
+    }`;
+
+  const blurFragment = `
+    in vec2 uv;
+    uniform sampler2D source;
+    uniform vec2 stepUV;
+    uniform float prefilter, storageScale;
+    out vec4 color;
+    vec3 sampleLight(vec2 pos) {
+      vec3 c=texture(source,pos).rgb;
+      float peak=max(max(c.r,c.g),c.b);
+      return c*mix(1.,smoothstep(.48,1.9,peak/storageScale),prefilter);
+    }
+    void main() {
+      vec3 c=.227027*sampleLight(uv);
+      c+=.316216*(sampleLight(uv+stepUV*1.384615)+sampleLight(uv-stepUV*1.384615));
+      c+=.070270*(sampleLight(uv+stepUV*3.230769)+sampleLight(uv-stepUV*3.230769));
+      color=vec4(c,1.);
+    }`;
+
+  const finishFragment = `
+    in vec2 uv;
+    uniform sampler2D source, bloom;
+    uniform float storageScale;
+    uniform vec2 resolution;
+    out vec4 color;
+    float curve(float x) { return 1.-exp(-x*.93); }
+    float luminance(vec3 c) { return dot(c,vec3(.299,.587,.114)); }
+    vec3 antialias(vec2 p) {
+      vec2 d=1./resolution;
+      vec3 m=texture(source,p).rgb;
+      vec3 a=texture(source,p+d*vec2(-.75,-.75)).rgb;
+      vec3 b=texture(source,p+d*vec2(.75,-.75)).rgb;
+      vec3 c=texture(source,p+d*vec2(-.75,.75)).rgb;
+      vec3 e=texture(source,p+d*vec2(.75,.75)).rgb;
+      float la=luminance(a), lb=luminance(b), lc=luminance(c), le=luminance(e);
+      float lm=luminance(m), lo=min(lm,min(min(la,lb),min(lc,le))), hi=max(lm,max(max(la,lb),max(lc,le)));
+      if(hi-lo<max(.032*storageScale,hi*.19)) return m;
+      vec2 edge=vec2(-((la+lb)-(lc+le)),((la+lc)-(lb+le)));
+      float soften=max((la+lb+lc+le)/32.,.004*storageScale);
+      edge=clamp(edge/(min(abs(edge.x),abs(edge.y))+soften),-4.,4.)*d;
+      vec3 along=.5*(texture(source,p-edge*.1667).rgb+texture(source,p+edge*.1667).rgb);
+      vec3 wide=along*.5+.25*(texture(source,p-edge*.5).rgb+texture(source,p+edge*.5).rgb);
+      float lw=luminance(wide);
+      return (lw<lo||lw>hi) ? along : wide;
+    }
+    void main() {
+      vec3 c=(antialias(uv)+texture(bloom,uv).rgb*.36)/storageScale;
+      float peak=max(max(c.r,c.g),c.b);
+      vec3 mapped=c*(curve(peak)/max(peak,.0001));
+      mapped=mix(mapped,vec3(curve(peak)),.22*smoothstep(1.8,8.8,peak));
+      vec2 vignette=(uv-.5)*vec2(1.29,1.);
+      mapped*=1.-.44*dot(vignette,vignette);
+      mapped=pow(max(mapped,0.),vec3(.454545));
+      float dither=fract(52.9829189*fract(dot(gl_FragCoord.xy,vec2(.06711056,.00583715))))-.5;
+      color=vec4(mapped+dither*.009,1.);
+    }`;
+
+  const materials = [];
+  function material(hex, metallic, roughness, kind=0, emission=0) {
+    const m = {base:linear(hex), metallic, roughness, kind, emission, vertices:[], indices:[]};
+    materials.push(m);
+    return m;
+  }
+
+  function grid(m, rows, cols, vertex) {
+    const offset = m.vertices.length/6;
+    for (let i=0; i<=rows; i++) {
+      for (let j=0; j<=cols; j++) m.vertices.push(...vertex(i,j));
+    }
+    for (let i=0; i<rows; i++) {
+      for (let j=0; j<cols; j++) {
+        const a=offset+i*(cols+1)+j, b=a+cols+1;
+        m.indices.push(a,b,a+1,a+1,b,b+1);
+      }
+    }
+  }
+
+  function box(m, center, dimensions, radius=.035) {
+    const half = scale(dimensions,.5);
+    radius = Math.min(radius,...half);
+    const inner = half.map(v => v-radius);
+    for (let axis=0; axis<3; axis++) {
+      const u=(axis+1)%3, v=(axis+2)%3;
+      const steps = extent => [-extent,-extent+radius*.293,-extent+radius,extent-radius,extent-radius*.293,extent];
+      const uu=steps(half[u]), vv=steps(half[v]);
+      for (const sign of [-1,1]) {
+        grid(m,5,5,(i,j) => {
+          const p=[0,0,0];
+          p[axis]=sign*half[axis];
+          p[u]=uu[i];
+          p[v]=sign*vv[j];
+          const onBox=p.map((n,k) => clamp(n,-inner[k],inner[k]));
+          const normal=unit(subtract(p,onBox));
+          return [...add(center,add(onBox,scale(normal,radius))),...normal];
+        });
+      }
+    }
+  }
+
+  function lathe(m, origin, profile, slices=44, axis=[0,1,0]) {
+    const y=unit(axis);
+    const x=unit(cross(y,Math.abs(y[2])>.94 ? [1,0,0] : [0,0,1]));
+    const z=cross(x,y);
+    grid(m,profile.length-1,slices,(i,j) => {
+      const [height,radius]=profile[i];
+      const prev=profile[Math.max(i-1,0)], next=profile[Math.min(i+1,profile.length-1)];
+      const dy=next[0]-prev[0], dr=next[1]-prev[1];
+      const angle=j*TAU/slices;
+      const radial=add(scale(x,Math.cos(angle)),scale(z,Math.sin(angle)));
+      const position=add(origin,add(scale(y,height),scale(radial,radius)));
+      const normal=unit(add(scale(radial,dy),scale(y,-dr)));
+      return [...position,...normal];
+    });
+  }
+
+  function cylinder(m, origin, radius, height, bevel=.013, slices=36, axis=[0,1,0]) {
+    const b=Math.min(radius*.37,height*.28,bevel);
+    lathe(m,origin,[[0,0],[0,radius-b],[b*.23,radius-b*.25],[b,radius],
+      [height-b,radius],[height-b*.23,radius-b*.25],[height,radius-b],[height,0]],slices,axis);
+  }
+
+  function link(m,a,b,radius,slices=24) {
+    const axis=subtract(b,a);
+    cylinder(m,a,radius,Math.hypot(...axis),radius*.19,slices,axis);
+  }
+
+  function cable(m, points, radius) {
+    const segments=(points.length-1)*9;
+    function path(t) {
+      const segment=clamp(Math.floor(t),0,points.length-2);
+      const f=clamp(t-segment,0,1);
+      const a=points[Math.max(segment-1,0)], b=points[segment];
+      const c=points[segment+1], d=points[Math.min(segment+2,points.length-1)];
+      return b.map((value,k) => .5*((2*value)+(-a[k]+c[k])*f+
+        (2*a[k]-5*value+4*c[k]-d[k])*f*f+(-a[k]+3*value-3*c[k]+d[k])*f*f*f));
+    }
+    grid(m,segments,13,(i,j) => {
+      const t=i/9;
+      const center=path(t);
+      const axis=unit(subtract(path(t+.015),path(t-.015)));
+      const x=unit(cross(axis,Math.abs(axis[1])>.95 ? [0,0,1] : [0,1,0]));
+      const z=cross(x,axis);
+      const angle=j*TAU/13;
+      const radial=add(scale(x,Math.cos(angle)),scale(z,Math.sin(angle)));
+      return [...add(center,scale(radial,radius)),...radial];
+    });
+  }
+
+  const wood=material(0x765035,0,.34,1);
+  const apron=material(0x4f3527,0,.38,1);
+  const wall=material(0x232b26,0,.91,8);
+  const panel=material(0x272f28,0,.75,8);
+  const floor=material(0x202522,0,.89,4);
+  const panelTrim=material(0x424940,.54,.49,2);
+  const steel=material(0xb7b6a5,.94,.279,2);
+  const darkSteel=material(0x575950,.86,.34,2);
+  const brass=material(0xc19b5d,.88,.28,2);
+  const oxidizedBrass=material(0x8f6a3b,.9,.36,2);
+  const castIron=material(0x232925,.41,.45,3);
+  const enamel=material(0x272e2c,.20,.21,4);
+  const rubber=material(0x191b18,.05,.8,3);
+  const blueRubber=material(0x30383c,0,.74,3);
+  const oxblood=material(0x713b2b,.05,.57,3);
+  const insulator=material(0x302926,.12,.23,4);
+  const ceramic=material(0xb8aa92,0,.28,4);
+  const paper=material(0x9c8a6d,0,.81,3);
+  const black=material(0x0d1010,0,.71);
+  const redLed=material(0xff3b10,.08,.19,0,1.65);
+  const lilacLed=material(0xa669ff,.08,.19,0,1.42);
+
+  box(wood,[0,-.15,0],[11.95,.30,5.05],.085);
+  box(apron,[0,-.43,-.12],[11.5,.37,4.64],.035);
+  box(darkSteel,[0,-.64,2.07],[11.43,.043,.079],.015);
+  box(wall,[0,8,-4.5],[52,29,.22],.06);
+  box(floor,[0,-3.43,4],[45,.14,24],.05);
+  box(panel,[0,1.75,-4.37],[27,3.55,.12],.024);
+  box(panelTrim,[0,3.54,-4.29],[26,.058,.075],.023);
+  box(panelTrim,[0,.27,-4.28],[26,.046,.064],.012);
+  for (const x of [-9,-6,-3,0,3,6,9]) {
+    box(panelTrim,[x,1.87,-4.288],[.020,3.31,.035],.007);
+  }
+  for (const x of [-4.86,-1.61,1.61,4.86]) {
+    box(apron,[x,-.452,2.221],[3.13,.25,.035],.024);
+    box(darkSteel,[x,-.452,2.25],[.48,.076,.063],.026);
+    box(brass,[x,-.446,2.289],[.36,.039,.028],.012);
+  }
+  for (const x of [-5.24,5.24]) {
+    for (const z of [-1.85,1.85]) {
+      box(apron,[x,-1.93,z],[.27,2.96,.30],.036);
+      box(castIron,[x,-3.31,z],[.29,.11,.32],.020);
+    }
+    box(apron,[x,-2.76,0],[.16,.21,3.51],.022);
+  }
+  box(apron,[0,-2.76,-1.85],[10.29,.22,.22],.026);
+
+  const stations = [[-3.4,0,.25],[-1.16,0,.13],[1.14,0,-.22],[3.38,0,-.16]];
+  const flames = [];
+  const glass = [];
+  const plasma = [];
+
+  function burner(position, hydrogen) {
+    const at=(x,y,z) => add(position,[x,y,z]);
+    const alloy=hydrogen ? steel : brass;
+    const trim=hydrogen ? darkSteel : oxidizedBrass;
+    lathe(castIron,at(0,0,0),[[0,0],[0,.54],[.022,.615],[.063,.627],
+      [.135,.609],[.181,.53],[.203,.32],[.203,0]],64);
+    lathe(trim,at(0,.074,0),[[0,.599],[.014,.628],[.026,.626],[.032,.604]],64);
+    cylinder(alloy,at(0,.175,0),.266,.115,.023,50);
+    cylinder(trim,at(0,.26,0),.196,.224,.018,50);
+    cylinder(alloy,at(0,.46,0),.209,.255,.023,52);
+    cylinder(darkSteel,at(0,.681,0),.16,.14,.016,52);
+    lathe(alloy,at(0,0,0),[[.725,.121],[.75,.143],[.79,.151],
+      [1.262,.146],[1.288,.151],[1.311,.167],[1.365,.167],[1.388,.159],
+      [1.396,.114],[1.381,.104],[1.318,.103]],60);
+    lathe(darkSteel,at(0,0,0),[[1.247,.001],[1.25,.105],[1.384,.105],[1.389,.110]],56);
+
+    for (let j=0; j<52; j++) {
+      const angle=j*TAU/52, x=Math.cos(angle), z=Math.sin(angle);
+      link(trim,at(x*.207,.496,z*.207),at(x*.207,.667,z*.207),.007,6);
+    }
+    for (let j=0; j<4; j++) {
+      const angle=j*TAU/4+.22, x=Math.cos(angle), z=Math.sin(angle);
+      cylinder(black,at(x*.205,.604,z*.205),.051,.009,.007,28,[x,0,z]);
+    }
+    for (const height of [.281,.315,.352,.391,.431]) {
+      cylinder(alloy,at(0,height,0),.203,.017,.005,44);
+    }
+    const side=hydrogen ? .11 : -.11;
+    link(trim,at(side,.336,.020),at(side*3.1,.336,.128),.094,8);
+    link(alloy,at(side*3.0,.336,.128),at(side*4.17,.336,.17),.064,20);
+    link(trim,at(side*4.04,.336,.17),at(side*5.2,.336,.215),.109,8);
+    cable(hydrogen ? blueRubber : oxblood,[at(side*4.5,.337,.194),
+      at(side*6.1,.293,.218),at(side*7.7,.14,.09),at(side*8.9,.053,-.37),
+      at(side*8.5,.054,-.90),at(side*5.2,.054,-1.30),at(side*5.6,.051,-1.85),
+      at(side*6.3,-.16,-2.78)],.052);
+    flames.push({origin:at(0,1.375,0),height:hydrogen?1.70:1.94,hydrogen});
+  }
+
+  function discharge(position, neon) {
+    const at=(x,y,z) => add(position,[x,y,z]);
+    const tint=neon ? [1.,.143,.035] : [.45,.205,1.];
+    const capillary=material(0xffffff,0,0,6,neon ? 6.5 : 5.35);
+    capillary.base=tint;
+    const gas=material(0xffffff,0,0,7,neon ? 1.31 : .88);
+    gas.base=tint;
+    const envelope=material(neon ? 0xe9b6a5 : 0xc4c5ec,0,0,5);
+    plasma.push(gas);
+    glass.push(envelope);
+
+    box(rubber,at(0,.038,0),[1.35,.076,1.13],.055);
+    box(castIron,at(0,.149,0),[1.44,.207,1.20],.073);
+    box(enamel,at(0,.255,0),[1.37,.066,1.13],.028);
+    box(darkSteel,at(0,.141,.608),[.978,.106,.027],.015);
+    box(paper,at(0,.141,.625),[.31,.055,.008],.003);
+    for (const x of [-.59,.59]) {
+      for (const z of [-.45,.45]) cylinder(steel,at(x,.273,z),.039,.020,.007,20);
+    }
+    for (let i=0; i<7; i++) box(rubber,at(-.46+i*.049,.295,.24),[.021,.014,.19],.006);
+    cylinder(neon ? redLed : lilacLed,at(.493,.139,.623),.030,.012,.005,28,[0,0,1]);
+
+    const poleX=.285, poleZ=-.35;
+    cylinder(oxidizedBrass,at(poleX,.288,poleZ),.107,.088);
+    cylinder(steel,at(poleX,.35,poleZ),.047,3.60,.021,36);
+    cylinder(brass,at(poleX,3.92,poleZ),.065,.059,.018);
+    for (const height of [.49,3.63]) {
+      cylinder(darkSteel,at(poleX,height-.062,poleZ),.097,.125,.022);
+      link(brass,at(poleX,height,poleZ),at(.008,height,-.018),.047);
+      cylinder(brass,at(poleX+.067,height,poleZ),.053,.067,.012,16,[1,0,0]);
+    }
+
+    cylinder(insulator,at(0,.292,0),.235,.106,.023);
+    cylinder(steel,at(0,.384,0),.196,.137,.016,58);
+    cylinder(steel,at(0,3.589,0),.193,.155,.023,58);
+    for (const height of [.392,.432,.476,3.607,3.653,3.701]) {
+      cylinder(oxidizedBrass,at(0,height,0),.197,.019,.007,58);
+    }
+    cylinder(ceramic,at(0,3.739,0),.146,.082,.010);
+    cylinder(brass,at(0,3.813,0),.093,.033,.007);
+
+    const tubeProfile=[
+      [.471,.116],[.485,.147],[.515,.171],[.56,.182],[.623,.186],
+      [.843,.184],[.915,.177],[.963,.152],[1.018,.105],[1.066,.071],
+      [1.115,.059],[1.172,.056],[2.945,.056],[3.008,.063],[3.047,.079],
+      [3.12,.115],[3.191,.154],[3.255,.177],[3.32,.185],[3.525,.185],
+      [3.576,.176],[3.62,.15],[3.646,.113]
+    ];
+    lathe(envelope,position,tubeProfile,62);
+    lathe(gas,position,tubeProfile.map(([y,r]) => [y,r*.82]),48);
+    lathe(capillary,position,[[.627,0],[.646,.033],[.705,.042],[.827,.035],
+      [.945,.027],[1.233,.027],[2.856,.027],[3.13,.031],[3.273,.038],
+      [3.401,.038],[3.47,.022],[3.478,0]],36);
+    cylinder(darkSteel,at(0,.476,0),.080,.151,.012);
+    cylinder(darkSteel,at(0,3.477,0),.073,.129,.012);
+
+    const wireColor=neon ? oxblood : rubber;
+    cable(wireColor,[at(0,3.835,0),at(.02,3.971,-.052),at(.19,4.027,-.164),
+      at(.422,3.912,-.259),at(.498,3.657,-.416),at(.509,2.77,-.442),
+      at(.507,1.53,-.431),at(.51,.56,-.401),at(.66,.105,-.48),
+      at(.83,.049,-.79),at(.72,.049,-1.43),at(.49,.04,-1.86)],.027);
+    cable(rubber,[at(-.14,.424,-.044),at(-.34,.383,-.13),at(-.42,.18,-.30),
+      at(-.52,.057,-.64),at(-.61,.046,-.98),at(-.53,.045,-1.45),
+      at(-.39,.045,-1.81)],.035);
+    for (const h of [.94,2.10,3.04]) link(darkSteel,at(.281,h,-.35),at(.503,h,-.431),.027,13);
+  }
+
+  function upload(m) {
+    const vao=gl.createVertexArray();
+    gl.bindVertexArray(vao);
+    const vertices=gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER,vertices);
+    gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(m.vertices),gl.STATIC_DRAW);
+    gl.enableVertexAttribArray(0);
+    gl.vertexAttribPointer(0,3,gl.FLOAT,false,24,0);
+    gl.enableVertexAttribArray(1);
+    gl.vertexAttribPointer(1,3,gl.FLOAT,false,24,12);
+    const indices=gl.createBuffer();
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,indices);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,new Uint32Array(m.indices),gl.STATIC_DRAW);
+    m.vao=vao;
+    m.count=m.indices.length;
+    delete m.vertices;
+    delete m.indices;
+  }
+
+  function drawMesh(m) {
+    gl.bindVertexArray(m.vao);
+    gl.drawElements(gl.TRIANGLES,m.count,gl.UNSIGNED_INT,0);
+  }
+
+  function framebuffer(width,height,colorBuffer,depthBuffer,hdr) {
+    const fbo=gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER,fbo);
+    let colorTexture, depthTexture, depth, complete;
+    if (colorBuffer) {
+      colorTexture=gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D,colorTexture);
+      gl.texStorage2D(gl.TEXTURE_2D,1,hdr?gl.RGBA16F:gl.RGBA8,width,height);
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+      gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,colorTexture,0);
+    } else {
+      gl.drawBuffers([gl.NONE]);
+      gl.readBuffer(gl.NONE);
+    }
+    if (depthBuffer && colorBuffer) {
+      depth=gl.createRenderbuffer();
+      gl.bindRenderbuffer(gl.RENDERBUFFER,depth);
+      gl.renderbufferStorage(gl.RENDERBUFFER,gl.DEPTH_COMPONENT24,width,height);
+      gl.framebufferRenderbuffer(gl.FRAMEBUFFER,gl.DEPTH_ATTACHMENT,gl.RENDERBUFFER,depth);
+    } else if (depthBuffer) {
+      depthTexture=gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D,depthTexture);
+      gl.texStorage2D(gl.TEXTURE_2D,1,gl.DEPTH_COMPONENT24,width,height);
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_COMPARE_MODE,gl.COMPARE_REF_TO_TEXTURE);
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_COMPARE_FUNC,gl.LEQUAL);
+      gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.DEPTH_ATTACHMENT,gl.TEXTURE_2D,depthTexture,0);
+    }
+    complete=gl.checkFramebufferStatus(gl.FRAMEBUFFER)===gl.FRAMEBUFFER_COMPLETE;
+    return {fbo,colorTexture,depthTexture,depth,width,height,complete};
+  }
+
+  function dispose(target) {
+    gl.deleteFramebuffer(target.fbo);
+    gl.deleteTexture(target.colorTexture||null);
+    gl.deleteTexture(target.depthTexture||null);
+    gl.deleteRenderbuffer(target.depth||null);
+  }
+
+  function texture(slot,handle) {
+    gl.activeTexture(gl.TEXTURE0+slot);
+    gl.bindTexture(gl.TEXTURE_2D,handle);
+  }
+
+  function bind(target) {
+    gl.bindFramebuffer(gl.FRAMEBUFFER,target ? target.fbo : null);
+    gl.viewport(0,0,target ? target.width : canvas.width,target ? target.height : canvas.height);
+  }
+
+  function start() {
+    burner(stations[0],false);
+    burner(stations[1],true);
+    discharge(stations[2],false);
+    discharge(stations[3],true);
+    materials.forEach(upload);
+
+    const scene=program(meshVertex,surfaceFragment);
+    const flame=program(flameVertex,flameFragment);
+    const depth=program(meshVertex,'void main() {}');
+    const blur=program(screenVertex,blurFragment);
+    const finish=program(screenVertex,finishFragment);
+    const fullscreen=gl.createVertexArray();
+    const shadowTarget=framebuffer(1536,1536,false,true,false);
+    if (!shadowTarget.complete) throw new Error('Shadow framebuffer is incomplete.');
+    const keyDirection=unit([-4.3,7.8,4.66]);
+    const lightView=lookAt(scale(keyDirection,13),[0,0,0]);
+    const shadowMatrix=multiply(orthographic(-7.2,7.2,-5.8,5.8,1,27),lightView);
+    const solids=materials.filter(m => m.kind!==5 && m.kind!==7);
+    gl.enable(gl.DEPTH_TEST);
+    gl.enable(gl.CULL_FACE);
+    bind(shadowTarget);
+    gl.clear(gl.DEPTH_BUFFER_BIT);
+    gl.useProgram(depth.handle);
+    matrix(depth,'viewProjection',shadowMatrix);
+    gl.enable(gl.POLYGON_OFFSET_FILL);
+    gl.polygonOffset(1.5,1.8);
+    for (const m of solids) {
+      if (m!==wall && m!==panel && m!==panelTrim && m.kind!==6) drawMesh(m);
+    }
+    gl.disable(gl.POLYGON_OFFSET_FILL);
+    bind(null);
+
+    const reduced=window.matchMedia('(prefers-reduced-motion: reduce)');
+    let auto=!reduced.matches, yaw=0, pitch=.165, sway=0, targetYaw=0, targetPitch=.165;
+    let activePointer=null, lastTime=0, frameTime=0, viewWidth=0, viewHeight=0;
+    let labelLimit=0;
+    let mainTarget, bloomX, bloomY;
+    let hdr=Boolean(gl.getExtension('EXT_color_buffer_float'));
+    let storageScale=hdr ? 1 : .22;
+
+    function updateOrbitButton() {
+      orbitButton.textContent=auto ? 'Pause orbit' : 'Resume orbit';
+    }
+    function toggleOrbit(value) {
+      auto=value;
+      updateOrbitButton();
+    }
+    updateOrbitButton();
+    orbitButton.addEventListener('click',() => toggleOrbit(!auto));
+    document.querySelector('#reset').addEventListener('click',() => {
+      targetYaw=0;
+      targetPitch=.165;
+      sway=0;
+    });
+    reduced.addEventListener('change',e => toggleOrbit(!e.matches));
+    canvas.addEventListener('pointerdown',e => {
+      if (activePointer || e.button!==0) return;
+      activePointer={id:e.pointerId,x:e.clientX,y:e.clientY};
+      canvas.setPointerCapture(e.pointerId);
+    });
+    canvas.addEventListener('pointermove',e => {
+      if (activePointer?.id!==e.pointerId) return;
+      targetYaw=clamp(targetYaw+(activePointer.x-e.clientX)*.0048,-.47,.47);
+      targetPitch=clamp(targetPitch+(e.clientY-activePointer.y)*.0032,.045,.38);
+      activePointer.x=e.clientX;
+      activePointer.y=e.clientY;
+    });
+    function release(e) {
+      if (activePointer?.id===e.pointerId) activePointer=null;
+    }
+    canvas.addEventListener('pointerup',release);
+    canvas.addEventListener('pointercancel',release);
+    canvas.addEventListener('lostpointercapture',release);
+    canvas.addEventListener('keydown',e => {
+      const turns={ArrowLeft:[-.09,0],ArrowRight:[.09,0],ArrowUp:[0,.075],ArrowDown:[0,-.075]};
+      const turn=turns[e.key];
+      if (!turn) return;
+      e.preventDefault();
+      targetYaw=clamp(targetYaw+turn[0],-.47,.47);
+      targetPitch=clamp(targetPitch+turn[1],.045,.38);
+    });
+
+    function resize() {
+      const width=canvas.clientWidth, height=canvas.clientHeight;
+      if (width!==viewWidth || height!==viewHeight || !mainTarget) {
+        viewWidth=width;
+        viewHeight=height;
+        const footerTop=document.querySelector('footer').getBoundingClientRect().top;
+        labelLimit=footerTop-labels[0].offsetHeight-10;
+      }
+      const ratio=Math.min(devicePixelRatio||1,1.65,Math.sqrt(1800000/Math.max(1,viewWidth*viewHeight)));
+      const w=Math.max(1,Math.round(viewWidth*ratio)), h=Math.max(1,Math.round(viewHeight*ratio));
+      if (mainTarget && canvas.width===w && canvas.height===h) return;
+      canvas.width=w;
+      canvas.height=h;
+      if (mainTarget) [mainTarget,bloomX,bloomY].forEach(dispose);
+      mainTarget=framebuffer(w,h,true,true,hdr);
+      if (!mainTarget.complete && hdr) {
+        dispose(mainTarget);
+        hdr=false;
+        storageScale=.22;
+        mainTarget=framebuffer(w,h,true,true,false);
+      }
+      const dw=Math.max(1,Math.ceil(w/4)), dh=Math.max(1,Math.ceil(h/4));
+      bloomX=framebuffer(dw,dh,true,false,hdr);
+      bloomY=framebuffer(dw,dh,true,false,hdr);
+      if (![mainTarget,bloomX,bloomY].every(t => t.complete)) throw new Error('Color framebuffer is incomplete.');
+    }
+
+    function drawSurface(m) {
+      f3(scene,'base',m.base);
+      f1(scene,'metallic',m.metallic);
+      f1(scene,'roughness',m.roughness);
+      f1(scene,'emission',m.emission);
+      integer(scene,'kind',m.kind);
+      drawMesh(m);
+    }
+
+    function projectLabels(vp) {
+      return stations.map(([x,,stationZ]) => {
+        const y=.042, z=stationZ+.89;
+        const w=vp[3]*x+vp[7]*y+vp[11]*z+vp[15];
+        const xp=(vp[0]*x+vp[4]*y+vp[8]*z+vp[12])/w;
+        const yp=(vp[1]*x+vp[5]*y+vp[9]*z+vp[13])/w;
+        return [(xp+1)*.5*viewWidth,(1-yp)*.5*viewHeight];
+      });
+    }
+
+    function bloomPass(target,source,dx,dy,prefilter) {
+      bind(target);
+      texture(0,source);
+      f2(blur,'stepUV',dx,dy);
+      f1(blur,'prefilter',prefilter);
+      gl.drawArrays(gl.TRIANGLES,0,3);
+    }
+
+    function frame(now) {
+      resize();
+      const dt=lastTime ? Math.min((now-lastTime)*.001,.055) : 0;
+      lastTime=now;
+      if (!reduced.matches) frameTime+=dt;
+      if (auto && !activePointer) sway+=dt*.195;
+      const ease=(reduced.matches && !activePointer) ? 1 : 1-Math.exp(-dt*13);
+      yaw+=(targetYaw-yaw)*ease;
+      pitch+=(targetPitch-pitch)*ease;
+      const aspect=viewWidth/Math.max(1,viewHeight);
+      const angle=clamp(.082+yaw+Math.sin(sway)*.104,-.48,.48);
+      const fov=.66;
+      const cameraPitch=pitch*(aspect<.85 ? .62 : 1.);
+      const framing=1+.24*Math.max(0,Math.abs(angle)-.115)+.34*Math.max(0,cameraPitch-.195);
+      const distance=Math.max(9.45,4.83/(Math.tan(fov*.5)*aspect))*framing;
+      const focus=[0,aspect<1 ? 1.46 : 1.91,-.04];
+      const eye=add(focus,[Math.sin(angle)*distance*Math.cos(cameraPitch),
+        Math.sin(cameraPitch)*distance,Math.cos(angle)*distance*Math.cos(cameraPitch)]);
+      const viewport=perspective(fov,aspect,.13,Math.max(60,distance+24));
+      const view=lookAt(eye,focus);
+      let vp=multiply(viewport,view);
+      const pins=projectLabels(vp);
+      const lift=Math.max(0,Math.max(...pins.map(([,y]) => y))-labelLimit);
+      if (lift>0) {
+        viewport[9]-=2*lift/Math.max(1,viewHeight);
+        vp=multiply(viewport,view);
+      }
+      pins.forEach(([x,y],i) => {
+        labels[i].style.transform='translate3d('+x.toFixed(2)+'px,'+(y-lift).toFixed(2)+'px,0)';
+      });
+
+      bind(mainTarget);
+      gl.clearColor(.011*storageScale,.017*storageScale,.015*storageScale,1);
+      gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+      gl.enable(gl.DEPTH_TEST);
+      gl.enable(gl.CULL_FACE);
+      gl.depthMask(true);
+      gl.useProgram(scene.handle);
+      matrix(scene,'viewProjection',vp);
+      matrix(scene,'shadowMatrix',shadowMatrix);
+      integer(scene,'shadowMap',1);
+      texture(1,shadowTarget.depthTexture);
+      f3(scene,'eye',eye);
+      f3(scene,'keyDirection',keyDirection);
+      f1(scene,'tick',frameTime);
+      f1(scene,'storageScale',storageScale);
+      gl.uniform3fv(uniform(scene,'station[0]'),stations.flat());
+      for (const m of solids) drawSurface(m);
+
+      gl.depthMask(false);
+      gl.enable(gl.BLEND);
+      gl.blendFunc(gl.SRC_ALPHA,gl.ONE);
+      for (const m of plasma) drawSurface(m);
+      gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);
+      const glassOrder=angle<0 ? [...glass].reverse() : glass;
+      for (const m of glassOrder) drawSurface(m);
+
+      gl.disable(gl.CULL_FACE);
+      gl.blendFunc(gl.ONE,gl.ONE);
+      gl.useProgram(flame.handle);
+      gl.bindVertexArray(fullscreen);
+      matrix(flame,'viewProjection',vp);
+      f3(flame,'eye',eye);
+      f3(flame,'horizontal',[view[0],view[4],view[8]]);
+      f3(flame,'vertical',[view[1],view[5],view[9]]);
+      f1(flame,'tick',frameTime);
+      f1(flame,'storageScale',storageScale);
+      for (const {origin,height,hydrogen} of flames) {
+        f3(flame,'origin',origin);
+        f1(flame,'height',height);
+        integer(flame,'hydrogen',Number(hydrogen));
+        gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
+      }
+
+      gl.depthMask(true);
+      gl.disable(gl.BLEND);
+      gl.disable(gl.DEPTH_TEST);
+      gl.useProgram(blur.handle);
+      integer(blur,'source',0);
+      f1(blur,'storageScale',storageScale);
+      bloomPass(bloomX,mainTarget.colorTexture,2.05/bloomX.width,0,1);
+      bloomPass(bloomY,bloomX.colorTexture,0,2.05/bloomY.height,0);
+      bloomPass(bloomX,bloomY.colorTexture,1.38/bloomX.width,0,0);
+      bloomPass(bloomY,bloomX.colorTexture,0,1.38/bloomY.height,0);
+
+      bind(null);
+      gl.useProgram(finish.handle);
+      integer(finish,'source',0);
+      integer(finish,'bloom',1);
+      f1(finish,'storageScale',storageScale);
+      f2(finish,'resolution',canvas.width,canvas.height);
+      texture(0,mainTarget.colorTexture);
+      texture(1,bloomY.colorTexture);
+      gl.drawArrays(gl.TRIANGLES,0,3);
+      requestAnimationFrame(frame);
+    }
+
+    frame(performance.now());
+    stage.classList.add('ready');
+    status.hidden=true;
+  }
+
+  canvas.addEventListener('webglcontextlost',event => {
+    event.preventDefault();
+    status.hidden=false;
+    status.textContent='The graphics device was interrupted. Reload to restart the exhibit.';
+  });
+  try {
+    start();
+  } catch (error) {
+    console.error(error);
+    status.textContent='The laboratory could not start on this graphics device.';
+  }
+})();
+</script>
+</body>
+</html>

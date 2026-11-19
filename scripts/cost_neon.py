@@ -5,7 +5,8 @@ Sol (codex turn.completed): (input-cached) x in + cached x cached + output x out
 Sonnet: total_cost_usd reported by Claude Code."""
 import json, os, re, glob
 B = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-T = ['water', 'globe', 'store', 'city', 'blackhole']
+DEMO = os.environ.get('DEMO') == '1'
+T = ['ski', 'turing', 'labbench'] if DEMO else ['water', 'globe', 'store', 'city', 'blackhole']
 P = {'neon': (3.0, 0.15, 15.0), 'hydrogen': (1.5, None, 7.5), 'sol': (2.0, 0.10, 10.0)}
 SESS = {}
 for f in glob.glob(os.path.expanduser('~/.codex/sessions/**/*.jsonl'), recursive=True):
@@ -50,7 +51,7 @@ for t in T:
         else: usd, tok = gem(d, m); r = {'usd': usd, 'tokens': tok, 'kind': 'estimate'}
         r['seconds'] = json.load(open(f'{d}/meta.json'))['seconds']
         res['runs'][t][m] = r
-for d in sorted(glob.glob(f'{B}/runs-failed-neon/*')):
+for d in ([] if DEMO else sorted(glob.glob(f'{B}/runs-failed-neon/*'))):
     meta = json.load(open(f'{d}/meta.json')) if os.path.exists(f'{d}/meta.json') else {}
     try: usd, tok = gem(d, 'neon')
     except Exception: usd, tok = None, None
@@ -58,6 +59,6 @@ for d in sorted(glob.glob(f'{B}/runs-failed-neon/*')):
 res['total'] = {m: round(sum(res['runs'][t][m]['usd'] for t in T), 2) for m in ['neon', 'hydrogen', 'sonnet', 'sol']}
 res['seconds'] = {m: sum(res['runs'][t][m]['seconds'] for t in T) for m in ['neon', 'hydrogen', 'sonnet', 'sol']}
 res['failed_usd'] = round(sum(f['usd'] or 0 for f in res['failed']), 2)
-json.dump(res, open(f'{B}/costs-neon.json', 'w'), indent=1)
+json.dump(res, open(f'{B}/' + ('costs-neon-demo.json' if DEMO else 'costs-neon.json'), 'w'), indent=1)
 for t in T: print(t, {m: (r['usd'], r['seconds']) for m, r in res['runs'][t].items()})
 print('total', res['total'], 'sec', res['seconds']); print('failed', res['failed'])

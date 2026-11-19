@@ -1,0 +1,3792 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Alan Turing's Study · King's College, Cambridge (1936)</title>
+<style>
+  :root {
+    --wood-dark: rgba(24, 17, 12, 0.88);
+    --wood-panel: rgba(32, 23, 16, 0.92);
+    --brass: #d4a656;
+    --brass-dim: rgba(212, 166, 86, 0.38);
+    --parchment: #efe2c6;
+    --parchment-dim: #bfb092;
+    --ink: #1e1610;
+    --emerald: #4da872;
+    --crimson: #c7534a;
+    --amber: #f0b14d;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+  html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    background: #120d0a;
+    font-family: Georgia, 'Times New Roman', serif;
+    color: var(--parchment);
+  }
+  #glcanvas {
+    position: fixed; inset: 0; width: 100%; height: 100%; display: block;
+    cursor: grab;
+  }
+  #glcanvas.dragging { cursor: grabbing; }
+  #glcanvas.locked { cursor: none; }
+
+  /* Subtle Reticle */
+  #reticle {
+    position: fixed; left: 50%; top: 50%;
+    width: 8px; height: 8px;
+    margin: -4px 0 0 -4px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(245, 226, 184, 0.72);
+    box-shadow: 0 0 6px rgba(0,0,0,0.65);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s, transform 0.15s, border-color 0.15s;
+    z-index: 15;
+  }
+  #reticle.visible { opacity: 1; }
+  #reticle.hovering {
+    transform: scale(1.6);
+    border-color: var(--amber);
+    background: rgba(240, 177, 77, 0.25);
+  }
+
+  /* Top Header Bar */
+  .top-bar {
+    position: fixed; top: 14px; left: 16px; right: 16px;
+    display: flex; justify-content: space-between; align-items: flex-start;
+    pointer-events: none; z-index: 20; gap: 12px;
+  }
+  .plaque {
+    pointer-events: auto;
+    background: var(--wood-dark);
+    border: 1px solid var(--brass-dim);
+    border-radius: 4px;
+    padding: 9px 14px;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,230,175,0.08);
+    backdrop-filter: blur(6px);
+  }
+  .plaque h1 {
+    font-size: 15px; font-weight: 600; letter-spacing: 0.04em;
+    color: var(--brass); line-height: 1.2;
+  }
+  .plaque .sub {
+    font-size: 11.5px; color: var(--parchment-dim); margin-top: 2px;
+    font-style: italic;
+  }
+  .top-actions {
+    pointer-events: auto;
+    display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end;
+  }
+  .btn {
+    font-family: Georgia, serif;
+    font-size: 12px; letter-spacing: 0.03em;
+    color: var(--parchment);
+    background: var(--wood-dark);
+    border: 1px solid var(--brass-dim);
+    border-radius: 4px;
+    padding: 7px 12px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, transform 0.08s;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.35);
+    backdrop-filter: blur(6px);
+  }
+  .btn:hover { background: rgba(54, 39, 25, 0.94); border-color: var(--brass); }
+  .btn:active { transform: translateY(1px); }
+  .btn.active {
+    background: rgba(150, 108, 42, 0.35);
+    border-color: var(--brass);
+    color: #fff3d6;
+  }
+  .btn.primary {
+    background: linear-gradient(180deg, rgba(168,122,48,0.42), rgba(112,78,28,0.48));
+    border-color: var(--brass);
+    color: #fff5dc;
+  }
+  .btn.primary:hover {
+    background: linear-gradient(180deg, rgba(196,144,60,0.52), rgba(132,94,36,0.58));
+  }
+  .btn.running {
+    background: linear-gradient(180deg, rgba(58,136,88,0.48), rgba(36,92,58,0.55));
+    border-color: var(--emerald);
+    color: #e6fff0;
+  }
+
+  /* Center Context Hint */
+  #hover-hint {
+    position: fixed; left: 50%; top: 56%;
+    transform: translateX(-50%);
+    background: rgba(20, 14, 10, 0.82);
+    border: 1px solid var(--brass-dim);
+    border-radius: 4px;
+    padding: 5px 12px;
+    font-size: 12px; color: #f6e6c4;
+    pointer-events: none;
+    opacity: 0; transition: opacity 0.2s;
+    z-index: 18;
+    white-space: nowrap;
+  }
+  #hover-hint.visible { opacity: 1; }
+
+  /* Floating Quick Navigation Notice */
+  #walk-banner {
+    position: fixed; top: 72px; left: 50%; transform: translateX(-50%);
+    background: rgba(22, 16, 11, 0.84);
+    border: 1px solid var(--brass-dim);
+    border-radius: 20px;
+    padding: 6px 16px;
+    font-size: 12px; color: var(--parchment);
+    pointer-events: none; z-index: 18;
+    transition: opacity 0.6s;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  }
+  #walk-banner kbd {
+    display: inline-block; padding: 1px 5px; margin: 0 2px;
+    border-radius: 3px; border: 1px solid var(--brass-dim);
+    background: rgba(212,166,86,0.14); color: var(--brass);
+    font-family: ui-monospace, Menlo, monospace; font-size: 11px;
+  }
+
+  /* Bottom Universal Turing Machine Dock */
+  .utm-dock {
+    position: fixed; left: 50%; bottom: 14px;
+    transform: translateX(-50%);
+    width: min(860px, calc(100vw - 28px));
+    background: var(--wood-panel);
+    border: 1px solid var(--brass-dim);
+    border-radius: 6px;
+    padding: 10px 14px;
+    box-shadow: 0 10px 34px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,230,175,0.1);
+    backdrop-filter: blur(8px);
+    z-index: 25;
+  }
+  .utm-top-row {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; flex-wrap: wrap; margin-bottom: 8px;
+  }
+  .utm-title-group {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  }
+  .utm-badge {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--brass); font-weight: 700;
+  }
+  .utm-select {
+    font-family: Georgia, serif; font-size: 12px;
+    background: rgba(16, 11, 8, 0.9);
+    color: var(--parchment);
+    border: 1px solid var(--brass-dim);
+    border-radius: 4px;
+    padding: 4px 8px;
+    cursor: pointer;
+    outline: none;
+  }
+  .utm-select:focus { border-color: var(--brass); }
+  .utm-stats {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 12px;
+  }
+  .stat-pill {
+    background: rgba(14, 10, 7, 0.72);
+    border: 1px solid rgba(212, 166, 86, 0.25);
+    border-radius: 4px;
+    padding: 3px 8px;
+    display: flex; align-items: center; gap: 5px;
+  }
+  .stat-pill .lbl { color: var(--parchment-dim); font-size: 10.5px; }
+  .stat-pill .val { color: #ffe4a8; font-weight: 700; }
+  .status-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--amber); display: inline-block;
+    box-shadow: 0 0 6px var(--amber);
+  }
+  .status-dot.running { background: var(--emerald); box-shadow: 0 0 8px var(--emerald); }
+  .status-dot.halted { background: var(--crimson); box-shadow: 0 0 8px var(--crimson); }
+
+  /* Tape Strip HUD */
+  .tape-strip-wrap {
+    position: relative;
+    background: linear-gradient(180deg, #1b130d, #120d09);
+    border: 1px solid rgba(212,166,86,0.3);
+    border-radius: 4px;
+    padding: 6px 8px;
+    margin-bottom: 8px;
+    overflow: hidden;
+  }
+  .tape-cells {
+    display: flex; justify-content: center; align-items: center; gap: 3px;
+  }
+  .tape-cell {
+    width: 34px; height: 34px; flex: 0 0 34px;
+    border-radius: 3px;
+    background: linear-gradient(180deg, #f3e6ca, #e2d0aa);
+    color: #261b12;
+    border: 1px solid #b89e70;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 16px; font-weight: 700;
+    position: relative;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.45);
+    transition: transform 0.12s, background 0.12s;
+  }
+  .tape-cell .idx {
+    position: absolute; bottom: 1px; right: 2px;
+    font-size: 8px; font-weight: 400; color: rgba(65,45,25,0.58);
+  }
+  .tape-cell.blank { color: rgba(90, 68, 44, 0.35); }
+  .tape-cell.head {
+    background: linear-gradient(180deg, #fff6db, #f2d282);
+    border: 2px solid #d98d26;
+    transform: scale(1.09);
+    z-index: 2;
+    box-shadow: 0 0 14px rgba(240, 177, 77, 0.55), inset 0 1px 0 #fff;
+    color: #1a0f06;
+  }
+  .head-arrow {
+    position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+    width: 0; height: 0;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 6px solid var(--amber);
+  }
+
+  /* Controls Row */
+  .utm-controls {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 8px; flex-wrap: wrap;
+  }
+  .ctrl-group { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .speed-wrap {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11.5px; color: var(--parchment-dim);
+    margin-left: 6px;
+  }
+  .speed-wrap input[type=range] {
+    width: 82px; accent-color: var(--brass); cursor: pointer;
+  }
+  .rule-preview {
+    font-family: ui-monospace, Menlo, monospace;
+    font-size: 11.5px; color: #e8cfa0;
+    background: rgba(12, 9, 6, 0.65);
+    border: 1px solid rgba(212,166,86,0.2);
+    border-radius: 4px;
+    padding: 4px 9px;
+    max-width: 310px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+
+  /* Right Drawer: Transition Table & Custom Universal Program Editor */
+  #inspector-drawer {
+    position: fixed; top: 64px; right: 16px; bottom: 168px;
+    width: min(370px, calc(100vw - 32px));
+    background: var(--wood-panel);
+    border: 1px solid var(--brass-dim);
+    border-radius: 6px;
+    box-shadow: 0 12px 38px rgba(0,0,0,0.62);
+    backdrop-filter: blur(8px);
+    z-index: 24;
+    display: flex; flex-direction: column;
+    transform: translateX(calc(100% + 24px));
+    transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+    overflow: hidden;
+  }
+  #inspector-drawer.open { transform: translateX(0); }
+  .drawer-header {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--brass-dim);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .drawer-header h2 {
+    font-size: 13.5px; color: var(--brass); letter-spacing: 0.04em;
+  }
+  .drawer-body {
+    padding: 10px 14px; overflow-y: auto; flex: 1;
+    font-size: 12px; line-height: 1.45;
+  }
+  .drawer-desc {
+    color: var(--parchment-dim); font-style: italic; margin-bottom: 9px;
+    font-size: 11.5px;
+  }
+  .sd-box {
+    background: rgba(12, 9, 6, 0.78);
+    border: 1px solid rgba(212,166,86,0.24);
+    border-radius: 4px;
+    padding: 6px 8px;
+    margin-bottom: 10px;
+    font-family: ui-monospace, Menlo, monospace;
+    font-size: 10.5px; color: #d8be8a;
+    word-break: break-all;
+    max-height: 58px; overflow-y: auto;
+  }
+  .sd-label {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--brass); margin-bottom: 3px; display: block;
+    font-family: Georgia, serif;
+  }
+  .rules-table {
+    width: 100%; border-collapse: collapse;
+    font-family: ui-monospace, Menlo, monospace;
+    font-size: 11.5px; margin-bottom: 12px;
+  }
+  .rules-table th {
+    text-align: left; padding: 4px 5px;
+    color: var(--brass); border-bottom: 1px solid var(--brass-dim);
+    font-size: 10.5px; font-weight: 600;
+  }
+  .rules-table td {
+    padding: 4px 5px; border-bottom: 1px solid rgba(212,166,86,0.1);
+    color: var(--parchment);
+  }
+  .rules-table tr.active-rule {
+    background: rgba(240, 177, 77, 0.24);
+    color: #fff6dc;
+  }
+  .rules-table tr.active-rule td { color: #fff8e2; font-weight: 700; }
+
+  .editor-section {
+    border-top: 1px solid var(--brass-dim);
+    padding-top: 10px; margin-top: 6px;
+  }
+  .editor-section label {
+    display: block; font-size: 11px; color: var(--brass);
+    margin: 6px 0 3px;
+  }
+  .editor-input, .editor-textarea {
+    width: 100%;
+    background: rgba(14, 10, 7, 0.9);
+    border: 1px solid var(--brass-dim);
+    border-radius: 4px;
+    color: var(--parchment);
+    font-family: ui-monospace, Menlo, monospace;
+    font-size: 11.5px;
+    padding: 6px 8px;
+    user-select: text;
+    outline: none;
+  }
+  .editor-textarea { min-height: 98px; resize: vertical; line-height: 1.38; }
+  .editor-input:focus, .editor-textarea:focus { border-color: var(--brass); }
+  .editor-msg {
+    font-size: 11px; margin-top: 5px; min-height: 15px; color: var(--emerald);
+  }
+  .editor-msg.err { color: var(--crimson); }
+
+  /* Help Modal */
+  #help-modal {
+    position: fixed; inset: 0; background: rgba(10, 7, 5, 0.65);
+    display: none; align-items: center; justify-content: center;
+    z-index: 40; backdrop-filter: blur(4px);
+  }
+  #help-modal.open { display: flex; }
+  .help-card {
+    width: min(460px, calc(100vw - 32px));
+    background: var(--wood-panel);
+    border: 1px solid var(--brass);
+    border-radius: 6px;
+    padding: 18px 20px;
+    box-shadow: 0 18px 48px rgba(0,0,0,0.7);
+  }
+  .help-card h3 { color: var(--brass); font-size: 16px; margin-bottom: 10px; }
+  .help-grid {
+    display: grid; grid-template-columns: auto 1fr; gap: 7px 14px;
+    font-size: 12.5px; margin-bottom: 14px;
+  }
+  .help-grid kbd {
+    background: rgba(212,166,86,0.16); border: 1px solid var(--brass-dim);
+    border-radius: 3px; padding: 2px 6px;
+    font-family: ui-monospace, Menlo, monospace; font-size: 11px;
+    color: var(--brass); text-align: center;
+  }
+  .help-foot {
+    font-size: 11.5px; color: var(--parchment-dim); font-style: italic;
+    margin-bottom: 12px; line-height: 1.45;
+  }
+</style>
+</head>
+<body>
+<canvas id="glcanvas"></canvas>
+<div id="reticle"></div>
+<div id="hover-hint"></div>
+<div id="walk-banner">
+  Click room to look &middot; <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk &middot; Drag mouse to pan &middot; <kbd>F</kbd> inspect machine &middot; <kbd>Space</kbd> step
+</div>
+
+<div class="top-bar">
+  <div class="plaque">
+    <h1>Alan Turing's Study &middot; 1936</h1>
+    <div class="sub">Gibbs' Building, King's College, Cambridge &mdash; overlooking King's College Chapel</div>
+  </div>
+  <div class="top-actions">
+    <button class="btn primary" id="btn-focus" title="Move camera to inspect the Universal Turing Machine (F)">Inspect Desk (F)</button>
+    <button class="btn" id="btn-window" title="Look out the window at King's College Chapel">Chapel View</button>
+    <button class="btn" id="btn-inspector" title="Show m-configuration table &amp; program editor (Tab)">Rules &amp; S.D.</button>
+    <button class="btn" id="btn-sound" title="Toggle mechanical relay sound">Sound: On</button>
+    <button class="btn" id="btn-help" title="Controls &amp; Historical Notes">?</button>
+  </div>
+</div>
+
+<!-- Right Drawer: Rules Table, Standard Description, and Custom UTM Program Editor -->
+<aside id="inspector-drawer">
+  <div class="drawer-header">
+    <h2>Universal Machine Table (m-configurations)</h2>
+    <button class="btn" id="btn-close-drawer" style="padding:3px 8px;">&times;</button>
+  </div>
+  <div class="drawer-body">
+    <div class="drawer-desc" id="prog-desc"></div>
+    <span class="sd-label">Turing 1936 Standard Description (S.D.)</span>
+    <div class="sd-box" id="sd-encoding"></div>
+
+    <table class="rules-table">
+      <thead>
+        <tr><th>State</th><th>Read</th><th>Write</th><th>Move</th><th>Next</th></tr>
+      </thead>
+      <tbody id="rules-tbody"></tbody>
+    </table>
+
+    <div class="editor-section">
+      <span class="sd-label">Program Any Machine (Universal Input)</span>
+      <label for="edit-tape">Initial Tape (use _ for blank):</label>
+      <input id="edit-tape" class="editor-input" type="text" placeholder="e.g. 1011">
+      <label for="edit-init">Initial State &amp; Head Index (state, index):</label>
+      <input id="edit-init" class="editor-input" type="text" placeholder="e.g. seek, 0">
+      <label for="edit-rules">Rules (one per line: state, read -> write, L|R|N, next):</label>
+      <textarea id="edit-rules" class="editor-textarea" spellcheck="false"></textarea>
+      <div style="display:flex; gap:8px; margin-top:8px;">
+        <button class="btn primary" id="btn-apply-custom" style="flex:1;">Load onto Machine</button>
+      </div>
+      <div class="editor-msg" id="editor-msg"></div>
+    </div>
+  </div>
+</aside>
+
+<!-- Bottom Universal Turing Machine Control Dock -->
+<section class="utm-dock">
+  <div class="utm-top-row">
+    <div class="utm-title-group">
+      <span class="utm-badge">Universal Turing Machine</span>
+      <select id="prog-select" class="utm-select" aria-label="Select Turing Machine Program"></select>
+    </div>
+    <div class="utm-stats">
+      <div class="stat-pill"><span class="status-dot" id="status-dot"></span><span class="val" id="stat-status">READY</span></div>
+      <div class="stat-pill"><span class="lbl">STATE</span><span class="val" id="stat-state">b</span></div>
+      <div class="stat-pill"><span class="lbl">HEAD</span><span class="val" id="stat-head">0</span></div>
+      <div class="stat-pill"><span class="lbl">STEPS</span><span class="val" id="stat-steps">0</span></div>
+    </div>
+  </div>
+
+  <div class="tape-strip-wrap">
+    <div class="head-arrow"></div>
+    <div class="tape-cells" id="hud-tape"></div>
+  </div>
+
+  <div class="utm-controls">
+    <div class="ctrl-group">
+      <button class="btn primary" id="btn-step" title="Execute one transition step (Space)">Step</button>
+      <button class="btn" id="btn-run" title="Run / Pause continuous execution (R)">Run</button>
+      <button class="btn" id="btn-reset" title="Reset tape &amp; state (T)">Reset</button>
+      <div class="speed-wrap">
+        <span>Speed</span>
+        <input id="speed-slider" type="range" min="1" max="12" step="1" value="3">
+        <span id="speed-label">3/s</span>
+      </div>
+    </div>
+    <div class="rule-preview" id="rule-preview">Next: (b, _) &rarr; 0, R, c</div>
+  </div>
+</section>
+
+<!-- Controls & Historical Info Modal -->
+<div id="help-modal">
+  <div class="help-card">
+    <h3>Alan Turing's 1936 Cambridge Study</h3>
+    <div class="help-grid">
+      <kbd>W A S D</kbd><span>Walk around the study (or Arrow keys)</span>
+      <kbd>Mouse</kbd><span>Click room for Pointer Lock look, or click &amp; drag to pan</span>
+      <kbd>Shift / C</kbd><span>Walk faster / Crouch down closer to desk</span>
+      <kbd>F</kbd><span>Toggle close-up Desk Inspection &amp; Free Walk</span>
+      <kbd>Space</kbd><span>Step the Universal Turing Machine once</span>
+      <kbd>R / T</kbd><span>Run or Pause / Reset the machine</span>
+      <kbd>Tab</kbd><span>Open m-configuration table &amp; custom program editor</span>
+      <kbd>Esc</kbd><span>Release mouse cursor</span>
+    </div>
+    <div class="help-foot">
+      In May 1936, as a 23-year-old Fellow of King's College, Cambridge, Alan Turing completed
+      <em>"On Computable Numbers, with an Application to the Entscheidungsproblem"</em>&mdash;introducing
+      the abstract computing machine and the Universal Machine capable of simulating any other machine
+      from its table of rules. You can click the brass buttons directly on the 3D machine on the desk
+      or use the controls below.
+    </div>
+    <div style="text-align:right;">
+      <button class="btn primary" id="btn-close-help">Return to Study</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+// ============================================================================
+// 1. DETERMINISTIC PRNG & VECTOR / MATRIX MATH
+// ============================================================================
+function mulberry32(seed) {
+  let a = seed >>> 0;
+  return function() {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+const M4 = {
+  ident() {
+    const m = new Float32Array(16);
+    m[0] = m[5] = m[10] = m[15] = 1;
+    return m;
+  },
+  mul(a, b, out = new Float32Array(16)) {
+    for (let c = 0; c < 4; c++) {
+      const b0 = b[c*4], b1 = b[c*4+1], b2 = b[c*4+2], b3 = b[c*4+3];
+      out[c*4]   = a[0]*b0 + a[4]*b1 + a[8]*b2  + a[12]*b3;
+      out[c*4+1] = a[1]*b0 + a[5]*b1 + a[9]*b2  + a[13]*b3;
+      out[c*4+2] = a[2]*b0 + a[6]*b1 + a[10]*b2 + a[14]*b3;
+      out[c*4+3] = a[3]*b0 + a[7]*b1 + a[11]*b2 + a[15]*b3;
+    }
+    return out;
+  },
+  translate(x, y, z) {
+    const m = M4.ident();
+    m[12] = x; m[13] = y; m[14] = z;
+    return m;
+  },
+  scale(x, y, z) {
+    const m = new Float32Array(16);
+    m[0] = x; m[5] = y; m[10] = z; m[15] = 1;
+    return m;
+  },
+  rotX(a) {
+    const m = M4.ident(), c = Math.cos(a), s = Math.sin(a);
+    m[5] = c; m[6] = s; m[9] = -s; m[10] = c;
+    return m;
+  },
+  rotY(a) {
+    const m = M4.ident(), c = Math.cos(a), s = Math.sin(a);
+    m[0] = c; m[2] = -s; m[8] = s; m[10] = c;
+    return m;
+  },
+  rotZ(a) {
+    const m = M4.ident(), c = Math.cos(a), s = Math.sin(a);
+    m[0] = c; m[1] = s; m[4] = -s; m[5] = c;
+    return m;
+  },
+  trs(tx, ty, tz, rx, ry, rz, sx, sy, sz) {
+    let m = M4.translate(tx, ty, tz);
+    if (ry) m = M4.mul(m, M4.rotY(ry));
+    if (rx) m = M4.mul(m, M4.rotX(rx));
+    if (rz) m = M4.mul(m, M4.rotZ(rz));
+    if (sx !== 1 || sy !== 1 || sz !== 1) m = M4.mul(m, M4.scale(sx, sy, sz));
+    return m;
+  },
+  perspective(fovy, aspect, near, far) {
+    const f = 1 / Math.tan(fovy * 0.5);
+    const nf = 1 / (near - far);
+    const m = new Float32Array(16);
+    m[0] = f / aspect;
+    m[5] = f;
+    m[10] = (far + near) * nf;
+    m[11] = -1;
+    m[14] = 2 * far * near * nf;
+    return m;
+  },
+  ortho(l, r, b, t, n, f) {
+    const m = new Float32Array(16);
+    m[0] = 2 / (r - l);
+    m[5] = 2 / (t - b);
+    m[10] = -2 / (f - n);
+    m[12] = -(r + l) / (r - l);
+    m[13] = -(t + b) / (t - b);
+    m[14] = -(f + n) / (f - n);
+    m[15] = 1;
+    return m;
+  },
+  lookAt(ex, ey, ez, cx, cy, cz, ux, uy, uz) {
+    let zx = ex - cx, zy = ey - cy, zz = ez - cz;
+    let zl = Math.hypot(zx, zy, zz) || 1;
+    zx /= zl; zy /= zl; zz /= zl;
+    let xx = uy * zz - uz * zy;
+    let xy = uz * zx - ux * zz;
+    let xz = ux * zy - uy * zx;
+    let xl = Math.hypot(xx, xy, xz) || 1;
+    xx /= xl; xy /= xl; xz /= xl;
+    const yx = zy * xz - zz * xy;
+    const yy = zz * xx - zx * xz;
+    const yz = zx * xy - zy * xx;
+    const m = new Float32Array(16);
+    m[0] = xx; m[1] = yx; m[2] = zx; m[3] = 0;
+    m[4] = xy; m[5] = yy; m[6] = zy; m[7] = 0;
+    m[8] = xz; m[9] = yz; m[10] = zz; m[11] = 0;
+    m[12] = -(xx*ex + xy*ey + xz*ez);
+    m[13] = -(yx*ex + yy*ey + yz*ez);
+    m[14] = -(zx*ex + zy*ey + zz*ez);
+    m[15] = 1;
+    return m;
+  },
+  normalMat3(m) {
+    // Inverse transpose of upper-left 3x3
+    const a00 = m[0], a01 = m[1], a02 = m[2];
+    const a10 = m[4], a11 = m[5], a12 = m[6];
+    const a20 = m[8], a21 = m[9], a22 = m[10];
+    const b01 = a22 * a11 - a12 * a21;
+    const b11 = -a22 * a10 + a12 * a20;
+    const b21 = a21 * a10 - a11 * a20;
+    let det = a00 * b01 + a01 * b11 + a02 * b21;
+    if (Math.abs(det) < 1e-8) return new Float32Array([1,0,0, 0,1,0, 0,0,1]);
+    det = 1.0 / det;
+    // Note: transpose of inverse in column-major means cofactor matrix directly
+    return new Float32Array([
+      b01 * det, b11 * det, b21 * det,
+      (-a22 * a01 + a02 * a21) * det, (a22 * a00 - a02 * a20) * det, (-a21 * a00 + a01 * a20) * det,
+      (a12 * a01 - a02 * a11) * det, (-a12 * a00 + a02 * a10) * det, (a11 * a00 - a01 * a10) * det
+    ]);
+  },
+  invert(m) {
+    const out = new Float32Array(16);
+    const a00=m[0],a01=m[1],a02=m[2],a03=m[3],
+          a10=m[4],a11=m[5],a12=m[6],a13=m[7],
+          a20=m[8],a21=m[9],a22=m[10],a23=m[11],
+          a30=m[12],a31=m[13],a32=m[14],a33=m[15];
+    const b00=a00*a11-a01*a10, b01=a00*a12-a02*a10, b02=a00*a13-a03*a10,
+          b03=a01*a12-a02*a11, b04=a01*a13-a03*a11, b05=a02*a13-a03*a12,
+          b06=a20*a31-a21*a30, b07=a20*a32-a22*a30, b08=a20*a33-a23*a30,
+          b09=a21*a32-a22*a31, b10=a21*a33-a23*a31, b11=a22*a33-a23*a32;
+    let det = b00*b11 - b01*b10 + b02*b09 + b03*b08 - b04*b07 + b05*b06;
+    if (!det) return M4.ident();
+    det = 1 / det;
+    out[0]  = (a11*b11 - a12*b10 + a13*b09)*det;
+    out[1]  = (a02*b10 - a01*b11 - a03*b09)*det;
+    out[2]  = (a31*b05 - a32*b04 + a33*b03)*det;
+    out[3]  = (a22*b04 - a21*b05 - a23*b03)*det;
+    out[4]  = (a12*b08 - a10*b11 - a13*b07)*det;
+    out[5]  = (a00*b11 - a02*b08 + a03*b07)*det;
+    out[6]  = (a32*b02 - a30*b05 - a33*b01)*det;
+    out[7]  = (a20*b05 - a22*b02 + a23*b01)*det;
+    out[8]  = (a10*b10 - a11*b08 + a13*b06)*det;
+    out[9]  = (a01*b08 - a00*b10 - a03*b06)*det;
+    out[10] = (a30*b04 - a31*b02 + a33*b00)*det;
+    out[11] = (a21*b02 - a20*b04 - a23*b00)*det;
+    out[12] = (a11*b07 - a10*b09 - a12*b06)*det;
+    out[13] = (a00*b09 - a01*b07 + a02*b06)*det;
+    out[14] = (a31*b01 - a30*b03 - a32*b00)*det;
+    out[15] = (a20*b03 - a21*b01 + a22*b00)*det;
+    return out;
+  }
+};
+
+// ============================================================================
+// 2. UNIVERSAL TURING MACHINE ENGINE (1936 PAPER + CUSTOM PROGRAMS)
+// ============================================================================
+const UTM_PROGRAMS = [
+  {
+    id: 'turing-0101',
+    name: 'Turing 1936 Ex. I — 0 1 0 1 0 1 ...',
+    desc: 'Alan Turing\'s very first machine from Section 3 of "On Computable Numbers" (1936): prints the alternating binary sequence 0, 1, 0, 1... across F-squares.',
+    initialTape: '',
+    initialState: 'b',
+    initialHead: 0,
+    rules: [
+      { state:'b', read:'_', write:'0', move:'R', next:'c' },
+      { state:'c', read:'_', write:'_', move:'R', next:'e' },
+      { state:'e', read:'_', write:'1', move:'R', next:'f' },
+      { state:'f', read:'_', write:'_', move:'R', next:'b' }
+    ]
+  },
+  {
+    id: 'turing-001011',
+    name: 'Turing 1936 Ex. II — 0010110111...',
+    desc: 'Turing\'s famous second 1936 example computing the non-repeating irrational sequence 001011011101111... by marking and copying progressively longer runs of 1s.',
+    initialTape: '',
+    initialState: 'b0',
+    initialHead: 0,
+    rules: [
+      { state:'b0', read:'_', write:'0', move:'R', next:'b1' },
+      { state:'b1', read:'_', write:'0', move:'R', next:'b2' },
+      { state:'b2', read:'_', write:'1', move:'R', next:'b3' },
+      { state:'b3', read:'_', write:'0', move:'L', next:'find1' },
+      { state:'find1', read:'1', write:'x', move:'R', next:'goEnd' },
+      { state:'find1', read:'x', write:'x', move:'L', next:'find1' },
+      { state:'find1', read:'0', write:'0', move:'R', next:'restore' },
+      { state:'goEnd', read:'0', write:'0', move:'R', next:'goEnd' },
+      { state:'goEnd', read:'1', write:'1', move:'R', next:'goEnd' },
+      { state:'goEnd', read:'x', write:'x', move:'R', next:'goEnd' },
+      { state:'goEnd', read:'_', write:'1', move:'L', next:'back0' },
+      { state:'back0', read:'1', write:'1', move:'L', next:'back0' },
+      { state:'back0', read:'0', write:'0', move:'L', next:'find1' },
+      { state:'restore', read:'x', write:'1', move:'R', next:'restore' },
+      { state:'restore', read:'1', write:'1', move:'R', next:'restore' },
+      { state:'restore', read:'0', write:'0', move:'R', next:'add1' },
+      { state:'add1', read:'1', write:'1', move:'R', next:'add1' },
+      { state:'add1', read:'_', write:'1', move:'R', next:'add0' },
+      { state:'add0', read:'_', write:'0', move:'L', next:'find1' }
+    ]
+  },
+  {
+    id: 'binary-inc',
+    name: 'Binary Incrementer (1011 + 1 = 1100)',
+    desc: 'Scans to the least-significant bit of a binary integer, propagates carry bits leftward, rewinds to the start, and halts.',
+    initialTape: '1011',
+    initialState: 'seek',
+    initialHead: 0,
+    rules: [
+      { state:'seek', read:'0', write:'0', move:'R', next:'seek' },
+      { state:'seek', read:'1', write:'1', move:'R', next:'seek' },
+      { state:'seek', read:'_', write:'_', move:'L', next:'carry' },
+      { state:'carry', read:'1', write:'0', move:'L', next:'carry' },
+      { state:'carry', read:'0', write:'1', move:'L', next:'done' },
+      { state:'carry', read:'_', write:'1', move:'N', next:'HALT' },
+      { state:'done', read:'0', write:'0', move:'L', next:'done' },
+      { state:'done', read:'1', write:'1', move:'L', next:'done' },
+      { state:'done', read:'_', write:'_', move:'R', next:'HALT' }
+    ]
+  },
+  {
+    id: 'unary-add',
+    name: 'Unary Adder (11 + 111 = 11111)',
+    desc: 'Bridges the "+" separator between two unary tallies, trims the trailing tally mark, rewinds to the first mark, and halts.',
+    initialTape: '11+111',
+    initialState: 'scan',
+    initialHead: 0,
+    rules: [
+      { state:'scan', read:'1', write:'1', move:'R', next:'scan' },
+      { state:'scan', read:'+', write:'1', move:'R', next:'toEnd' },
+      { state:'toEnd', read:'1', write:'1', move:'R', next:'toEnd' },
+      { state:'toEnd', read:'_', write:'_', move:'L', next:'trim' },
+      { state:'trim', read:'1', write:'_', move:'L', next:'rewind' },
+      { state:'rewind', read:'1', write:'1', move:'L', next:'rewind' },
+      { state:'rewind', read:'_', write:'_', move:'R', next:'HALT' }
+    ]
+  },
+  {
+    id: 'busy-beaver-3',
+    name: '3-State Busy Beaver (BB-3)',
+    desc: 'Classic 3-state, 2-symbol Busy Beaver champion: starts on blank tape, writes six 1s in 13 transitions, and halts.',
+    initialTape: '',
+    initialState: 'A',
+    initialHead: 0,
+    rules: [
+      { state:'A', read:'_', write:'1', move:'R', next:'B' },
+      { state:'A', read:'1', write:'1', move:'L', next:'C' },
+      { state:'B', read:'_', write:'1', move:'L', next:'A' },
+      { state:'B', read:'1', write:'1', move:'R', next:'B' },
+      { state:'C', read:'_', write:'1', move:'L', next:'B' },
+      { state:'C', read:'1', write:'1', move:'N', next:'HALT' }
+    ]
+  }
+];
+
+class UniversalTuringMachine {
+  constructor() {
+    this.tape = new Map();
+    this.head = 0;
+    this.state = 'b';
+    this.steps = 0;
+    this.running = false;
+    this.halted = false;
+    this.speed = 3; // steps per second
+    this.stepAccum = 0;
+    this.program = null;
+    this.ruleMap = new Map();
+    this.lastAction = null;
+    this.listeners = [];
+    this.loadProgram(UTM_PROGRAMS[0]);
+  }
+  onChange(fn) { this.listeners.push(fn); }
+  emit(ev) { for (const fn of this.listeners) fn(ev); }
+
+  loadProgram(prog) {
+    this.program = {
+      id: prog.id || 'custom',
+      name: prog.name || 'Custom Machine',
+      desc: prog.desc || 'User-defined machine table executed by the Universal Machine.',
+      initialTape: prog.initialTape || '',
+      initialState: prog.initialState || 'q0',
+      initialHead: Number.isFinite(prog.initialHead) ? prog.initialHead : 0,
+      rules: prog.rules.map(r => ({ ...r }))
+    };
+    this.ruleMap.clear();
+    for (const r of this.program.rules) {
+      this.ruleMap.set(`${r.state}|${r.read}`, r);
+    }
+    this.reset();
+  }
+
+  reset() {
+    this.tape.clear();
+    const s = this.program.initialTape;
+    for (let i = 0; i < s.length; i++) {
+      if (s[i] !== '_' && s[i] !== ' ') this.tape.set(i, s[i]);
+    }
+    this.head = this.program.initialHead;
+    this.state = this.program.initialState;
+    this.steps = 0;
+    this.running = false;
+    this.halted = (this.state === 'HALT');
+    this.stepAccum = 0;
+    this.lastAction = null;
+    this.emit('reset');
+  }
+
+  readCell(pos) {
+    return this.tape.has(pos) ? this.tape.get(pos) : '_';
+  }
+  writeCell(pos, sym) {
+    if (sym === '_' || sym === ' ' || sym === '') this.tape.delete(pos);
+    else this.tape.set(pos, sym);
+  }
+  getActiveRule() {
+    if (this.halted) return null;
+    const sym = this.readCell(this.head);
+    return this.ruleMap.get(`${this.state}|${sym}`) || this.ruleMap.get(`${this.state}|*`) || null;
+  }
+  step() {
+    if (this.halted) {
+      this.running = false;
+      return false;
+    }
+    const sym = this.readCell(this.head);
+    const rule = this.getActiveRule();
+    if (!rule) {
+      this.halted = true;
+      this.running = false;
+      this.lastAction = { state: this.state, read: sym, write: sym, move: 'N', next: 'HALT' };
+      this.emit('halt');
+      return false;
+    }
+    const writeSym = rule.write === '*' ? sym : rule.write;
+    const changed = writeSym !== sym;
+    this.writeCell(this.head, writeSym);
+    const moveDir = rule.move === 'L' ? -1 : (rule.move === 'R' ? 1 : 0);
+    this.head += moveDir;
+    this.lastAction = { state: this.state, read: sym, write: writeSym, move: rule.move, next: rule.next, changed };
+    this.state = rule.next;
+    this.steps++;
+    if (this.state === 'HALT' || !this.getActiveRule()) {
+      if (this.state === 'HALT') {
+        this.halted = true;
+        this.running = false;
+      }
+    }
+    this.emit('step');
+    if (this.halted) this.emit('halt');
+    return true;
+  }
+
+  // Encode current machine into Alan Turing's 1936 Standard Description (S.D.)
+  computeStandardDescription() {
+    const stateIds = new Map();
+    const symIds = new Map([['_', 0]]);
+    const getStateCode = (st) => {
+      if (!stateIds.has(st)) stateIds.set(st, stateIds.size + 1);
+      return 'D' + 'A'.repeat(stateIds.get(st));
+    };
+    const getSymCode = (sy) => {
+      if (!symIds.has(sy)) symIds.set(sy, symIds.size);
+      return 'D' + 'C'.repeat(symIds.get(sy));
+    };
+    const parts = this.program.rules.map(r =>
+      `${getStateCode(r.state)}${getSymCode(r.read)}${getSymCode(r.write)}${r.move}${getStateCode(r.next)}`
+    );
+    return ';' + parts.join(';');
+  }
+}
+
+const utm = new UniversalTuringMachine();
+
+// ============================================================================
+// 3. SUBTLE PROCEDURAL WEB AUDIO (MECHANICAL RELAY CLICK ON UTM STEP)
+// ============================================================================
+let soundEnabled = true;
+let audioCtx = null;
+function ensureAudio() {
+  if (!soundEnabled) return null;
+  if (!audioCtx) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (AC) audioCtx = new AC();
+  }
+  if (audioCtx && audioCtx.state === 'suspended') {
+    audioCtx.resume().catch(() => {});
+  }
+  return audioCtx;
+}
+function playStepClick(type = 'step') {
+  const ctx = ensureAudio();
+  if (!ctx) return;
+  const now = ctx.currentTime;
+  // Crisp brass relay / typewriter clack
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  const filter = ctx.createBiquadFilter();
+  filter.type = 'bandpass';
+  filter.frequency.value = type === 'halt' ? 680 : (type === 'write' ? 1450 : 1050);
+  filter.Q.value = 3.2;
+
+  osc.type = type === 'halt' ? 'triangle' : 'square';
+  osc.frequency.setValueAtTime(type === 'halt' ? 520 : (type === 'write' ? 240 : 185), now);
+  osc.frequency.exponentialRampToValueAtTime(type === 'halt' ? 330 : 65, now + (type === 'halt' ? 0.16 : 0.035));
+
+  gain.gain.setValueAtTime(type === 'halt' ? 0.09 : 0.055, now);
+  gain.gain.exponentialRampToValueAtTime(0.0008, now + (type === 'halt' ? 0.18 : 0.04));
+
+  osc.connect(filter);
+  filter.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start(now);
+  osc.stop(now + (type === 'halt' ? 0.19 : 0.045));
+}
+
+// ============================================================================
+// 4. WEBGL2 INITIALIZATION & SHADERS
+// ============================================================================
+const canvas = document.getElementById('glcanvas');
+const gl = canvas.getContext('webgl2', { antialias: true, alpha: false, powerPreference: 'high-performance' });
+if (!gl) {
+  document.body.innerHTML = '<div style="padding:40px;color:#efe2c6;font-family:Georgia,serif;">WebGL2 is required to view Alan Turing\'s 1936 Study.</div>';
+  throw new Error('WebGL2 unavailable');
+}
+const anisoExt = gl.getExtension('EXT_texture_filter_anisotropic') || gl.getExtension('WEBKIT_EXT_texture_filter_anisotropic');
+const maxAniso = anisoExt ? Math.min(8, gl.getParameter(anisoExt.MAX_TEXTURE_MAX_ANISOTROPY_EXT)) : 1;
+
+function compileShader(type, src) {
+  const sh = gl.createShader(type);
+  gl.shaderSource(sh, src);
+  gl.compileShader(sh);
+  if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) {
+    const log = gl.getShaderInfoLog(sh);
+    console.error('Shader compile error:', log, src);
+    throw new Error(log);
+  }
+  return sh;
+}
+function createProgram(vsSrc, fsSrc) {
+  const prog = gl.createProgram();
+  gl.attachShader(prog, compileShader(gl.VERTEX_SHADER, vsSrc));
+  gl.attachShader(prog, compileShader(gl.FRAGMENT_SHADER, fsSrc));
+  gl.linkProgram(prog);
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+    throw new Error(gl.getProgramInfoLog(prog));
+  }
+  return prog;
+}
+function getUniforms(prog, names) {
+  const u = {};
+  for (const n of names) u[n] = gl.getUniformLocation(prog, n);
+  return u;
+}
+
+// --- Shadow Pass Shader ---
+const shadowVS = `#version 300 es
+precision highp float;
+layout(location=0) in vec3 aPos;
+uniform mat4 uLightVP;
+uniform mat4 uModel;
+void main() {
+  gl_Position = uLightVP * uModel * vec4(aPos, 1.0);
+}`;
+const shadowFS = `#version 300 es
+precision highp float;
+void main() {}`;
+
+// --- Main PBR-lite Lit Shader with PCF Shadows + Multi-Light + ACES ---
+const mainVS = `#version 300 es
+precision highp float;
+layout(location=0) in vec3 aPos;
+layout(location=1) in vec3 aNorm;
+layout(location=2) in vec2 aUV;
+
+uniform mat4 uViewProj;
+uniform mat4 uModel;
+uniform mat3 uNormalMat;
+uniform mat4 uLightVP;
+
+out vec3 vWorldPos;
+out vec3 vNormal;
+out vec2 vUV;
+out vec4 vLightSpacePos;
+
+void main() {
+  vec4 wp = uModel * vec4(aPos, 1.0);
+  vWorldPos = wp.xyz;
+  vNormal = normalize(uNormalMat * aNorm);
+  vUV = aUV;
+  vLightSpacePos = uLightVP * wp;
+  gl_Position = uViewProj * wp;
+}`;
+
+const mainFS = `#version 300 es
+precision highp float;
+
+in vec3 vWorldPos;
+in vec3 vNormal;
+in vec2 vUV;
+in vec4 vLightSpacePos;
+
+uniform sampler2D uTex;
+uniform sampler2D uShadowMap;
+uniform vec4 uColor;
+uniform vec3 uEmissive;
+uniform float uRoughness;
+uniform float uMetallic;
+uniform float uUseTex;
+uniform float uIsExterior;
+uniform float uReceiveShadow;
+
+uniform vec3 uCamPos;
+uniform vec3 uSunDir;
+uniform vec3 uSunColor;
+uniform vec3 uFirePos;
+uniform vec3 uFireColor;
+uniform vec3 uLampPos;
+uniform vec3 uLampColor;
+uniform vec3 uCeilPos;
+uniform vec3 uCeilColor;
+
+out vec4 fragColor;
+
+float calcShadow(vec4 lp, vec3 N, vec3 L) {
+  if (uReceiveShadow < 0.5) return 1.0;
+  vec3 proj = lp.xyz / lp.w;
+  proj = proj * 0.5 + 0.5;
+  if (proj.x < 0.002 || proj.x > 0.998 || proj.y < 0.002 || proj.y > 0.998 || proj.z > 0.999) {
+    return 1.0;
+  }
+  float ndotl = max(dot(N, L), 0.0);
+  float bias = max(0.0018 * (1.0 - ndotl), 0.00045);
+  vec2 texel = vec2(1.0 / 2048.0);
+  float sum = 0.0;
+  for (int x = -1; x <= 1; x++) {
+    for (int y = -1; y <= 1; y++) {
+      float d = texture(uShadowMap, proj.xy + vec2(float(x), float(y)) * texel).r;
+      sum += (proj.z - bias > d) ? 0.0 : 1.0;
+    }
+  }
+  return sum / 9.0;
+}
+
+vec3 evalLight(vec3 N, vec3 V, vec3 L, vec3 radiance, vec3 albedo, float rough, float metal) {
+  float ndotl = max(dot(N, L), 0.0);
+  if (ndotl <= 0.0) return vec3(0.0);
+  vec3 H = normalize(L + V);
+  float ndoth = max(dot(N, H), 0.0);
+  float vdotH = max(dot(V, H), 0.0);
+
+  vec3 F0 = mix(vec3(0.04), albedo, metal);
+  vec3 F = F0 + (1.0 - F0) * pow(1.0 - vdotH, 5.0);
+
+  float a = max(rough * rough, 0.045);
+  float a2 = a * a;
+  float denom = (ndoth * ndoth * (a2 - 1.0) + 1.0);
+  float D = a2 / (3.14159265 * denom * denom + 1e-5);
+
+  vec3 kD = (vec3(1.0) - F) * (1.0 - metal);
+  vec3 spec = (D * F) * 0.25;
+  return (kD * albedo / 3.14159265 + spec) * radiance * ndotl;
+}
+
+vec3 acesToneMap(vec3 x) {
+  return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), 0.0, 1.0);
+}
+
+void main() {
+  vec4 texCol = mix(vec4(1.0), texture(uTex, vUV), uUseTex);
+  vec3 albedo = texCol.rgb * uColor.rgb;
+  float alpha = texCol.a * uColor.a;
+  if (alpha < 0.01) discard;
+
+  vec3 N = normalize(vNormal);
+  if (!gl_FrontFacing) N = -N;
+  vec3 V = normalize(uCamPos - vWorldPos);
+
+  vec3 color = vec3(0.0);
+
+  if (uIsExterior > 0.5) {
+    // Warm sunlit Cambridge exterior lighting for King's College Chapel & Front Court
+    vec3 extSun = normalize(vec3(0.58, 0.46, 0.67));
+    float wrapN = max((dot(N, extSun) + 0.28) / 1.28, 0.0);
+    vec3 sunCol = vec3(1.75, 1.38, 0.92);
+    vec3 skyFill = mix(vec3(0.28, 0.26, 0.22), vec3(0.45, 0.56, 0.72), clamp(N.y * 0.5 + 0.5, 0.0, 1.0));
+    color = albedo * (skyFill * 0.62 + sunCol * wrapN * 0.85);
+    // Specular glint on Chapel stained glass & roof lead
+    color += evalLight(N, V, extSun, sunCol * 0.65, albedo, uRoughness, uMetallic);
+    color += uEmissive;
+    // Soft golden atmospheric aerial perspective
+    float dist = length(vWorldPos - uCamPos);
+    float fog = 1.0 - exp(-max(dist - 10.0, 0.0) * 0.017);
+    vec3 fogCol = vec3(0.95, 0.78, 0.56);
+    color = mix(color, fogCol, clamp(fog, 0.0, 0.42));
+  } else {
+    // Interior lighting: directional window sun + shadow map + fireplace + banker's lamp + ceiling + sky bounce
+    float sh = calcShadow(vLightSpacePos, N, uSunDir);
+    color += evalLight(N, V, uSunDir, uSunColor * sh, albedo, uRoughness, uMetallic);
+
+    // Warm golden bounce near sunlit floor/desk area
+    vec3 skyDir = normalize(vec3(0.0, 0.35, -1.0));
+    float winMask = smoothstep(2.6, -2.8, vWorldPos.z);
+    float skyN = max(dot(N, skyDir) * 0.5 + 0.5, 0.0);
+    color += albedo * vec3(0.22, 0.20, 0.17) * skyN * (0.45 + 0.55 * winMask);
+
+    // Fireplace warm flickering point light
+    {
+      vec3 toL = uFirePos - vWorldPos;
+      float d = length(toL);
+      float att = 1.0 / (1.0 + 0.32 * d + 0.28 * d * d);
+      color += evalLight(N, V, toL / max(d, 0.001), uFireColor * att, albedo, uRoughness, uMetallic);
+    }
+
+    // Banker's Desk Lamp warm tungsten pool
+    {
+      vec3 toL = uLampPos - vWorldPos;
+      float d = length(toL);
+      float att = 1.0 / (1.0 + 0.65 * d + 0.95 * d * d);
+      // Downward shade bias
+      float cone = smoothstep(-0.35, 0.45, -(toL.y / max(d, 0.001)));
+      color += evalLight(N, V, toL / max(d, 0.001), uLampColor * att * (0.38 + 0.62 * cone), albedo, uRoughness, uMetallic);
+    }
+
+    // Soft overhead ceiling pendant fill
+    {
+      vec3 toL = uCeilPos - vWorldPos;
+      float d = length(toL);
+      float att = 1.0 / (1.0 + 0.18 * d + 0.12 * d * d);
+      color += evalLight(N, V, toL / max(d, 0.001), uCeilColor * att, albedo, uRoughness, uMetallic);
+    }
+
+    // Hemisphere ambient + subtle architectural corner AO
+    vec3 hemi = mix(vec3(0.11, 0.085, 0.065), vec3(0.19, 0.17, 0.145), N.y * 0.5 + 0.5);
+    float wallDistX = max(3.3 - abs(vWorldPos.x), 0.0);
+    float wallDistZ = max(2.8 - abs(vWorldPos.z), 0.0);
+    float floorDist = max(vWorldPos.y, 0.0);
+    float ceilDist = max(3.4 - vWorldPos.y, 0.0);
+    float cornerAO = 0.72 + 0.28 * clamp(min(wallDistX, wallDistZ) * 1.4, 0.0, 1.0);
+    float vertAO = 0.80 + 0.20 * clamp(min(floorDist, ceilDist) * 2.2, 0.0, 1.0);
+    color += albedo * hemi * cornerAO * vertAO;
+
+    // Brass / metallic subtle env reflection approximation
+    if (uMetallic > 0.2) {
+      vec3 R = reflect(-V, N);
+      vec3 env = mix(vec3(0.18, 0.12, 0.07), vec3(0.85, 0.68, 0.44), clamp(R.y * 0.5 + 0.5, 0.0, 1.0));
+      color += env * albedo * uMetallic * (1.0 - uRoughness * 0.7) * 0.32;
+    }
+
+    color += uEmissive;
+  }
+
+  color = acesToneMap(color);
+  color = pow(color, vec3(1.0 / 2.2));
+  fragColor = vec4(color, alpha);
+}`;
+
+// --- Golden Cambridge Afternoon Sky Shader ---
+const skyVS = `#version 300 es
+precision highp float;
+layout(location=0) in vec3 aPos;
+uniform mat4 uViewProj;
+uniform vec3 uCamPos;
+out vec3 vDir;
+void main() {
+  vDir = aPos;
+  vec4 wp = vec4(aPos * 70.0 + uCamPos, 1.0);
+  vec4 p = uViewProj * wp;
+  gl_Position = p.xyww;
+}`;
+const skyFS = `#version 300 es
+precision highp float;
+in vec3 vDir;
+uniform vec3 uSunDir;
+uniform float uTime;
+out vec4 fragColor;
+
+float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float noise(vec2 p) {
+  vec2 i = floor(p), f = fract(p);
+  f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x),
+             mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
+}
+float fbm(vec2 p) {
+  float v = 0.0, a = 0.5;
+  for (int i = 0; i < 4; i++) { v += a * noise(p); p *= 2.04; a *= 0.5; }
+  return v;
+}
+
+void main() {
+  vec3 d = normalize(vDir);
+  float h = clamp(d.y, 0.0, 1.0);
+  vec3 horizon = vec3(0.98, 0.78, 0.52);
+  vec3 midSky  = vec3(0.56, 0.68, 0.84);
+  vec3 zenith  = vec3(0.24, 0.40, 0.66);
+  vec3 col = mix(horizon, midSky, pow(h, 0.48));
+  col = mix(col, zenith, pow(h, 1.25));
+
+  // Sun disk + warm aureole
+  float s = max(dot(d, normalize(uSunDir)), 0.0);
+  col += vec3(1.0, 0.78, 0.46) * pow(s, 7.0) * 0.55;
+  col += vec3(1.0, 0.94, 0.78) * pow(s, 140.0) * 1.4;
+
+  // Wispy autumn clouds
+  if (d.y > 0.03) {
+    vec2 uv = d.xz / (d.y + 0.16) * 0.9 + vec2(uTime * 0.008, 0.0);
+    float c = smoothstep(0.46, 0.80, fbm(uv));
+    vec3 cloudCol = mix(vec3(0.95, 0.83, 0.68), vec3(1.0, 0.93, 0.80), pow(s, 2.0));
+    col = mix(col, cloudCol, c * smoothstep(0.03, 0.22, d.y) * 0.52);
+  }
+  col = pow(clamp(col, 0.0, 1.0), vec3(1.0 / 2.2));
+  fragColor = vec4(col, 1.0);
+}`;
+
+// --- Additive FX Shader (Fireplace Flames & Window God-Rays) ---
+const fxVS = `#version 300 es
+precision highp float;
+layout(location=0) in vec3 aPos;
+layout(location=1) in vec3 aNorm;
+layout(location=2) in vec2 aUV;
+uniform mat4 uViewProj;
+uniform mat4 uModel;
+out vec2 vUV;
+out vec3 vWorldPos;
+void main() {
+  vec4 wp = uModel * vec4(aPos, 1.0);
+  vWorldPos = wp.xyz;
+  vUV = aUV;
+  gl_Position = uViewProj * wp;
+}`;
+const fxFS = `#version 300 es
+precision highp float;
+in vec2 vUV;
+in vec3 vWorldPos;
+uniform float uTime;
+uniform int uMode; // 0 = fireplace flame, 1 = window sunbeam
+uniform float uSeed;
+out vec4 fragColor;
+
+float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float noise(vec2 p) {
+  vec2 i = floor(p), f = fract(p);
+  f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x),
+             mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
+}
+
+void main() {
+  if (uMode == 0) {
+    // vUV.y = 0 is top of plane, vUV.y = 1 is bottom -> flip so fy=0 at hearth logs, fy=1 at flame tip
+    float fy = 1.0 - vUV.y;
+    float sway = sin(uTime * 5.2 + fy * 5.5 + uSeed) * 0.09 * fy;
+    float x = (vUV.x - 0.5 + sway) * 2.0;
+    float n = noise(vec2(vUV.x * 4.5 + uSeed, fy * 5.0 - uTime * 4.8)) * 0.5
+            + noise(vec2(vUV.x * 9.0 - uSeed, fy * 10.0 - uTime * 7.6)) * 0.25;
+    float shape = 1.0 - (x * x * 1.55 + fy * 1.12) + n * 0.48;
+    float a = smoothstep(0.18, 0.65, shape) * smoothstep(0.0, 0.14, fy) * smoothstep(1.0, 0.55, fy);
+    vec3 col = mix(vec3(0.95, 0.22, 0.03), vec3(1.0, 0.68, 0.16), smoothstep(0.2, 0.72, shape));
+    col = mix(col, vec3(1.0, 0.96, 0.78), smoothstep(0.68, 0.96, shape) * (1.0 - fy * 0.7));
+    fragColor = vec4(col * a * 1.15, a * 0.9);
+  } else {
+    // Soft volumetric sunbeam shaft from window
+    float edgeX = sin(vUV.x * 3.14159265);
+    float fadeY = smoothstep(0.0, 0.18, vUV.y) * smoothstep(1.0, 0.08, vUV.y);
+    float shimmer = 0.85 + 0.15 * sin(vUV.x * 9.0 + uTime * 0.35 + uSeed);
+    float alpha = pow(edgeX, 1.6) * fadeY * 0.062 * shimmer;
+    fragColor = vec4(vec3(1.0, 0.86, 0.58) * alpha, alpha);
+  }
+}`;
+
+// --- Floating Dust Motes Particle Shader ---
+const dustVS = `#version 300 es
+precision highp float;
+layout(location=0) in vec3 aPos;
+layout(location=1) in float aPhase;
+uniform mat4 uViewProj;
+uniform float uTime;
+out float vAlpha;
+void main() {
+  vec3 p = aPos;
+  p.x += sin(uTime * 0.27 + aPhase) * 0.12;
+  p.y += sin(uTime * 0.19 + aPhase * 1.7) * 0.08;
+  p.z += cos(uTime * 0.23 + aPhase * 0.9) * 0.10;
+  vec4 clip = uViewProj * vec4(p, 1.0);
+  gl_Position = clip;
+  float dist = max(clip.w, 0.3);
+  gl_PointSize = clamp(16.0 / dist, 1.5, 6.0);
+  // Brighter inside the golden window beam region
+  float inBeam = smoothstep(1.9, 0.2, abs(p.x)) * smoothstep(0.9, -2.5, p.z);
+  vAlpha = (0.16 + 0.55 * inBeam) * (0.65 + 0.35 * sin(uTime * 1.3 + aPhase * 3.0));
+}`;
+const dustFS = `#version 300 es
+precision highp float;
+in float vAlpha;
+out vec4 fragColor;
+void main() {
+  vec2 c = gl_PointCoord - 0.5;
+  float r = length(c);
+  if (r > 0.5) discard;
+  float s = pow(1.0 - r * 2.0, 1.8);
+  fragColor = vec4(vec3(1.0, 0.90, 0.66) * s * vAlpha, s * vAlpha);
+}`;
+
+const shadowProg = createProgram(shadowVS, shadowFS);
+const mainProg   = createProgram(mainVS, mainFS);
+const skyProg    = createProgram(skyVS, skyFS);
+const fxProg     = createProgram(fxVS, fxFS);
+const dustProg   = createProgram(dustVS, dustFS);
+
+const uShadow = getUniforms(shadowProg, ['uLightVP', 'uModel']);
+const uMain   = getUniforms(mainProg, [
+  'uViewProj','uModel','uNormalMat','uLightVP','uTex','uShadowMap','uColor','uEmissive',
+  'uRoughness','uMetallic','uUseTex','uIsExterior','uReceiveShadow',
+  'uCamPos','uSunDir','uSunColor','uFirePos','uFireColor','uLampPos','uLampColor','uCeilPos','uCeilColor'
+]);
+const uSky  = getUniforms(skyProg, ['uViewProj','uCamPos','uSunDir','uTime']);
+const uFX   = getUniforms(fxProg, ['uViewProj','uModel','uTime','uMode','uSeed']);
+const uDust = getUniforms(dustProg, ['uViewProj','uTime']);
+
+// Shadow FBO (2048x2048)
+const SHADOW_SIZE = 2048;
+const shadowTex = gl.createTexture();
+gl.bindTexture(gl.TEXTURE_2D, shadowTex);
+gl.texImage2D(gl.TEXTURE_2D, 0, gl.DEPTH_COMPONENT24, SHADOW_SIZE, SHADOW_SIZE, 0, gl.DEPTH_COMPONENT, gl.UNSIGNED_INT, null);
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+const shadowFBO = gl.createFramebuffer();
+gl.bindFramebuffer(gl.FRAMEBUFFER, shadowFBO);
+gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, shadowTex, 0);
+gl.drawBuffers([gl.NONE]);
+gl.readBuffer(gl.NONE);
+gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+// ============================================================================
+// 5. PROCEDURAL CANVAS2D TEXTURE GENERATOR
+// ============================================================================
+function makeCanvasTex(w, h, drawFn, repeat = true, mipmap = true) {
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const ctx = c.getContext('2d');
+  drawFn(ctx, w, h);
+  const tex = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, c);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, repeat ? gl.REPEAT : gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, repeat ? gl.REPEAT : gl.CLAMP_TO_EDGE);
+  if (mipmap) {
+    gl.generateMipmap(gl.TEXTURE_2D);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+  } else {
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  }
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  if (anisoExt) gl.texParameterf(gl.TEXTURE_2D, anisoExt.TEXTURE_MAX_ANISOTROPY_EXT, maxAniso);
+  return { tex, canvas: c, ctx };
+}
+
+function updateDynamicTex(tObj) {
+  gl.bindTexture(gl.TEXTURE_2D, tObj.tex);
+  gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, tObj.canvas);
+}
+
+const TEX = {};
+
+// 1x1 white fallback
+TEX.white = makeCanvasTex(4, 4, (ctx, w, h) => { ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,w,h); }, true, false).tex;
+
+// Aged Oak Floorboards
+TEX.oakFloor = makeCanvasTex(512, 512, (ctx, w, h) => {
+  const rnd = mulberry32(101);
+  ctx.fillStyle = '#5a3b23';
+  ctx.fillRect(0, 0, w, h);
+  const planks = 8;
+  const pw = h / planks;
+  for (let i = 0; i < planks; i++) {
+    const y = i * pw;
+    const tone = (rnd() - 0.5) * 26;
+    ctx.fillStyle = `rgb(${Math.round(92+tone)},${Math.round(61+tone*0.7)},${Math.round(37+tone*0.45)})`;
+    ctx.fillRect(0, y, w, pw);
+    // Grain streaks
+    for (let g = 0; g < 36; g++) {
+      const gy = y + rnd() * pw;
+      ctx.strokeStyle = rnd() > 0.5 ? 'rgba(38,22,10,0.16)' : 'rgba(138,98,62,0.12)';
+      ctx.lineWidth = 1 + rnd() * 1.8;
+      ctx.beginPath();
+      ctx.moveTo(0, gy);
+      ctx.bezierCurveTo(w*0.33, gy + (rnd()-0.5)*5, w*0.66, gy + (rnd()-0.5)*5, w, gy);
+      ctx.stroke();
+    }
+    // Seam line
+    ctx.fillStyle = 'rgba(20, 12, 6, 0.72)';
+    ctx.fillRect(0, y, w, 2);
+    // Cross joint
+    const jx = Math.floor(rnd() * w);
+    ctx.fillRect(jx, y, 2, pw);
+  }
+}).tex;
+
+// Rich Dark Cambridge Oak (Desk, Bookcases, Wainscoting)
+TEX.oakDark = makeCanvasTex(512, 512, (ctx, w, h) => {
+  const rnd = mulberry32(202);
+  ctx.fillStyle = '#3f2818';
+  ctx.fillRect(0, 0, w, h);
+  for (let i = 0; i < 160; i++) {
+    const y = rnd() * h;
+    ctx.strokeStyle = rnd() > 0.45 ? 'rgba(24,13,6,0.22)' : 'rgba(104,68,40,0.14)';
+    ctx.lineWidth = 1 + rnd() * 2.5;
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.bezierCurveTo(w*0.35, y+(rnd()-0.5)*14, w*0.7, y+(rnd()-0.5)*14, w, y);
+    ctx.stroke();
+  }
+}).tex;
+
+// Historic Cambridge Plaster Wall (Warm Aged Sage-Cream)
+TEX.plaster = makeCanvasTex(512, 512, (ctx, w, h) => {
+  const rnd = mulberry32(303);
+  ctx.fillStyle = '#c5bca6';
+  ctx.fillRect(0, 0, w, h);
+  for (let i = 0; i < 1400; i++) {
+    const x = rnd()*w, y = rnd()*h, r = 8 + rnd()*34;
+    ctx.fillStyle = rnd() > 0.5 ? 'rgba(155,146,126,0.06)' : 'rgba(220,212,190,0.06)';
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill();
+  }
+}).tex;
+
+// Wainscot Paneled Dado Texture
+TEX.wainscot = makeCanvasTex(512, 512, (ctx, w, h) => {
+  const rnd = mulberry32(404);
+  ctx.fillStyle = '#3e2718';
+  ctx.fillRect(0, 0, w, h);
+  for (let i = 0; i < 90; i++) {
+    ctx.fillStyle = rnd() > 0.5 ? 'rgba(22,12,6,0.12)' : 'rgba(92,60,34,0.1)';
+    ctx.fillRect(0, rnd()*h, w, 2+rnd()*4);
+  }
+  const cols = 4;
+  const cw = w / cols;
+  for (let c = 0; c < cols; c++) {
+    const x = c * cw + 14;
+    ctx.strokeStyle = 'rgba(18, 10, 5, 0.75)';
+    ctx.lineWidth = 5;
+    ctx.strokeRect(x, 34, cw - 28, h - 68);
+    ctx.strokeStyle = 'rgba(118, 82, 48, 0.35)';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x + 8, 42, cw - 44, h - 84);
+  }
+  // Dado top & bottom rails
+  ctx.fillStyle = '#2d1b0f';
+  ctx.fillRect(0, 0, w, 24);
+  ctx.fillRect(0, h-24, w, 24);
+}).tex;
+
+// Persian Study Rug (Crimson, Indigo, Gold Medallion)
+TEX.rug = makeCanvasTex(512, 512, (ctx, w, h) => {
+  const rnd = mulberry32(505);
+  ctx.fillStyle = '#6c1f1c';
+  ctx.fillRect(0, 0, w, h);
+  // Outer borders
+  ctx.strokeStyle = '#1d2740'; ctx.lineWidth = 36; ctx.strokeRect(24, 24, w-48, h-48);
+  ctx.strokeStyle = '#c89b4b'; ctx.lineWidth = 5;  ctx.strokeRect(12, 12, w-24, h-24);
+  ctx.strokeStyle = '#c89b4b'; ctx.lineWidth = 4;  ctx.strokeRect(44, 44, w-88, h-88);
+  ctx.strokeStyle = '#dfd0ad'; ctx.lineWidth = 2;  ctx.strokeRect(56, 56, w-112, h-112);
+
+  // Border floral motifs
+  for (let i = 36; i < w - 36; i += 28) {
+    for (const [x, y] of [[i, 24], [i, h-24], [24, i], [w-24, i]]) {
+      ctx.fillStyle = '#d4a652';
+      ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#8b2622';
+      ctx.beginPath(); ctx.arc(x, y, 2.2, 0, Math.PI*2); ctx.fill();
+    }
+  }
+  // Center medallion
+  ctx.save(); ctx.translate(w/2, h/2);
+  ctx.fillStyle = '#1b243b';
+  ctx.beginPath();
+  ctx.moveTo(0, -125); ctx.lineTo(86, 0); ctx.lineTo(0, 125); ctx.lineTo(-86, 0);
+  ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = '#d6a955'; ctx.lineWidth = 4; ctx.stroke();
+
+  ctx.fillStyle = '#8d2a22';
+  ctx.beginPath();
+  ctx.moveTo(0, -78); ctx.lineTo(54, 0); ctx.lineTo(0, 78); ctx.lineTo(-54, 0);
+  ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = '#e5d4ae'; ctx.lineWidth = 2; ctx.stroke();
+
+  ctx.fillStyle = '#d4a652';
+  ctx.beginPath(); ctx.arc(0, 0, 20, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
+
+  // Subtle woven noise
+  for (let i = 0; i < 3200; i++) {
+    ctx.fillStyle = rnd() > 0.5 ? 'rgba(255,245,215,0.06)' : 'rgba(15,8,5,0.08)';
+    ctx.fillRect(rnd()*w, rnd()*h, 2, 2);
+  }
+}, false).tex;
+
+// Aged Brick Fireplace Surround
+TEX.brick = makeCanvasTex(512, 512, (ctx, w, h) => {
+  const rnd = mulberry32(606);
+  ctx.fillStyle = '#3b332d';
+  ctx.fillRect(0, 0, w, h);
+  const rows = 12, cols = 6;
+  const bh = h / rows, bw = w / cols;
+  for (let r = 0; r < rows; r++) {
+    const off = (r % 2) * (bw * 0.5);
+    for (let c = -1; c <= cols; c++) {
+      const v = (rnd() - 0.5) * 30;
+      ctx.fillStyle = `rgb(${Math.round(118+v)},${Math.round(58+v*0.5)},${Math.round(42+v*0.4)})`;
+      ctx.fillRect(c*bw + off + 3, r*bh + 3, bw - 6, bh - 6);
+    }
+  }
+  // Subtle soot gradient at bottom/center
+  const grad = ctx.createRadialGradient(w*0.5, h*0.6, 20, w*0.5, h*0.6, w*0.55);
+  grad.addColorStop(0, 'rgba(12,8,6,0.55)');
+  grad.addColorStop(1, 'rgba(12,8,6,0)');
+  ctx.fillStyle = grad; ctx.fillRect(0,0,w,h);
+}).tex;
+
+// Honey-Gold Weldon Limestone (King's College Chapel)
+TEX.limestone = makeCanvasTex(512, 512, (ctx, w, h) => {
+  const rnd = mulberry32(707);
+  ctx.fillStyle = '#c8b48c';
+  ctx.fillRect(0, 0, w, h);
+  const rows = 16, cols = 8;
+  const bh = h / rows, bw = w / cols;
+  for (let r = 0; r < rows; r++) {
+    const off = (r % 2) * (bw * 0.5);
+    for (let c = -1; c <= cols; c++) {
+      const v = (rnd() - 0.5) * 20;
+      ctx.fillStyle = `rgb(${Math.round(202+v)},${Math.round(182+v*0.9)},${Math.round(142+v*0.75)})`;
+      ctx.fillRect(c*bw + off + 1.5, r*bh + 1.5, bw - 3, bh - 3);
+    }
+  }
+  for (let i = 0; i < 600; i++) {
+    ctx.fillStyle = 'rgba(95,80,58,0.06)';
+    ctx.fillRect(rnd()*w, rnd()*h, 6+rnd()*18, 2+rnd()*5);
+  }
+}).tex;
+
+// King's College Chapel Perpendicular Gothic Stained Glass Window
+TEX.chapelWindow = makeCanvasTex(256, 512, (ctx, w, h) => {
+  const rnd = mulberry32(808);
+  // Deep rich stained-glass backdrop (cobalt, gold, ruby, emerald)
+  const g = ctx.createLinearGradient(0, 0, 0, h);
+  g.addColorStop(0, '#30496e');
+  g.addColorStop(0.35, '#6e4e3a');
+  g.addColorStop(0.68, '#365070');
+  g.addColorStop(1, '#4c382c');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, w, h);
+
+  // Stained glass diamond/pane mosaic
+  const cols = 5, rows = 14;
+  const cw = w / cols, rh = h / rows;
+  const pal = ['#2d4d7a','#8a302b','#c28c38','#38644f','#526c8c','#9e5b2e'];
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      ctx.fillStyle = pal[Math.floor(rnd() * pal.length)];
+      ctx.globalAlpha = 0.65;
+      ctx.fillRect(c*cw+4, r*rh+3, cw-8, rh-6);
+    }
+  }
+  ctx.globalAlpha = 1;
+  // Perpendicular stone mullions & transoms
+  ctx.fillStyle = '#b9a37c';
+  for (let c = 0; c <= cols; c++) ctx.fillRect(c*cw - 4, 0, 8, h);
+  ctx.fillRect(0, h*0.48, w, 12);
+  ctx.fillRect(0, h*0.20, w, 10);
+  // Pointed Gothic arch spandrels at top
+  ctx.fillStyle = '#c2ad84';
+  ctx.beginPath();
+  ctx.moveTo(0, 0); ctx.lineTo(w, 0); ctx.lineTo(w, h*0.18);
+  ctx.quadraticCurveTo(w*0.5, 0, 0, h*0.18);
+  ctx.closePath(); ctx.fill();
+}, false).tex;
+
+// Turing's 1936 Manuscript Page ("On Computable Numbers")
+TEX.manuscript = makeCanvasTex(512, 640, (ctx, w, h) => {
+  ctx.fillStyle = '#ede0c2';
+  ctx.fillRect(0, 0, w, h);
+  // Subtle paper aging
+  const grad = ctx.createRadialGradient(w/2, h/2, 80, w/2, h/2, w*0.75);
+  grad.addColorStop(0, 'rgba(255,250,235,0.18)');
+  grad.addColorStop(1, 'rgba(120,88,48,0.22)');
+  ctx.fillStyle = grad; ctx.fillRect(0,0,w,h);
+
+  ctx.fillStyle = '#241b13';
+  ctx.textAlign = 'center';
+  ctx.font = 'bold 21px Georgia, serif';
+  ctx.fillText('ON COMPUTABLE NUMBERS,', w/2, 62);
+  ctx.font = 'italic 16px Georgia, serif';
+  ctx.fillText('WITH AN APPLICATION TO THE', w/2, 86);
+  ctx.font = 'bold 16px Georgia, serif';
+  ctx.fillText('ENTSCHEIDUNGSPROBLEM', w/2, 108);
+  ctx.font = '14px Georgia, serif';
+  ctx.fillText('By A. M. TURING  (King\'s College, Cambridge, 1936)', w/2, 136);
+
+  ctx.strokeStyle = 'rgba(40,28,18,0.45)';
+  ctx.beginPath(); ctx.moveTo(60, 152); ctx.lineTo(w-60, 152); ctx.stroke();
+
+  ctx.textAlign = 'left';
+  ctx.font = '13px Georgia, serif';
+  const lines = [
+    '1. Computing machines. We may compare a man in the',
+    'process of computing a real number to a machine which',
+    'is only capable of a finite number of conditions q1..qR',
+    'which will be called "m-configurations". The machine is',
+    'supplied with a "tape" divided into sections (squares).',
+    '',
+    '3. Examples of computing machines (0 1 0 1 0 1 ...):'
+  ];
+  lines.forEach((ln, i) => ctx.fillText(ln, 46, 184 + i * 24));
+
+  // Hand-drawn m-configuration table
+  ctx.strokeStyle = '#2e2217'; ctx.lineWidth = 1.5;
+  ctx.strokeRect(46, 355, w - 92, 145);
+  ctx.beginPath();
+  ctx.moveTo(46, 385); ctx.lineTo(w-46, 385);
+  ctx.moveTo(145, 355); ctx.lineTo(145, 500);
+  ctx.moveTo(230, 355); ctx.lineTo(230, 500);
+  ctx.moveTo(355, 355); ctx.lineTo(355, 500);
+  ctx.stroke();
+
+  ctx.font = 'bold 13px monospace';
+  ctx.fillText('m-cfg', 64, 375); ctx.fillText('sym', 165, 375);
+  ctx.fillText('operations', 248, 375); ctx.fillText('final', 376, 375);
+
+  const rows = [
+    ['  b', 'None', 'P0, R', '  c'],
+    ['  c', 'None', '  R',   '  e'],
+    ['  e', 'None', 'P1, R', '  f'],
+    ['  f', 'None', '  R',   '  b']
+  ];
+  ctx.font = '14px monospace';
+  rows.forEach((r, i) => {
+    const y = 412 + i * 24;
+    ctx.fillText(r[0], 64, y); ctx.fillText(r[1], 160, y);
+    ctx.fillText(r[2], 254, y); ctx.fillText(r[3], 376, y);
+  });
+
+  // Ink sketch of tape at bottom
+  ctx.font = 'italic 13px Georgia, serif';
+  ctx.fillText('Universal Machine U:  ;DADDCRDAA;DAADDRDAAA;...', 46, 540);
+  for (let i = 0; i < 10; i++) {
+    ctx.strokeRect(56 + i*40, 558, 40, 36);
+    const ch = ['0','','1','','0','','1','','0',''][i];
+    ctx.font = 'bold 18px monospace';
+    ctx.fillText(ch, 70 + i*40, 583);
+  }
+}, false).tex;
+
+// Chalkboard with Turing's 1936 Lecture Notes
+TEX.chalkboard = makeCanvasTex(512, 384, (ctx, w, h) => {
+  const rnd = mulberry32(909);
+  ctx.fillStyle = '#1c2620';
+  ctx.fillRect(0, 0, w, h);
+  // Chalk dust smudges
+  for (let i = 0; i < 320; i++) {
+    ctx.fillStyle = 'rgba(225,232,222,0.025)';
+    ctx.beginPath(); ctx.arc(rnd()*w, rnd()*h, 12+rnd()*36, 0, Math.PI*2); ctx.fill();
+  }
+  ctx.strokeStyle = 'rgba(236, 236, 224, 0.85)';
+  ctx.fillStyle = 'rgba(236, 236, 224, 0.88)';
+  ctx.font = 'italic 22px Georgia, serif';
+  ctx.fillText('Universal Machine  U', 28, 46);
+  ctx.lineWidth = 1.6;
+  ctx.beginPath(); ctx.moveTo(26, 56); ctx.lineTo(252, 56); ctx.stroke();
+
+  // Chalk tape drawing
+  for (let i = 0; i < 9; i++) {
+    ctx.strokeRect(32 + i*48, 86, 48, 44);
+    const sy = ['ə','ə','0',' ','1',' ','0',' ','1'][i];
+    ctx.font = 'bold 20px monospace';
+    ctx.fillText(sy, 48 + i*48, 115);
+  }
+  // Head arrow
+  ctx.beginPath();
+  ctx.moveTo(152, 66); ctx.lineTo(152, 84);
+  ctx.moveTo(145, 76); ctx.lineTo(152, 84); ctx.lineTo(159, 76);
+  ctx.stroke();
+
+  ctx.font = '16px monospace';
+  ctx.fillText('m-config:  b -> c -> e -> f -> b', 32, 168);
+  ctx.fillText('S.D.(M) = ;DADDCRDAA;DAADDRDAAA;', 32, 200);
+  ctx.fillText('D.N.(M) = 313325311731133531117...', 32, 230);
+
+  // Small state diagram
+  const nodes = [[90, 305, 'b'], [210, 285, 'c'], [330, 305, 'e'], [210, 345, 'f']];
+  for (const [nx, ny, lbl] of nodes) {
+    ctx.beginPath(); ctx.arc(nx, ny, 20, 0, Math.PI*2); ctx.stroke();
+    ctx.font = 'italic 18px Georgia, serif';
+    ctx.fillText(lbl, nx - 5, ny + 6);
+  }
+  ctx.beginPath();
+  ctx.moveTo(110, 300); ctx.lineTo(190, 288);
+  ctx.moveTo(230, 288); ctx.lineTo(310, 300);
+  ctx.moveTo(310, 314); ctx.lineTo(230, 342);
+  ctx.moveTo(190, 342); ctx.lineTo(110, 314);
+  ctx.stroke();
+
+  ctx.font = 'italic 15px Georgia, serif';
+  ctx.fillText('Entscheidungsproblem:', 360, 290);
+  ctx.fillText('No general decision', 360, 314);
+  ctx.fillText('procedure exists.', 360, 336);
+}, false).tex;
+
+// Oil Painting Above Mantelpiece (Cambridge Backs & Chapel Silhouette)
+TEX.painting = makeCanvasTex(512, 340, (ctx, w, h) => {
+  const g = ctx.createLinearGradient(0, 0, 0, h);
+  g.addColorStop(0, '#4d6073');
+  g.addColorStop(0.55, '#c7a474');
+  g.addColorStop(0.68, '#536243');
+  g.addColorStop(1, '#263022');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+  // Distant Chapel silhouette
+  ctx.fillStyle = '#6f5f4c';
+  ctx.fillRect(140, 128, 220, 82);
+  for (const tx of [144, 348]) ctx.fillRect(tx, 84, 14, 126);
+  for (let i = 0; i < 8; i++) ctx.fillRect(164 + i*24, 114, 6, 16);
+  // River Cam reflection
+  ctx.fillStyle = 'rgba(195, 168, 122, 0.45)';
+  ctx.beginPath();
+  ctx.moveTo(0, 248); ctx.quadraticCurveTo(250, 215, w, 255);
+  ctx.lineTo(w, 295); ctx.quadraticCurveTo(250, 265, 0, 305); ctx.fill();
+  // Dark foreground willow trees
+  ctx.fillStyle = '#1f2618';
+  ctx.beginPath(); ctx.arc(58, 195, 76, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(460, 185, 86, 0, Math.PI*2); ctx.fill();
+  // Varnish vignette
+  const v = ctx.createRadialGradient(w/2, h/2, 90, w/2, h/2, w*0.65);
+  v.addColorStop(0, 'rgba(0,0,0,0)');
+  v.addColorStop(1, 'rgba(18,12,6,0.45)');
+  ctx.fillStyle = v; ctx.fillRect(0,0,w,h);
+}, false).tex;
+
+// Antique Mantel Clock Face (Dynamic for ticking hands!)
+const clockTexObj = makeCanvasTex(256, 256, () => {}, false, true);
+function drawClockFace(sec) {
+  const { ctx, canvas } = clockTexObj;
+  const w = canvas.width, h = canvas.height, cx = w/2, cy = h/2, r = w*0.44;
+  ctx.fillStyle = '#f2e5c6';
+  ctx.fillRect(0, 0, w, h);
+  ctx.strokeStyle = '#3a2a18'; ctx.lineWidth = 7;
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.stroke();
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(cx, cy, r-10, 0, Math.PI*2); ctx.stroke();
+
+  const romans = ['XII','I','II','III','IV','V','VI','VII','VIII','IX','X','XI'];
+  ctx.fillStyle = '#1e1610';
+  ctx.font = 'bold 17px Georgia, serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2 - Math.PI / 2;
+    ctx.fillText(romans[i], cx + Math.cos(a) * (r - 28), cy + Math.sin(a) * (r - 28));
+  }
+  // 4:15 PM Cambridge golden afternoon + real elapsed seconds
+  const baseMin = 4 * 60 + 15 + sec / 60;
+  const hrA = ((baseMin / 720) * Math.PI * 2) - Math.PI / 2;
+  const minA = (((baseMin % 60) / 60) * Math.PI * 2) - Math.PI / 2;
+  const secA = (((sec % 60) / 60) * Math.PI * 2) - Math.PI / 2;
+
+  ctx.strokeStyle = '#19120c'; ctx.lineCap = 'round';
+  ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(hrA)*52, cy + Math.sin(hrA)*52); ctx.stroke();
+  ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(minA)*76, cy + Math.sin(minA)*76); ctx.stroke();
+  ctx.strokeStyle = '#8b261d';
+  ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(secA)*82, cy + Math.sin(secA)*82); ctx.stroke();
+  ctx.fillStyle = '#b88a3c'; ctx.beginPath(); ctx.arc(cx, cy, 6, 0, Math.PI*2); ctx.fill();
+  updateDynamicTex(clockTexObj);
+}
+drawClockFace(0);
+
+// Dynamic 3D Paper Tape Texture for the Universal Turing Machine!
+const utmTapeTexObj = makeCanvasTex(1024, 160, () => {}, false, false);
+const TAPE_VISIBLE_CELLS = 11; // 5 left, center head, 5 right
+let lastDrawnTapePos = 99999;
+let lastDrawnTapeRev = -1;
+let tapeRevision = 0;
+
+function drawUTMTapeTexture(animHeadPos, stampPulse) {
+  const { ctx, canvas } = utmTapeTexObj;
+  const w = canvas.width, h = canvas.height;
+  // Parchment paper strip background
+  const bg = ctx.createLinearGradient(0, 0, 0, h);
+  bg.addColorStop(0, '#dfcea7');
+  bg.addColorStop(0.15, '#f2e5c6');
+  bg.addColorStop(0.85, '#eee0be');
+  bg.addColorStop(1, '#d9c69c');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, w, h);
+
+  // Top & bottom sprocket rail bands
+  ctx.fillStyle = 'rgba(130, 102, 62, 0.16)';
+  ctx.fillRect(0, 0, w, 24);
+  ctx.fillRect(0, h - 24, w, 24);
+
+  const cellW = w / TAPE_VISIBLE_CELLS;
+  const centerIdx = Math.floor(animHeadPos);
+  const frac = animHeadPos - centerIdx;
+
+  // Draw cells from -7 to +7 relative to centerIdx
+  for (let offset = -7; offset <= 7; offset++) {
+    const cellIdx = centerIdx + offset;
+    const cx = w * 0.5 + (offset - frac) * cellW;
+    const x0 = cx - cellW * 0.5;
+
+    // Highlight active head cell right at center
+    const distFromCenter = Math.abs(cellIdx - animHeadPos);
+    if (distFromCenter < 0.65) {
+      const glow = (1.0 - distFromCenter / 0.65) * (0.28 + stampPulse * 0.25);
+      ctx.fillStyle = `rgba(245, 185, 66, ${glow.toFixed(3)})`;
+      ctx.fillRect(x0 + 2, 24, cellW - 4, h - 48);
+    }
+
+    // Cell vertical divider line
+    ctx.strokeStyle = 'rgba(92, 68, 38, 0.52)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x0, 24); ctx.lineTo(x0, h - 24);
+    ctx.stroke();
+
+    // Sprocket holes along both paper margins
+    ctx.fillStyle = '#3a2b1c';
+    for (const sx of [x0 + cellW * 0.25, x0 + cellW * 0.75]) {
+      ctx.beginPath(); ctx.arc(sx, 12, 4.2, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(sx, h - 12, 4.2, 0, Math.PI * 2); ctx.fill();
+    }
+
+    // Cell index tiny stamp
+    ctx.fillStyle = 'rgba(110, 82, 48, 0.55)';
+    ctx.font = '13px monospace';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText(String(cellIdx), x0 + cellW - 7, h - 28);
+
+    // Printed ink symbol
+    const sym = utm.readCell(cellIdx);
+    if (sym !== '_') {
+      ctx.fillStyle = '#1b130b';
+      ctx.font = 'bold 64px "Courier New", monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(sym, cx, h * 0.5 + 2);
+    } else {
+      ctx.fillStyle = 'rgba(120, 92, 58, 0.22)';
+      ctx.font = '32px monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('·', cx, h * 0.5 + 2);
+    }
+  }
+
+  // Horizontal ink border lines
+  ctx.strokeStyle = 'rgba(92, 68, 38, 0.55)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(0, 24); ctx.lineTo(w, 24);
+  ctx.moveTo(0, h - 24); ctx.lineTo(w, h - 24);
+  ctx.stroke();
+
+  updateDynamicTex(utmTapeTexObj);
+}
+
+// Dynamic 3D Brass Instrument Faceplate on Front of the UTM!
+const utmPanelTexObj = makeCanvasTex(512, 256, () => {}, false, false);
+function drawUTMPanelTexture() {
+  const { ctx, canvas } = utmPanelTexObj;
+  const w = canvas.width, h = canvas.height;
+  // Brushed dark antique brass plate
+  const g = ctx.createLinearGradient(0, 0, 0, h);
+  g.addColorStop(0, '#5a4324');
+  g.addColorStop(0.5, '#46331b');
+  g.addColorStop(1, '#312312');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, w, h);
+
+  // Engraved brass double border
+  ctx.strokeStyle = '#d8ae5e'; ctx.lineWidth = 5;
+  ctx.strokeRect(10, 10, w - 20, h - 20);
+  ctx.strokeStyle = 'rgba(216,174,94,0.45)'; ctx.lineWidth = 1.5;
+  ctx.strokeRect(18, 18, w - 36, h - 36);
+
+  // Title engraving
+  ctx.fillStyle = '#ebd093';
+  ctx.font = 'bold 17px Georgia, serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('UNIVERSAL COMPUTING MACHINE · CAMBRIDGE 1936', w/2, 42);
+
+  // Recessed State Drum Window (Left)
+  ctx.fillStyle = '#18110a';
+  ctx.fillRect(30, 62, 160, 108);
+  ctx.strokeStyle = '#c89b4b'; ctx.lineWidth = 3;
+  ctx.strokeRect(30, 62, 160, 108);
+
+  ctx.fillStyle = '#c9a66b';
+  ctx.font = 'bold 12px Georgia, serif';
+  ctx.fillText('m-CONFIGURATION', 110, 82);
+
+  ctx.fillStyle = utm.halted ? '#ff7d6b' : '#ffe18c';
+  ctx.font = 'bold 40px monospace';
+  ctx.fillText(utm.state.slice(0, 7), 110, 134);
+
+  // Center Window: Scanned Symbol & Next Operation
+  ctx.fillStyle = '#18110a';
+  ctx.fillRect(204, 62, 162, 108);
+  ctx.strokeStyle = '#c89b4b'; ctx.lineWidth = 3;
+  ctx.strokeRect(204, 62, 162, 108);
+
+  const sym = utm.readCell(utm.head);
+  const rule = utm.getActiveRule();
+  ctx.fillStyle = '#c9a66b';
+  ctx.font = 'bold 12px Georgia, serif';
+  ctx.fillText('SCAN / OPERATION', 285, 82);
+
+  ctx.fillStyle = '#f5e4bc';
+  ctx.font = 'bold 28px monospace';
+  ctx.fillText(`[${sym}]`, 248, 126);
+  ctx.fillStyle = '#f0b14d';
+  ctx.font = 'bold 20px monospace';
+  ctx.fillText(rule ? `→${rule.write},${rule.move}` : 'HALT', 316, 125);
+  ctx.fillStyle = '#b99f72';
+  ctx.font = '12px monospace';
+  ctx.fillText(`HEAD POS: ${utm.head}`, 285, 157);
+
+  // Right Odometer: Steps & Status Lamp
+  ctx.fillStyle = '#18110a';
+  ctx.fillRect(380, 62, 102, 108);
+  ctx.strokeStyle = '#c89b4b'; ctx.lineWidth = 3;
+  ctx.strokeRect(380, 62, 102, 108);
+
+  ctx.fillStyle = '#c9a66b';
+  ctx.font = 'bold 12px Georgia, serif';
+  ctx.fillText('STEPS', 431, 82);
+  ctx.fillStyle = '#f2e6c8';
+  ctx.font = 'bold 26px monospace';
+  ctx.fillText(String(utm.steps).padStart(4, '0'), 431, 118);
+
+  const statusCol = utm.halted ? '#d94d43' : (utm.running ? '#48c77a' : '#eab14d');
+  ctx.fillStyle = statusCol;
+  ctx.beginPath(); ctx.arc(406, 150, 7, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#ebd6aa';
+  ctx.font = 'bold 12px monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText(utm.halted ? 'HALT' : (utm.running ? 'RUN' : 'IDLE'), 420, 154);
+
+  // Bottom Button Labels (matching the 3 physical 3D brass buttons!)
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#d9bc82';
+  ctx.font = 'bold 13px Georgia, serif';
+  ctx.fillText('STEP', 135, 224);
+  ctx.fillText('RUN / PAUSE', 256, 224);
+  ctx.fillText('RESET', 377, 224);
+
+  // Program Subtitle
+  ctx.fillStyle = 'rgba(235, 210, 155, 0.72)';
+  ctx.font = 'italic 12px Georgia, serif';
+  ctx.fillText(utm.program.name.slice(0, 52), w/2, 196);
+
+  updateDynamicTex(utmPanelTexObj);
+}
+
+// ============================================================================
+// 6. PROCEDURAL 3D MESH BUILDERS
+// ============================================================================
+function createVAO(positions, normals, uvs, indices) {
+  const vao = gl.createVertexArray();
+  gl.bindVertexArray(vao);
+
+  const bindBuf = (loc, data, size) => {
+    const b = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, b);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data), gl.STATIC_DRAW);
+    gl.enableVertexAttribArray(loc);
+    gl.vertexAttribPointer(loc, size, gl.FLOAT, false, 0, 0);
+  };
+  bindBuf(0, positions, 3);
+  bindBuf(1, normals, 3);
+  bindBuf(2, uvs, 2);
+
+  const ib = gl.createBuffer();
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ib);
+  const use32 = positions.length / 3 > 65535;
+  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, use32 ? new Uint32Array(indices) : new Uint16Array(indices), gl.STATIC_DRAW);
+  gl.bindVertexArray(null);
+  return { vao, count: indices.length, type: use32 ? gl.UNSIGNED_INT : gl.UNSIGNED_SHORT };
+}
+
+function buildBoxData(w, h, d, uvScaleX = 1, uvScaleY = 1) {
+  const hx = w/2, hy = h/2, hz = d/2;
+  const faces = [
+    // +Z
+    { n:[0,0,1],  v:[[-hx,-hy,hz],[hx,-hy,hz],[hx,hy,hz],[-hx,hy,hz]], u:[w*uvScaleX, h*uvScaleY] },
+    // -Z
+    { n:[0,0,-1], v:[[hx,-hy,-hz],[-hx,-hy,-hz],[-hx,hy,-hz],[hx,hy,-hz]], u:[w*uvScaleX, h*uvScaleY] },
+    // +X
+    { n:[1,0,0],  v:[[hx,-hy,hz],[hx,-hy,-hz],[hx,hy,-hz],[hx,hy,hz]], u:[d*uvScaleX, h*uvScaleY] },
+    // -X
+    { n:[-1,0,0], v:[[-hx,-hy,-hz],[-hx,-hy,hz],[-hx,hy,hz],[-hx,hy,-hz]], u:[d*uvScaleX, h*uvScaleY] },
+    // +Y
+    { n:[0,1,0],  v:[[-hx,hy,hz],[hx,hy,hz],[hx,hy,-hz],[-hx,hy,-hz]], u:[w*uvScaleX, d*uvScaleY] },
+    // -Y
+    { n:[0,-1,0], v:[[-hx,-hy,-hz],[hx,-hy,-hz],[hx,-hy,hz],[-hx,-hy,hz]], u:[w*uvScaleX, d*uvScaleY] }
+  ];
+  const P = [], N = [], U = [], I = [];
+  let vi = 0;
+  for (const f of faces) {
+    const uvCoords = [[0, f.u[1]], [f.u[0], f.u[1]], [f.u[0], 0], [0, 0]];
+    for (let k = 0; k < 4; k++) {
+      P.push(...f.v[k]); N.push(...f.n); U.push(...uvCoords[k]);
+    }
+    I.push(vi, vi+1, vi+2, vi, vi+2, vi+3);
+    vi += 4;
+  }
+  return { P, N, U, I };
+}
+
+function buildBoxUnitUV() {
+  return buildBoxData(1, 1, 1, 1, 1);
+}
+
+function buildCylinderData(rTop, rBot, h, segs = 20, capped = true) {
+  const P = [], N = [], U = [], I = [];
+  const hy = h / 2;
+  const slope = (rBot - rTop) / h;
+  for (let i = 0; i <= segs; i++) {
+    const t = i / segs;
+    const a = t * Math.PI * 2;
+    const ca = Math.cos(a), sa = Math.sin(a);
+    const nl = Math.hypot(1, slope);
+    const nx = ca / nl, ny = slope / nl, nz = sa / nl;
+    P.push(ca * rBot, -hy, sa * rBot); N.push(nx, ny, nz); U.push(t, 1);
+    P.push(ca * rTop,  hy, sa * rTop); N.push(nx, ny, nz); U.push(t, 0);
+  }
+  for (let i = 0; i < segs; i++) {
+    const b = i * 2;
+    I.push(b, b+1, b+3, b, b+3, b+2);
+  }
+  if (capped) {
+    // Top cap (+Y)
+    if (rTop > 1e-5) {
+      const cIdx = P.length / 3;
+      P.push(0, hy, 0); N.push(0, 1, 0); U.push(0.5, 0.5);
+      for (let i = 0; i <= segs; i++) {
+        const a = (i / segs) * Math.PI * 2;
+        P.push(Math.cos(a)*rTop, hy, Math.sin(a)*rTop);
+        N.push(0, 1, 0);
+        U.push(0.5 + Math.cos(a)*0.5, 0.5 + Math.sin(a)*0.5);
+      }
+      for (let i = 0; i < segs; i++) I.push(cIdx, cIdx + 1 + i + 1, cIdx + 1 + i);
+    }
+    // Bottom cap (-Y)
+    if (rBot > 1e-5) {
+      const cIdx = P.length / 3;
+      P.push(0, -hy, 0); N.push(0, -1, 0); U.push(0.5, 0.5);
+      for (let i = 0; i <= segs; i++) {
+        const a = (i / segs) * Math.PI * 2;
+        P.push(Math.cos(a)*rBot, -hy, Math.sin(a)*rBot);
+        N.push(0, -1, 0);
+        U.push(0.5 + Math.cos(a)*0.5, 0.5 + Math.sin(a)*0.5);
+      }
+      for (let i = 0; i < segs; i++) I.push(cIdx, cIdx + 1 + i, cIdx + 1 + i + 1);
+    }
+  }
+  return { P, N, U, I };
+}
+
+function buildSphereData(r, lat = 14, lon = 22) {
+  const P = [], N = [], U = [], I = [];
+  for (let y = 0; y <= lat; y++) {
+    const v = y / lat;
+    const phi = v * Math.PI;
+    const sp = Math.sin(phi), cp = Math.cos(phi);
+    for (let x = 0; x <= lon; x++) {
+      const u = x / lon;
+      const th = u * Math.PI * 2;
+      const nx = Math.cos(th) * sp, ny = cp, nz = Math.sin(th) * sp;
+      P.push(nx*r, ny*r, nz*r);
+      N.push(nx, ny, nz);
+      U.push(u, v);
+    }
+  }
+  const stride = lon + 1;
+  for (let y = 0; y < lat; y++) {
+    for (let x = 0; x < lon; x++) {
+      const a = y * stride + x;
+      const b = a + stride;
+      I.push(a, a+1, b, b, a+1, b+1);
+    }
+  }
+  return { P, N, U, I };
+}
+
+function buildLatheData(profile, segs = 20) {
+  // profile: array of [radius, y] from bottom to top
+  const P = [], N = [], U = [], I = [];
+  const nPts = profile.length;
+  for (let i = 0; i < nPts; i++) {
+    const [r, y] = profile[i];
+    const prev = profile[Math.max(0, i-1)];
+    const next = profile[Math.min(nPts-1, i+1)];
+    const dr = next[0] - prev[0];
+    const dy = next[1] - prev[1];
+    const nl = Math.hypot(dy, -dr) || 1;
+    const nr = dy / nl, ny = -dr / nl;
+    const v = 1 - i / (nPts - 1);
+    for (let s = 0; s <= segs; s++) {
+      const u = s / segs;
+      const a = u * Math.PI * 2;
+      const ca = Math.cos(a), sa = Math.sin(a);
+      P.push(ca * r, y, sa * r);
+      N.push(ca * nr, ny, sa * nr);
+      U.push(u, v);
+    }
+  }
+  const stride = segs + 1;
+  for (let i = 0; i < nPts - 1; i++) {
+    for (let s = 0; s < segs; s++) {
+      const a = i * stride + s;
+      const b = a + stride;
+      I.push(a, b, a+1, a+1, b, b+1);
+    }
+  }
+  return { P, N, U, I };
+}
+
+function buildPlaneData(w, h, segX = 1, segY = 1) {
+  const P = [], N = [], U = [], I = [];
+  for (let y = 0; y <= segY; y++) {
+    const ty = y / segY;
+    for (let x = 0; x <= segX; x++) {
+      const tx = x / segX;
+      P.push((tx - 0.5) * w, (0.5 - ty) * h, 0);
+      N.push(0, 0, 1);
+      U.push(tx, ty);
+    }
+  }
+  const s = segX + 1;
+  for (let y = 0; y < segY; y++) {
+    for (let x = 0; x < segX; x++) {
+      const a = y * s + x;
+      I.push(a, a+s, a+1, a+1, a+s, a+s+1);
+    }
+  }
+  return { P, N, U, I };
+}
+
+// Pleated Velvet Curtain Mesh
+function buildCurtainData(w, h) {
+  const segX = 26, segY = 12;
+  const P = [], N = [], U = [], I = [];
+  for (let y = 0; y <= segY; y++) {
+    const ty = y / segY;
+    const gather = 0.85 + 0.15 * Math.sin(ty * Math.PI);
+    for (let x = 0; x <= segX; x++) {
+      const tx = x / segX;
+      const px = (tx - 0.5) * w * gather;
+      const py = (0.5 - ty) * h;
+      const pz = Math.sin(tx * Math.PI * 7.0) * 0.048 * (0.4 + 0.6 * ty);
+      const dzdx = Math.cos(tx * Math.PI * 7.0) * 0.048 * Math.PI * 7.0 / w;
+      const nl = Math.hypot(dzdx, 1);
+      P.push(px, py, pz);
+      N.push(-dzdx / nl, 0, 1 / nl);
+      U.push(tx, ty);
+    }
+  }
+  const s = segX + 1;
+  for (let y = 0; y < segY; y++) {
+    for (let x = 0; x < segX; x++) {
+      const a = y * s + x;
+      I.push(a, a+s, a+1, a+1, a+s, a+s+1);
+    }
+  }
+  return { P, N, U, I };
+}
+
+// Curved 3D Paper Tape Strip running over rollers and flat across the UTM platen
+function buildUTMTapeData() {
+  const segX = 48;
+  const widthZ = 0.072;
+  const P = [], N = [], U = [], I = [];
+  for (let i = 0; i <= segX; i++) {
+    const t = i / segX;
+    // x spans -0.285 to +0.285
+    const x = (t - 0.5) * 0.57;
+    // Flat across center platen [-0.21, 0.21], curves gently up toward supply/take-up reels on sides
+    let y = 0.0;
+    let dydx = 0.0;
+    const edge = Math.abs(x) - 0.205;
+    if (edge > 0) {
+      y = edge * edge * 5.2;
+      dydx = Math.sign(x) * edge * 10.4;
+    }
+    const nl = Math.hypot(-dydx, 1);
+    const nx = -dydx / nl, ny = 1 / nl;
+    // Front edge (+Z) and back edge (-Z)
+    P.push(x, y,  widthZ * 0.5); N.push(nx, ny, 0); U.push(t, 1);
+    P.push(x, y, -widthZ * 0.5); N.push(nx, ny, 0); U.push(t, 0);
+  }
+  for (let i = 0; i < segX; i++) {
+    const a = i * 2;
+    I.push(a, a+2, a+1, a+1, a+2, a+3);
+  }
+  return { P, N, U, I };
+}
+
+const MESH = {
+  box:      createVAO(...Object.values(buildBoxUnitUV())),
+  cyl:      createVAO(...Object.values(buildCylinderData(0.5, 0.5, 1, 20, true))),
+  cyl8:     createVAO(...Object.values(buildCylinderData(0.5, 0.5, 1, 8, true))),
+  cone:     createVAO(...Object.values(buildCylinderData(0.01, 0.5, 1, 12, true))),
+  cone8:    createVAO(...Object.values(buildCylinderData(0.01, 0.5, 1, 8, true))),
+  sphere:   createVAO(...Object.values(buildSphereData(0.5, 14, 20))),
+  plane:    createVAO(...Object.values(buildPlaneData(1, 1, 1, 1))),
+  curtain:  createVAO(...Object.values(buildCurtainData(0.74, 2.48))),
+  utmTape:  createVAO(...Object.values(buildUTMTapeData())),
+  // Turned Georgian leg / baluster
+  turnedLeg: createVAO(...Object.values(buildLatheData([
+    [0.022, 0.00], [0.028, 0.04], [0.020, 0.08], [0.032, 0.20],
+    [0.024, 0.34], [0.036, 0.48], [0.026, 0.58], [0.038, 0.68], [0.038, 0.75]
+  ], 14))),
+  // Turned brass candlestick / lamp pedestal
+  lampBase: createVAO(...Object.values(buildLatheData([
+    [0.09, 0.00], [0.088, 0.018], [0.062, 0.035], [0.022, 0.065],
+    [0.016, 0.16], [0.024, 0.22], [0.014, 0.28], [0.018, 0.34]
+  ], 18))),
+  // Porcelain Teacup
+  teacup: createVAO(...Object.values(buildLatheData([
+    [0.022, 0.00], [0.036, 0.025], [0.042, 0.062], [0.039, 0.065], [0.033, 0.025], [0.001, 0.012]
+  ], 16))),
+  // Brass Inkwell
+  inkwell: createVAO(...Object.values(buildLatheData([
+    [0.036, 0.00], [0.034, 0.015], [0.028, 0.042], [0.018, 0.052], [0.020, 0.064], [0.014, 0.068]
+  ], 14))),
+  // Gothic Pinnacle Finial
+  pinnacle: createVAO(...Object.values(buildLatheData([
+    [0.32, 0.0], [0.28, 0.7], [0.34, 0.8], [0.22, 1.5], [0.12, 2.3], [0.02, 3.0]
+  ], 8)))
+};
+
+// Skybox cube VAO
+const skyCubeVAO = (() => {
+  const b = buildBoxData(2, 2, 2);
+  return createVAO(b.P, b.N, b.U, b.I);
+})();
+
+// Dust Motes VAO
+const DUST_COUNT = 160;
+const dustVAO = (() => {
+  const rnd = mulberry32(4242);
+  const pos = [], phase = [];
+  for (let i = 0; i < DUST_COUNT; i++) {
+    pos.push((rnd() - 0.5) * 5.0, 0.5 + rnd() * 2.5, -2.5 + rnd() * 4.4);
+    phase.push(rnd() * Math.PI * 2);
+  }
+  const vao = gl.createVertexArray();
+  gl.bindVertexArray(vao);
+  const b0 = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, b0);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(pos), gl.STATIC_DRAW);
+  gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
+  const b1 = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, b1);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(phase), gl.STATIC_DRAW);
+  gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1, 1, gl.FLOAT, false, 0, 0);
+  gl.bindVertexArray(null);
+  return vao;
+})();
+
+// ============================================================================
+// 7. SCENE GRAPH & WORLD CONSTRUCTION
+// ============================================================================
+const opaqueObjects = [];
+const transparentObjects = [];
+const colliders = []; // { minX, maxX, minZ, maxZ }
+const interactables = []; // clickable 3D buttons/objects on desk
+
+function addObj(opts) {
+  const model = opts.model || M4.trs(
+    opts.pos?.[0]||0, opts.pos?.[1]||0, opts.pos?.[2]||0,
+    opts.rot?.[0]||0, opts.rot?.[1]||0, opts.rot?.[2]||0,
+    opts.scale?.[0]??1, opts.scale?.[1]??1, opts.scale?.[2]??1
+  );
+  const item = {
+    mesh: opts.mesh || MESH.box,
+    model,
+    normalMat: M4.normalMat3(model),
+    tex: opts.tex || null,
+    color: opts.color || [1, 1, 1, 1],
+    emissive: opts.emissive || [0, 0, 0],
+    roughness: opts.roughness ?? 0.65,
+    metallic: opts.metallic ?? 0.0,
+    isExterior: opts.isExterior ? 1.0 : 0.0,
+    castShadow: opts.castShadow ?? (!opts.isExterior && !opts.transparent),
+    receiveShadow: opts.receiveShadow ?? !opts.isExterior,
+    doubleSided: !!opts.doubleSided,
+    transparent: !!opts.transparent
+  };
+  if (item.transparent) transparentObjects.push(item);
+  else opaqueObjects.push(item);
+  return item;
+}
+
+function setObjTransform(obj, tx, ty, tz, rx, ry, rz, sx, sy, sz) {
+  obj.model = M4.trs(tx, ty, tz, rx, ry, rz, sx, sy, sz);
+  obj.normalMat = M4.normalMat3(obj.model);
+}
+
+// Helper for UV-tiled architectural box
+function addTiledBox(w, h, d, pos, tex, tileX, tileY, opts = {}) {
+  const data = buildBoxData(w, h, d, tileX / Math.max(w, 0.01), tileY / Math.max(h, 0.01));
+  // For floor/ceiling top faces, tile across w & d
+  if (opts.isFloor) {
+    const fdata = buildBoxData(w, h, d, tileX / w, tileY / d);
+    return addObj({ ...opts, mesh: createVAO(fdata.P, fdata.N, fdata.U, fdata.I), pos, tex });
+  }
+  return addObj({ ...opts, mesh: createVAO(data.P, data.N, data.U, data.I), pos, tex });
+}
+
+// --- A. ROOM ARCHITECTURE (6.6m wide X[-3.3,3.3], 5.6m deep Z[-2.8,2.8], 3.4m tall) ---
+function buildRoom() {
+  // Oak Floor
+  addTiledBox(6.6, 0.12, 5.6, [0, -0.06, 0], TEX.oakFloor, 4, 4, {
+    isFloor: true, roughness: 0.42, castShadow: false
+  });
+  // Plaster Ceiling
+  addTiledBox(6.6, 0.14, 5.6, [0, 3.47, 0], TEX.plaster, 3, 3, {
+    isFloor: true, color: [0.95, 0.92, 0.86, 1], roughness: 0.92, castShadow: true
+  });
+  // Ceiling timber beams
+  for (const bx of [-2.1, 0.0, 2.1]) {
+    addObj({ pos:[bx, 3.32, 0], scale:[0.16, 0.16, 5.6], tex: TEX.oakDark, roughness: 0.65 });
+  }
+
+  // East Wall (+X = 3.3), West Wall (-X = -3.3), South Wall (+Z = 2.8)
+  // Upper plaster + lower dark oak wainscot (Y = 0 to 1.08)
+  const addWall = (w, h, d, pos, tileW) => {
+    addTiledBox(w, h, d, pos, TEX.plaster, tileW, 2, { color:[0.92,0.89,0.82,1], roughness:0.88 });
+  };
+  const addDado = (w, h, d, pos, tileW) => {
+    addTiledBox(w, h, d, pos, TEX.wainscot, tileW, 1, { roughness:0.55 });
+  };
+
+  // West wall (X = -3.3)
+  addWall(0.18, 2.34, 5.6, [-3.39, 2.23, 0], 3);
+  addDado(0.18, 1.08, 5.6, [-3.38, 0.54, 0], 4);
+  // East wall (X = +3.3)
+  addWall(0.18, 2.34, 5.6, [3.39, 2.23, 0], 3);
+  addDado(0.18, 1.08, 5.6, [3.38, 0.54, 0], 4);
+  // South wall (Z = +2.8)
+  addWall(6.6, 2.34, 0.18, [0, 2.23, 2.89], 3);
+  addDado(6.6, 1.08, 0.18, [0, 0.54, 2.88], 4);
+
+  // North Window Wall (Z = -2.8) with LARGE OPEN GEORGIAN WINDOW BAY: X in [-1.65, 1.65], Y in [0.68, 3.05]
+  // Left pier X[-3.3, -1.65] (w=1.65, center=-2.475)
+  addWall(1.65, 2.34, 0.34, [-2.475, 2.23, -2.97], 1);
+  addDado(1.65, 1.08, 0.34, [-2.475, 0.54, -2.96], 1.2);
+  // Right pier X[1.65, 3.3] (w=1.65, center=2.475)
+  addWall(1.65, 2.34, 0.34, [2.475, 2.23, -2.97], 1);
+  addDado(1.65, 1.08, 0.34, [2.475, 0.54, -2.96], 1.2);
+  // Below window apron X[-1.65, 1.65], Y[0, 0.68]
+  addDado(3.30, 0.68, 0.34, [0, 0.34, -2.96], 2.5);
+  // Above window header X[-1.65, 1.65], Y[3.05, 3.4]
+  addWall(3.30, 0.36, 0.34, [0, 3.23, -2.97], 2);
+
+  // Deep oak window sill & recessed window architrave
+  addObj({ pos:[0, 0.69, -2.94], scale:[3.46, 0.06, 0.44], tex:TEX.oakDark, roughness:0.45 });
+  addObj({ pos:[-1.68, 1.86, -2.95], scale:[0.09, 2.40, 0.38], tex:TEX.oakDark, roughness:0.5 });
+  addObj({ pos:[ 1.68, 1.86, -2.95], scale:[0.09, 2.40, 0.38], tex:TEX.oakDark, roughness:0.5 });
+  addObj({ pos:[0, 3.07, -2.95], scale:[3.46, 0.09, 0.38], tex:TEX.oakDark, roughness:0.5 });
+
+  // Georgian Sash Window Mullions & Glazing Bars (casts authentic sunlit window lattice onto desk!)
+  const winZ = -3.02;
+  const creamPaint = [0.89, 0.85, 0.76, 1];
+  // Two main vertical bay dividers
+  for (const mx of [-0.55, 0.55]) {
+    addObj({ pos:[mx, 1.86, winZ], scale:[0.055, 2.36, 0.06], color:creamPaint, roughness:0.55 });
+  }
+  // Thin vertical glazing bars inside each bay
+  for (const gx of [-1.10, 0.0, 1.10]) {
+    addObj({ pos:[gx, 1.86, winZ], scale:[0.022, 2.36, 0.032], color:creamPaint, roughness:0.55 });
+  }
+  // Horizontal sash meeting rail (thicker) & muntins
+  addObj({ pos:[0, 1.86, winZ], scale:[3.30, 0.055, 0.055], color:creamPaint, roughness:0.55 });
+  for (const gy of [1.14, 1.50, 2.26, 2.66]) {
+    addObj({ pos:[0, gy, winZ], scale:[3.30, 0.022, 0.032], color:creamPaint, roughness:0.55 });
+  }
+
+  // Subtle Translucent Window Glass Panes
+  addObj({
+    mesh: MESH.plane, pos:[0, 1.86, winZ - 0.01], scale:[3.28, 2.34, 1],
+    color:[0.82, 0.90, 0.96, 0.09], roughness:0.08, metallic:0.15,
+    transparent:true, doubleSided:true, castShadow:false, receiveShadow:false
+  });
+
+  // Brass Curtain Rod & Burgundy Velvet Drapes
+  addObj({ mesh:MESH.cyl, pos:[0, 3.16, -2.72], rot:[0,0,Math.PI/2], scale:[0.032, 4.15, 0.032], color:[0.82,0.64,0.28,1], metallic:0.85, roughness:0.25 });
+  for (const sx of [-2.10, 2.10]) {
+    addObj({ mesh:MESH.sphere, pos:[sx, 3.16, -2.72], scale:[0.075,0.075,0.075], color:[0.86,0.68,0.30,1], metallic:0.88, roughness:0.22 });
+  }
+  addObj({ mesh:MESH.curtain, pos:[-1.84, 1.88, -2.69], color:[0.44, 0.11, 0.13, 1], roughness:0.92, doubleSided:true });
+  addObj({ mesh:MESH.curtain, pos:[ 1.84, 1.88, -2.69], color:[0.44, 0.11, 0.13, 1], roughness:0.92, doubleSided:true });
+
+  // Molded Crown Cornice & Baseboard Skirting
+  const corniceCol = [0.28, 0.17, 0.10, 1];
+  addObj({ pos:[0, 3.36, -2.76], scale:[6.6, 0.09, 0.09], color:corniceCol, roughness:0.6 });
+  addObj({ pos:[0, 3.36,  2.76], scale:[6.6, 0.09, 0.09], color:corniceCol, roughness:0.6 });
+  addObj({ pos:[-3.26, 3.36, 0], scale:[0.09, 0.09, 5.6], color:corniceCol, roughness:0.6 });
+  addObj({ pos:[ 3.26, 3.36, 0], scale:[0.09, 0.09, 5.6], color:corniceCol, roughness:0.6 });
+
+  // Overhead Brass Pendant Chandelier
+  addObj({ mesh:MESH.cyl, pos:[0, 3.05, 0.1], scale:[0.018, 0.72, 0.018], color:[0.78,0.60,0.26,1], metallic:0.85, roughness:0.28 });
+  addObj({ mesh:MESH.cyl, pos:[0, 3.38, 0.1], scale:[0.16, 0.05, 0.16], color:[0.78,0.60,0.26,1], metallic:0.85, roughness:0.28 });
+  addObj({ mesh:MESH.sphere, pos:[0, 2.66, 0.1], scale:[0.34, 0.20, 0.34], color:[0.98,0.92,0.78,1], emissive:[0.52,0.38,0.18], roughness:0.35, castShadow:false });
+
+  // Persian Rug on Oak Floor
+  addObj({ pos:[-0.25, 0.005, 0.58], scale:[2.95, 0.01, 2.15], tex:TEX.rug, roughness:0.92, castShadow:false });
+
+  // Six-Panel Cambridge Staircase Door on South Wall (Z = +2.8, X = 1.25)
+  addObj({ pos:[1.25, 1.08, 2.77], scale:[1.02, 2.16, 0.06], tex:TEX.oakDark, roughness:0.52 });
+  addObj({ pos:[1.25, 2.20, 2.75], scale:[1.16, 0.09, 0.09], color:[0.22,0.13,0.08,1], roughness:0.55 });
+  addObj({ pos:[0.72, 1.08, 2.75], scale:[0.08, 2.16, 0.09], color:[0.22,0.13,0.08,1], roughness:0.55 });
+  addObj({ pos:[1.78, 1.08, 2.75], scale:[0.08, 2.16, 0.09], color:[0.22,0.13,0.08,1], roughness:0.55 });
+  // Brass doorknob & plate
+  addObj({ pos:[0.86, 0.98, 2.73], scale:[0.05, 0.18, 0.012], color:[0.84,0.66,0.30,1], metallic:0.85, roughness:0.24 });
+  addObj({ mesh:MESH.sphere, pos:[0.86, 1.02, 2.68], scale:[0.055,0.055,0.055], color:[0.88,0.70,0.32,1], metallic:0.9, roughness:0.18 });
+}
+
+// --- B. EXTERIOR DIORAMA: KING'S COLLEGE FRONT COURT & KING'S COLLEGE CHAPEL ---
+function buildKingsCollegeChapel() {
+  const groundY = -2.45;
+  // Front Court emerald-autumn lawn
+  addObj({
+    pos:[0, groundY - 0.1, -24], scale:[76, 0.2, 54],
+    color:[0.30, 0.42, 0.22, 1], roughness:0.95, isExterior:true
+  });
+  // Gravel courtyard walkway & low stone court wall
+  addObj({ pos:[0, groundY + 0.015, -14.5], scale:[60, 0.04, 3.6], color:[0.72, 0.65, 0.52, 1], roughness:0.9, isExterior:true });
+  addObj({ pos:[0, groundY + 0.015, -21.5], scale:[4.2, 0.04, 15.0], color:[0.72, 0.65, 0.52, 1], roughness:0.9, isExterior:true });
+  addObj({ pos:[0, groundY + 0.48, -11.5], scale:[48, 0.96, 0.55], tex:TEX.limestone, roughness:0.85, isExterior:true });
+
+  // King's College Chapel — iconic Perpendicular Gothic architecture!
+  // Positioned at (-0.8, groundY, -31.5), subtly angled (+11 deg) so we see the long buttressed facade + grand corner spires!
+  const chapelX = -0.6, chapelZ = -31.0, chapelYaw = 0.17;
+  const C = (lx, ly, lz, sx, sy, sz, opts = {}) => {
+    const base = M4.mul(M4.translate(chapelX, groundY, chapelZ), M4.rotY(chapelYaw));
+    let local = M4.translate(lx, ly, lz);
+    if (opts.rx) local = M4.mul(local, M4.rotX(opts.rx));
+    if (opts.ry) local = M4.mul(local, M4.rotY(opts.ry));
+    if (opts.rz) local = M4.mul(local, M4.rotZ(opts.rz));
+    local = M4.mul(local, M4.scale(sx, sy, sz));
+    addObj({ ...opts, model: M4.mul(base, local), isExterior: true });
+  };
+
+  const naveLen = 22.0; // along local X [-11, +11]
+  const naveW   = 7.6;  // along local Z [-3.8, +3.8]
+  const wallH   = 9.2;  // limestone main walls
+
+  // Main Limestone Nave Body
+  C(0, wallH/2, 0, naveLen, wallH, naveW, { tex: TEX.limestone, color:[1.02, 0.96, 0.86, 1], roughness:0.82 });
+  // Stepped Stone Plinth Base
+  C(0, 0.55, 0, naveLen + 0.8, 1.1, naveW + 0.8, { tex: TEX.limestone, color:[0.90, 0.84, 0.74, 1], roughness:0.86 });
+  // Pitched Lead Roof behind pierced parapet
+  C(0, wallH + 1.1, -1.2, naveLen - 0.8, 0.25, 4.4, { rx: 0.42, color:[0.38, 0.42, 0.45, 1], roughness:0.52, metallic:0.25 });
+  C(0, wallH + 1.1,  1.2, naveLen - 0.8, 0.25, 4.4, { rx:-0.42, color:[0.38, 0.42, 0.45, 1], roughness:0.52, metallic:0.25 });
+
+  // Pierced Gothic Parapet Battlements along front & back rooflines
+  for (let i = -10; i <= 10; i++) {
+    const x = i * 1.05;
+    C(x, wallH + 0.42, naveW/2 + 0.04, 0.58, 0.84, 0.26, { tex:TEX.limestone, color:[1.04,0.98,0.88,1], roughness:0.8 });
+  }
+  // Horizontal cornice stringcourses
+  C(0, wallH - 0.1, naveW/2 + 0.14, naveLen + 0.5, 0.32, 0.34, { tex:TEX.limestone, roughness:0.8 });
+  C(0, 2.7, naveW/2 + 0.10, naveLen + 0.4, 0.24, 0.24, { tex:TEX.limestone, roughness:0.8 });
+
+  // 9 Tall Gothic Bays: Alternating Stepped Buttresses with Pinnacles + Stained-Glass Windows!
+  const bayCount = 9;
+  const baySpan = (naveLen - 2.2) / bayCount;
+  for (let b = 0; b <= bayCount; b++) {
+    const bx = -(naveLen - 2.2)/2 + b * baySpan;
+    // Lower massive buttress pier
+    C(bx, 2.4, naveW/2 + 0.65, 0.72, 4.8, 1.35, { tex:TEX.limestone, color:[0.98,0.92,0.82,1], roughness:0.82 });
+    // Upper stepped buttress pier
+    C(bx, 6.7, naveW/2 + 0.42, 0.56, 4.6, 0.92, { tex:TEX.limestone, color:[1.02,0.96,0.86,1], roughness:0.80 });
+    // Sculpted Gothic Pinnacle atop every buttress!
+    C(bx, wallH + 0.15, naveW/2 + 0.36, 0.72, 0.75, 0.72, { mesh:MESH.pinnacle, tex:TEX.limestone, color:[1.05,0.98,0.86,1], roughness:0.78 });
+
+    // Stained-glass lancet window between buttresses
+    if (b < bayCount) {
+      const wx = bx + baySpan * 0.5;
+      C(wx, 5.7, naveW/2 + 0.06, baySpan * 0.66, 5.6, 0.08, {
+        tex: TEX.chapelWindow, roughness:0.25, metallic:0.15, emissive:[0.10, 0.08, 0.05]
+      });
+      // Lower side-chapel alcove between buttresses
+      C(wx, 1.55, naveW/2 + 0.42, baySpan * 0.74, 2.8, 0.84, { tex:TEX.limestone, color:[0.94,0.88,0.78,1], roughness:0.85 });
+    }
+  }
+
+  // Grand West Gable End Window (facing -X, visible from our 3/4 angle!)
+  C(-naveLen/2 - 0.06, 5.4, 0, 0.10, 6.2, 4.4, {
+    tex: TEX.chapelWindow, roughness:0.25, metallic:0.15, emissive:[0.12, 0.09, 0.06]
+  });
+
+  // THE FOUR ICONIC CORNER OCTAGONAL TURRET SPIRES OF KING'S COLLEGE CHAPEL!
+  const corners = [
+    [-naveLen/2 - 0.15,  naveW/2 + 0.25],
+    [ naveLen/2 + 0.15,  naveW/2 + 0.25],
+    [-naveLen/2 - 0.15, -naveW/2 - 0.25],
+    [ naveLen/2 + 0.15, -naveW/2 - 0.25]
+  ];
+  for (const [cx, cz] of corners) {
+    // Tall octagonal limestone shaft
+    C(cx, 6.2, cz, 1.95, 12.4, 1.95, { mesh:MESH.cyl8, tex:TEX.limestone, color:[1.03,0.96,0.85,1], roughness:0.8 });
+    // Turret collar rings
+    C(cx, 9.6, cz, 2.25, 0.34, 2.25, { mesh:MESH.cyl8, tex:TEX.limestone, roughness:0.78 });
+    C(cx, 12.1, cz, 2.15, 0.30, 2.15, { mesh:MESH.cyl8, tex:TEX.limestone, roughness:0.78 });
+    // Pierced ogee lantern cupola + spire finial
+    C(cx, 13.0, cz, 1.75, 1.55, 1.75, { mesh:MESH.sphere, tex:TEX.limestone, color:[1.06,0.99,0.88,1], roughness:0.75 });
+    C(cx, 14.3, cz, 0.72, 1.75, 0.72, { mesh:MESH.cone8, tex:TEX.limestone, color:[1.06,0.99,0.88,1], roughness:0.72 });
+    // Four mini corner pinnacles around each turret crown
+    for (let k = 0; k < 4; k++) {
+      const ka = k * Math.PI * 0.5 + Math.PI * 0.25;
+      C(cx + Math.cos(ka)*0.82, 12.2, cz + Math.sin(ka)*0.82, 0.36, 0.55, 0.36, {
+        mesh:MESH.pinnacle, tex:TEX.limestone, roughness:0.76
+      });
+    }
+  }
+
+  // Autumn Cambridge Trees framing the left & right edges of the Front Court view
+  const trees = [
+    [-16.5, -18.5, 1.15, [0.46, 0.38, 0.15, 1]],
+    [-13.5, -24.0, 0.95, [0.58, 0.30, 0.14, 1]],
+    [ 14.2, -19.5, 1.20, [0.34, 0.42, 0.18, 1]],
+    [ 17.5, -25.5, 1.10, [0.54, 0.34, 0.15, 1]]
+  ];
+  for (const [tx, tz, sc, col] of trees) {
+    addObj({ mesh:MESH.cyl, pos:[tx, groundY + 1.8*sc, tz], scale:[0.42*sc, 3.6*sc, 0.42*sc], color:[0.30,0.22,0.16,1], roughness:0.9, isExterior:true });
+    addObj({ mesh:MESH.sphere, pos:[tx, groundY + 4.4*sc, tz], scale:[3.2*sc, 2.8*sc, 3.0*sc], color:col, roughness:0.92, isExterior:true });
+    addObj({ mesh:MESH.sphere, pos:[tx + 1.1*sc, groundY + 3.8*sc, tz + 0.5*sc], scale:[2.2*sc, 2.0*sc, 2.2*sc], color:[col[0]*1.1, col[1]*1.05, col[2], 1], roughness:0.92, isExterior:true });
+  }
+}
+
+// --- C. WEST WALL: FIREPLACE, MANTEL CLOCK, PAINTING, WINGBACK ARMCHAIR ---
+const flameQuads = [];
+function buildFireplaceAndNook() {
+  // Protruding Chimney Breast on West Wall (X = -3.3 to -2.76, Z in [-0.95, 0.95])
+  addTiledBox(0.56, 3.40, 1.92, [-3.02, 1.70, 0.0], TEX.plaster, 1.5, 2.5, { color:[0.90,0.86,0.79,1], roughness:0.88 });
+  // Stone Hearth Slab
+  addObj({ pos:[-2.62, 0.035, 0.0], scale:[0.96, 0.07, 1.66], color:[0.36, 0.34, 0.31, 1], roughness:0.75 });
+  // Brick Fire Surround
+  addTiledBox(0.16, 1.24, 1.38, [-2.72, 0.69, 0.0], TEX.brick, 1.5, 1.5, { roughness:0.88 });
+  // Recessed dark firebox cavity (framed visually with brick jambs + black cast-iron fireback)
+  addObj({ pos:[-2.63, 0.48, 0.0], scale:[0.06, 0.78, 0.76], color:[0.07, 0.06, 0.06, 1], roughness:0.95 });
+  // Left/right brick cheek piers around firebox
+  addObj({ pos:[-2.60, 0.48, -0.48], scale:[0.22, 0.84, 0.24], tex:TEX.brick, roughness:0.88 });
+  addObj({ pos:[-2.60, 0.48,  0.48], scale:[0.22, 0.84, 0.24], tex:TEX.brick, roughness:0.88 });
+
+  // Carved Dark Oak Mantelpiece & Fluted Pilasters
+  addObj({ pos:[-2.62, 1.36, 0.0], scale:[0.36, 0.09, 1.72], tex:TEX.oakDark, roughness:0.45 });
+  addObj({ pos:[-2.64, 1.26, 0.0], scale:[0.28, 0.14, 1.54], tex:TEX.oakDark, roughness:0.48 });
+  addObj({ pos:[-2.64, 0.65, -0.70], scale:[0.24, 1.22, 0.18], tex:TEX.oakDark, roughness:0.48 });
+  addObj({ pos:[-2.64, 0.65,  0.70], scale:[0.24, 1.22, 0.18], tex:TEX.oakDark, roughness:0.48 });
+
+  // Cast-iron Fire Grate, Glowing Coal Bed, Charred Logs
+  addObj({ pos:[-2.52, 0.14, 0.0], scale:[0.24, 0.06, 0.56], color:[0.12,0.11,0.11,1], metallic:0.7, roughness:0.65 });
+  for (let i = -2; i <= 2; i++) {
+    addObj({ pos:[-2.40, 0.24, i*0.11], scale:[0.025, 0.20, 0.025], color:[0.14,0.13,0.13,1], metallic:0.75, roughness:0.6 });
+  }
+  // Glowing red-orange embers
+  const rnd = mulberry32(777);
+  for (let i = 0; i < 14; i++) {
+    addObj({
+      mesh:MESH.sphere,
+      pos:[-2.50 + (rnd()-0.5)*0.14, 0.19 + rnd()*0.05, (rnd()-0.5)*0.42],
+      scale:[0.08+rnd()*0.05, 0.06+rnd()*0.04, 0.08+rnd()*0.05],
+      color:[0.18,0.06,0.03,1],
+      emissive:[1.35 + rnd()*0.5, 0.36 + rnd()*0.22, 0.04],
+      roughness:0.9, castShadow:false
+    });
+  }
+  // Stacked oak logs
+  addObj({ mesh:MESH.cyl, pos:[-2.50, 0.24, -0.05], rot:[1.28, 0.2, 0.35], scale:[0.09, 0.48, 0.09], color:[0.16,0.10,0.07,1], emissive:[0.28,0.06,0.01], roughness:0.92 });
+  addObj({ mesh:MESH.cyl, pos:[-2.49, 0.27,  0.07], rot:[1.72,-0.15,-0.25], scale:[0.08, 0.44, 0.08], color:[0.14,0.09,0.06,1], emissive:[0.24,0.05,0.01], roughness:0.92 });
+
+  // Animated 3D Flame Quads (rendered in FX pass)
+  flameQuads.push(
+    { pos:[-2.48, 0.44,  0.00], rotY: Math.PI * 0.5, sx: 0.44, sy: 0.48, seed: 0.3 },
+    { pos:[-2.49, 0.42, -0.10], rotY: Math.PI * 0.3, sx: 0.32, sy: 0.40, seed: 2.1 },
+    { pos:[-2.47, 0.41,  0.11], rotY: Math.PI * 0.7, sx: 0.30, sy: 0.38, seed: 4.4 }
+  );
+
+  // Brass Fireplace Fender & Coal Scuttle
+  addObj({ pos:[-2.20, 0.11, 0.0], scale:[0.04, 0.10, 1.48], color:[0.82,0.64,0.28,1], metallic:0.85, roughness:0.25 });
+  addObj({ pos:[-2.40, 0.11, -0.72], scale:[0.44, 0.10, 0.04], color:[0.82,0.64,0.28,1], metallic:0.85, roughness:0.25 });
+  addObj({ pos:[-2.40, 0.11,  0.72], scale:[0.44, 0.10, 0.04], color:[0.82,0.64,0.28,1], metallic:0.85, roughness:0.25 });
+  addObj({ mesh:MESH.cyl, pos:[-2.48, 0.22, -0.98], rot:[0,0,-0.2], scale:[0.22, 0.32, 0.22], color:[0.22,0.18,0.14,1], metallic:0.65, roughness:0.38 });
+
+  // Antique Mantel Clock (center of mantel, facing +X into room!)
+  addObj({ pos:[-2.62, 1.54, 0.0], scale:[0.14, 0.26, 0.28], tex:TEX.oakDark, color:[0.72,0.56,0.44,1], roughness:0.38 });
+  addObj({ mesh:MESH.cyl, pos:[-2.62, 1.67, 0.0], rot:[0,0,Math.PI/2], scale:[0.26, 0.14, 0.26], tex:TEX.oakDark, color:[0.72,0.56,0.44,1], roughness:0.38 });
+  // Clock dial plane facing +X
+  addObj({ mesh:MESH.plane, pos:[-2.548, 1.58, 0.0], rot:[0, Math.PI/2, 0], scale:[0.16, 0.16, 1], tex:clockTexObj.tex, roughness:0.3 });
+  // Brass candlesticks flanking the clock
+  for (const cz of [-0.55, 0.55]) {
+    addObj({ mesh:MESH.lampBase, pos:[-2.60, 1.40, cz], scale:[0.52, 0.65, 0.52], color:[0.85,0.67,0.30,1], metallic:0.88, roughness:0.24 });
+    addObj({ mesh:MESH.cyl, pos:[-2.60, 1.68, cz], scale:[0.022, 0.12, 0.022], color:[0.95,0.92,0.84,1], roughness:0.7 });
+  }
+
+  // Gilt-Framed Painting above Mantelpiece
+  addObj({ pos:[-2.72, 2.28, 0.0], scale:[0.06, 0.86, 1.24], color:[0.76,0.58,0.24,1], metallic:0.72, roughness:0.32 });
+  addObj({ mesh:MESH.plane, pos:[-2.688, 2.28, 0.0], rot:[0, Math.PI/2, 0], scale:[1.12, 0.74, 1], tex:TEX.painting, roughness:0.42 });
+
+  // Oxblood Leather Wingback Armchair (X = -1.95, Z = 1.28, angled toward fireplace & desk)
+  const chairBase = M4.mul(M4.translate(-1.95, 0, 1.28), M4.rotY(2.25));
+  const AC = (lx, ly, lz, sx, sy, sz, col = [0.36, 0.12, 0.09, 1], rough = 0.44, mesh = MESH.box) => {
+    addObj({ mesh, model: M4.mul(chairBase, M4.trs(lx, ly, lz, 0,0,0, sx,sy,sz)), color:col, roughness:rough });
+  };
+  AC(0, 0.36, 0, 0.78, 0.22, 0.76); // seat base
+  AC(0, 0.49, 0.03, 0.66, 0.12, 0.66, [0.40,0.14,0.10,1], 0.40); // cushion
+  AC(0, 0.82, -0.32, 0.76, 0.86, 0.16); // tall backrest
+  AC(-0.36, 0.96, -0.18, 0.10, 0.44, 0.28); // left wing
+  AC( 0.36, 0.96, -0.18, 0.10, 0.44, 0.28); // right wing
+  AC(-0.37, 0.56, 0.04, 0.12, 0.26, 0.70); // left arm
+  AC( 0.37, 0.56, 0.04, 0.12, 0.26, 0.70); // right arm
+  // Turned oak armchair legs
+  for (const [lx, lz] of [[-0.31,-0.28],[0.31,-0.28],[-0.31,0.28],[0.31,0.28]]) {
+    AC(lx, 0.14, lz, 0.06, 0.28, 0.06, [0.24,0.14,0.08,1], 0.5, MESH.cyl);
+  }
+  colliders.push({ minX: -2.45, maxX: -1.45, minZ: 0.78, maxZ: 1.78 });
+
+  // Small Round Oak Side Table beside Armchair (X = -2.25, Z = -1.35) with Teacup & Book
+  addObj({ mesh:MESH.cyl, pos:[-2.25, 0.62, -1.35], scale:[0.62, 0.04, 0.62], tex:TEX.oakDark, roughness:0.42 });
+  addObj({ mesh:MESH.turnedLeg, pos:[-2.25, 0.0, -1.35], scale:[1.7, 0.82, 1.7], tex:TEX.oakDark, roughness:0.45 });
+  addObj({ mesh:MESH.cyl, pos:[-2.25, 0.04, -1.35], scale:[0.42, 0.05, 0.42], tex:TEX.oakDark, roughness:0.45 });
+  // Saucer + Porcelain Teacup
+  addObj({ mesh:MESH.cyl, pos:[-2.18, 0.65, -1.28], scale:[0.13, 0.014, 0.13], color:[0.95,0.93,0.88,1], roughness:0.2 });
+  addObj({ mesh:MESH.teacup, pos:[-2.18, 0.655, -1.28], color:[0.96,0.94,0.90,1], roughness:0.18 });
+  // Closed book on side table
+  addObj({ pos:[-2.34, 0.66, -1.42], rot:[0, 0.45, 0], scale:[0.18, 0.036, 0.24], color:[0.18, 0.26, 0.40, 1], roughness:0.7 });
+  colliders.push({ minX: -2.62, maxX: -1.88, minZ: -1.72, maxZ: -0.98 });
+
+  // Hearth collider
+  colliders.push({ minX: -3.4, maxX: -2.18, minZ: -1.02, maxZ: 1.02 });
+}
+
+// --- D. EAST WALL: FLOOR-TO-CEILING BOOKCASES, CHALKBOARD EASEL, GLOBE ---
+function buildBookcasesAndEastWall() {
+  const rnd = mulberry32(1936);
+  const bookColors = [
+    [0.46, 0.13, 0.12, 1], // oxblood
+    [0.14, 0.22, 0.36, 1], // Cambridge navy
+    [0.16, 0.30, 0.19, 1], // forest green
+    [0.54, 0.36, 0.16, 1], // tan calfskin
+    [0.34, 0.22, 0.14, 1], // dark leather
+    [0.64, 0.56, 0.42, 1], // worn vellum
+    [0.38, 0.16, 0.24, 1], // plum cloth
+    [0.24, 0.28, 0.30, 1]  // slate cloth
+  ];
+
+  function buildBookcase(zCenter, widthZ) {
+    const xBack = 3.06;
+    const depthX = 0.40;
+    const h = 2.66;
+    // Carcass: back, left/right sides, top cornice, base plinth
+    addObj({ pos:[xBack + depthX*0.44, h/2, zCenter], scale:[0.04, h, widthZ], tex:TEX.oakDark, roughness:0.55 });
+    addObj({ pos:[xBack, h/2, zCenter - widthZ/2 + 0.025], scale:[depthX, h, 0.05], tex:TEX.oakDark, roughness:0.5 });
+    addObj({ pos:[xBack, h/2, zCenter + widthZ/2 - 0.025], scale:[depthX, h, 0.05], tex:TEX.oakDark, roughness:0.5 });
+    addObj({ pos:[xBack - 0.02, h + 0.04, zCenter], scale:[depthX + 0.08, 0.09, widthZ + 0.08], tex:TEX.oakDark, roughness:0.48 });
+    addObj({ pos:[xBack, 0.07, zCenter], scale:[depthX, 0.14, widthZ], tex:TEX.oakDark, roughness:0.52 });
+
+    const shelfYs = [0.16, 0.58, 0.98, 1.38, 1.78, 2.18];
+    for (const sy of shelfYs) {
+      addObj({ pos:[xBack, sy, zCenter], scale:[depthX - 0.02, 0.032, widthZ - 0.08], tex:TEX.oakDark, roughness:0.52 });
+      // Pack books along this shelf!
+      let curZ = zCenter - widthZ/2 + 0.07;
+      const endZ = zCenter + widthZ/2 - 0.08;
+      while (curZ < endZ - 0.05) {
+        if (rnd() < 0.09) { curZ += 0.06 + rnd() * 0.08; continue; } // occasional natural gap
+        const thick = 0.026 + rnd() * 0.036;
+        if (curZ + thick > endZ) break;
+        const bh = 0.21 + rnd() * 0.12;
+        const bd = 0.19 + rnd() * 0.07;
+        const col = bookColors[Math.floor(rnd() * bookColors.length)];
+        const jitterX = (rnd() - 0.5) * 0.03;
+        addObj({
+          pos:[xBack + 0.04 + jitterX, sy + 0.016 + bh/2, curZ + thick/2],
+          scale:[bd, bh, thick * 0.92],
+          color:col, roughness:0.74
+        });
+        curZ += thick + 0.004;
+      }
+    }
+    colliders.push({ minX: xBack - depthX*0.5 - 0.1, maxX: 3.4, minZ: zCenter - widthZ/2, maxZ: zCenter + widthZ/2 });
+  }
+
+  buildBookcase(-1.35, 1.75);
+  buildBookcase( 1.20, 1.75);
+
+  // Standing Mathematician's Oak Easel with Slate Chalkboard (North-East corner, X = 2.08, Z = -1.78, facing desk/room!)
+  const eX = 2.08, eZ = -1.78, eYaw = -0.68;
+  const EB = M4.mul(M4.translate(eX, 0, eZ), M4.rotY(eYaw));
+  const EObj = (lx, ly, lz, rx, ry, rz, sx, sy, sz, opts = {}) => {
+    addObj({ ...opts, model: M4.mul(EB, M4.trs(lx, ly, lz, rx, ry, rz, sx, sy, sz)) });
+  };
+  // Easel A-frame legs
+  EObj(-0.34, 0.92,  0.04, -0.14, 0, -0.08, 0.045, 1.88, 0.045, { tex:TEX.oakDark, roughness:0.55 });
+  EObj( 0.34, 0.92,  0.04, -0.14, 0,  0.08, 0.045, 1.88, 0.045, { tex:TEX.oakDark, roughness:0.55 });
+  EObj( 0.00, 0.88, -0.38,  0.34, 0,  0.00, 0.045, 1.86, 0.045, { tex:TEX.oakDark, roughness:0.55 });
+  // Chalk tray ledge
+  EObj( 0.00, 0.90,  0.14, -0.14, 0,  0.00, 1.18, 0.045, 0.11, { tex:TEX.oakDark, roughness:0.5 });
+  // Chalkboard oak frame & slate surface
+  EObj( 0.00, 1.36,  0.04, -0.14, 0,  0.00, 1.16, 0.88, 0.04, { tex:TEX.oakDark, roughness:0.52 });
+  EObj( 0.00, 1.36,  0.064,-0.14, 0,  0.00, 1.06, 0.78, 1.0,  { mesh:MESH.plane, tex:TEX.chalkboard, roughness:0.88 });
+  colliders.push({ minX: 1.55, maxX: 2.65, minZ: -2.28, maxZ: -1.32 });
+
+  // Terrestrial Brass & Wood Globe on Tripod Stand (X = 2.48, Z = -0.08)
+  addObj({ mesh:MESH.turnedLeg, pos:[2.48, 0.0, -0.08], scale:[1.3, 1.12, 1.3], tex:TEX.oakDark, roughness:0.48 });
+  addObj({ mesh:MESH.cyl, pos:[2.48, 0.04, -0.08], scale:[0.38, 0.05, 0.38], tex:TEX.oakDark, roughness:0.48 });
+  addObj({ mesh:MESH.sphere, pos:[2.48, 1.08, -0.08], rot:[0.4, 0.8, 0], scale:[0.36, 0.36, 0.36], color:[0.74,0.66,0.48,1], roughness:0.42 });
+  // Brass meridian ring (approximated with thin tilted cylinder)
+  addObj({ mesh:MESH.cyl, pos:[2.48, 1.08, -0.08], rot:[0, 0.4, Math.PI/2], scale:[0.41, 0.015, 0.41], color:[0.82,0.64,0.28,1], metallic:0.85, roughness:0.26 });
+  colliders.push({ minX: 2.22, maxX: 2.75, minZ: -0.35, maxZ: 0.22 });
+
+  // South Wall Credenza / Period Side Cabinet (X = -1.25, Z = 2.44) with stacked math journals
+  addObj({ pos:[-1.25, 0.44, 2.44], scale:[1.32, 0.88, 0.48], tex:TEX.oakDark, roughness:0.48 });
+  addObj({ pos:[-1.25, 0.90, 2.44], scale:[1.38, 0.04, 0.52], tex:TEX.oakDark, roughness:0.42 });
+  // Stacked volumes on credenza
+  addObj({ pos:[-1.55, 0.95, 2.42], rot:[0, 0.15, 0], scale:[0.24, 0.05, 0.18], color:[0.44,0.14,0.12,1], roughness:0.7 });
+  addObj({ pos:[-1.54, 1.00, 2.43], rot:[0,-0.12, 0], scale:[0.22, 0.045, 0.17], color:[0.16,0.24,0.38,1], roughness:0.7 });
+  addObj({ pos:[-0.95, 0.94, 2.44], rot:[0, 0.22, 0], scale:[0.26, 0.04, 0.20], color:[0.62,0.54,0.40,1], roughness:0.75 });
+  colliders.push({ minX: -1.96, maxX: -0.54, minZ: 2.12, maxZ: 2.80 });
+
+  // Coat Stand in South-East corner (X = 2.42, Z = 2.28)
+  addObj({ mesh:MESH.cyl, pos:[2.42, 0.92, 2.28], scale:[0.055, 1.84, 0.055], tex:TEX.oakDark, roughness:0.48 });
+  addObj({ mesh:MESH.cyl, pos:[2.42, 0.04, 2.28], scale:[0.44, 0.06, 0.44], tex:TEX.oakDark, roughness:0.48 });
+  for (let k = 0; k < 4; k++) {
+    const a = k * Math.PI * 0.5 + 0.4;
+    addObj({
+      mesh:MESH.cyl,
+      pos:[2.42 + Math.cos(a)*0.11, 1.72, 2.28 + Math.sin(a)*0.11],
+      rot:[Math.sin(a)*0.7, 0, -Math.cos(a)*0.7],
+      scale:[0.02, 0.22, 0.02], color:[0.82,0.64,0.28,1], metallic:0.85, roughness:0.26
+    });
+  }
+  colliders.push({ minX: 2.15, maxX: 2.70, minZ: 2.02, maxZ: 2.58 });
+}
+
+// --- E. HERO CENTERPIECE: TURING'S OAK DESK, MANUSCRIPTS, BANKER'S LAMP & UNIVERSAL TURING MACHINE ---
+const utmAnim = {
+  headPos: 0,
+  reelAngle: 0,
+  stylusDrop: 0,
+  leftReel: null,
+  rightReel: null,
+  leftSpoke: null,
+  rightSpoke: null,
+  leftRoll: null,
+  rightRoll: null,
+  gearWheel: null,
+  stylus: null,
+  statusBulb: null,
+  headGlow: null,
+  btnStep: null,
+  btnRun: null,
+  btnReset: null,
+  btnPress: { step: 0, run: 0, reset: 0 }
+};
+
+// Desk coordinates
+const DESK_X = -0.05, DESK_Z = -1.26, DESK_Y = 0.78;
+const UTM_X  = -0.04, UTM_Y  = DESK_Y, UTM_Z = -1.22;
+
+function buildDeskAndUTM() {
+  // 1. Grand Cambridge Oak Pedestal Desk (1.96m wide x 0.96m deep x 0.78m tall)
+  // Desktop slab + deep green leather inlaid blotter
+  addObj({ pos:[DESK_X, DESK_Y - 0.028, DESK_Z], scale:[1.96, 0.056, 0.96], tex:TEX.oakDark, roughness:0.38 });
+  addObj({ pos:[DESK_X, DESK_Y + 0.002, DESK_Z + 0.02], scale:[1.56, 0.006, 0.72], color:[0.09, 0.22, 0.14, 1], roughness:0.65, castShadow:false });
+
+  // Left & Right Drawer Pedestals
+  for (const sx of [-0.70, 0.70]) {
+    addObj({ pos:[DESK_X + sx, 0.37, DESK_Z], scale:[0.48, 0.74, 0.86], tex:TEX.oakDark, roughness:0.46 });
+    // 3 drawer fronts + brass bail handles facing +Z
+    for (let d = 0; d < 3; d++) {
+      const dy = 0.17 + d * 0.21;
+      addObj({ pos:[DESK_X + sx, dy, DESK_Z + 0.435], scale:[0.41, 0.175, 0.02], tex:TEX.oakDark, color:[0.86,0.78,0.70,1], roughness:0.44 });
+      addObj({ pos:[DESK_X + sx, dy, DESK_Z + 0.452], scale:[0.11, 0.022, 0.02], color:[0.84,0.66,0.28,1], metallic:0.88, roughness:0.22 });
+    }
+  }
+  // Center modesty back panel & kneehole drawer
+  addObj({ pos:[DESK_X, 0.38, DESK_Z - 0.36], scale:[0.96, 0.68, 0.04], tex:TEX.oakDark, roughness:0.5 });
+  addObj({ pos:[DESK_X, 0.68, DESK_Z + 0.02], scale:[0.92, 0.10, 0.82], tex:TEX.oakDark, roughness:0.46 });
+  addObj({ pos:[DESK_X, 0.68, DESK_Z + 0.44], scale:[0.11, 0.022, 0.02], color:[0.84,0.66,0.28,1], metallic:0.88, roughness:0.22 });
+
+  colliders.push({ minX: DESK_X - 1.06, maxX: DESK_X + 1.06, minZ: DESK_Z - 0.56, maxZ: DESK_Z + 0.54 });
+
+  // 2. Period Oak Desk Chair (tucked slightly to right, angled as if Alan just stepped away)
+  const chBase = M4.mul(M4.translate(0.76, 0, -0.44), M4.rotY(-0.55));
+  const CH = (lx, ly, lz, sx, sy, sz, mesh = MESH.box, col = [0.34,0.21,0.12,1]) => {
+    addObj({ mesh, model: M4.mul(chBase, M4.trs(lx, ly, lz, 0,0,0, sx,sy,sz)), tex:TEX.oakDark, color:col, roughness:0.46 });
+  };
+  CH(0, 0.45, 0, 0.48, 0.05, 0.46); // seat
+  for (const [lx, lz] of [[-0.20,-0.19],[0.20,-0.19],[-0.20,0.19],[0.20,0.19]]) {
+    CH(lx, 0.225, lz, 0.042, 0.45, 0.042, MESH.cyl);
+  }
+  // Curved slat backrest (facing desk at -Z)
+  CH(-0.20, 0.72, 0.20, 0.04, 0.54, 0.04, MESH.cyl);
+  CH( 0.20, 0.72, 0.20, 0.04, 0.54, 0.04, MESH.cyl);
+  CH( 0.00, 0.94, 0.20, 0.46, 0.11, 0.04);
+  CH( 0.00, 0.72, 0.20, 0.36, 0.06, 0.03);
+  colliders.push({ minX: 0.46, maxX: 1.06, minZ: -0.74, maxZ: -0.14 });
+
+  // 3. Green-Shaded Brass Banker's Lamp (Left-back of desk: X = -0.74, Z = -1.52)
+  const lx = DESK_X - 0.69, lz = DESK_Z - 0.26;
+  addObj({ mesh:MESH.lampBase, pos:[lx, DESK_Y, lz], scale:[1.0, 1.05, 1.0], color:[0.85,0.67,0.30,1], metallic:0.88, roughness:0.22 });
+  // Emerald glass shade (angled slightly toward desk & UTM!)
+  addObj({
+    mesh:MESH.cyl, pos:[lx + 0.04, DESK_Y + 0.35, lz + 0.04], rot:[0.22, -0.5, Math.PI/2],
+    scale:[0.13, 0.26, 0.15], color:[0.09, 0.48, 0.24, 1], emissive:[0.07, 0.38, 0.16], roughness:0.18
+  });
+  // Glowing tungsten bulb tucked underneath shade
+  addObj({
+    mesh:MESH.sphere, pos:[lx + 0.04, DESK_Y + 0.31, lz + 0.04], scale:[0.055, 0.055, 0.055],
+    color:[1, 0.95, 0.8, 1], emissive:[1.8, 1.35, 0.65], castShadow:false
+  });
+
+  // 4. Turing's 1936 Manuscript Pages ("On Computable Numbers"), Inkwell & Fountain Pen
+  // Main manuscript sheet on right side of desk
+  addObj({
+    mesh:MESH.plane, pos:[DESK_X + 0.62, DESK_Y + 0.007, DESK_Z + 0.14],
+    rot:[-Math.PI/2, -0.14, 0], scale:[0.26, 0.33, 1],
+    tex:TEX.manuscript, roughness:0.86, castShadow:false
+  });
+  // Second angled draft page slightly underneath
+  addObj({
+    mesh:MESH.plane, pos:[DESK_X + 0.56, DESK_Y + 0.006, DESK_Z + 0.17],
+    rot:[-Math.PI/2, 0.18, 0], scale:[0.25, 0.32, 1],
+    tex:TEX.manuscript, color:[0.95,0.92,0.86,1], roughness:0.88, castShadow:false
+  });
+  // Scratch calculation note on left front
+  addObj({
+    mesh:MESH.plane, pos:[DESK_X - 0.64, DESK_Y + 0.007, DESK_Z + 0.18],
+    rot:[-Math.PI/2, 0.28, 0], scale:[0.23, 0.29, 1],
+    tex:TEX.manuscript, color:[0.96,0.93,0.88,1], roughness:0.86, castShadow:false
+  });
+  // Brass Inkwell & Ebony-Gold Fountain Pen
+  addObj({ mesh:MESH.inkwell, pos:[DESK_X + 0.44, DESK_Y, DESK_Z - 0.10], color:[0.82,0.64,0.26,1], metallic:0.85, roughness:0.25 });
+  addObj({ mesh:MESH.cyl, pos:[DESK_X + 0.58, DESK_Y + 0.015, DESK_Z + 0.24], rot:[0, 0.42, Math.PI/2], scale:[0.012, 0.17, 0.012], color:[0.10,0.09,0.09,1], roughness:0.25 });
+  addObj({ mesh:MESH.cone, pos:[DESK_X + 0.50, DESK_Y + 0.015, DESK_Z + 0.275], rot:[0, 0.42, Math.PI/2], scale:[0.012, 0.032, 0.012], color:[0.90,0.72,0.30,1], metallic:0.9, roughness:0.18 });
+
+  // 5. Reference Book Stack on Back-Right of Desk (Principia Mathematica, Gödel, Hilbert)
+  addObj({ pos:[DESK_X + 0.72, DESK_Y + 0.025, DESK_Z - 0.24], rot:[0, -0.18, 0], scale:[0.26, 0.048, 0.19], color:[0.44,0.13,0.12,1], roughness:0.68 });
+  addObj({ pos:[DESK_X + 0.71, DESK_Y + 0.070, DESK_Z - 0.23], rot:[0,  0.08, 0], scale:[0.24, 0.042, 0.18], color:[0.14,0.22,0.36,1], roughness:0.68 });
+  addObj({ pos:[DESK_X + 0.72, DESK_Y + 0.108, DESK_Z - 0.25], rot:[0, -0.26, 0], scale:[0.22, 0.034, 0.16], color:[0.17,0.31,0.20,1], roughness:0.70 });
+  // Desk Teacup (left front)
+  addObj({ mesh:MESH.cyl, pos:[DESK_X - 0.80, DESK_Y + 0.008, DESK_Z + 0.22], scale:[0.12, 0.012, 0.12], color:[0.95,0.93,0.88,1], roughness:0.22 });
+  addObj({ mesh:MESH.teacup, pos:[DESK_X - 0.80, DESK_Y + 0.012, DESK_Z + 0.22], color:[0.96,0.94,0.89,1], roughness:0.20 });
+
+  // ==========================================================================
+  // 6. THE WORKING 3D UNIVERSAL TURING MACHINE ON THE DESK
+  // ==========================================================================
+  const brass = [0.85, 0.67, 0.30, 1];
+  const darkBrass = [0.52, 0.39, 0.18, 1];
+  const mahogany = [0.30, 0.13, 0.08, 1];
+
+  // Mahogany Plinth Base (0.78m x 0.065m x 0.42m)
+  addObj({ pos:[UTM_X, UTM_Y + 0.032, UTM_Z], scale:[0.78, 0.065, 0.42], tex:TEX.oakDark, color:[0.76,0.44,0.32,1], roughness:0.34 });
+  // Brass base trim molding
+  addObj({ pos:[UTM_X, UTM_Y + 0.008, UTM_Z], scale:[0.805, 0.016, 0.445], color:brass, metallic:0.86, roughness:0.24 });
+  // Rear mahogany instrument housing
+  addObj({ pos:[UTM_X, UTM_Y + 0.088, UTM_Z - 0.10], scale:[0.74, 0.055, 0.18], color:mahogany, roughness:0.36 });
+
+  // Sloped Front Brass Instrument Panel (LIVE DYNAMIC TEXTURE!)
+  // Backing wedge + textured front plate facing viewer (+Z, tilted up ~42 deg)
+  addObj({ pos:[UTM_X, UTM_Y + 0.095, UTM_Z + 0.115], rot:[-0.68, 0, 0], scale:[0.56, 0.16, 0.022], color:darkBrass, metallic:0.82, roughness:0.3 });
+  addObj({
+    mesh:MESH.plane, pos:[UTM_X, UTM_Y + 0.104, UTM_Z + 0.125], rot:[-0.68, 0, 0],
+    scale:[0.54, 0.148, 1], tex:utmPanelTexObj.tex, roughness:0.35, metallic:0.25, emissive:[0.14, 0.11, 0.06]
+  });
+
+  // 3 Physical Interactive 3D Brass Buttons along front lip (STEP, RUN/PAUSE, RESET)
+  const btnSpecs = [
+    { key:'step',  x: UTM_X - 0.13, col:[0.88, 0.68, 0.28, 1], em:[0.12,0.08,0.02], label:'Click to STEP Universal Machine' },
+    { key:'run',   x: UTM_X + 0.00, col:[0.30, 0.72, 0.42, 1], em:[0.06,0.16,0.08], label:'Click to RUN / PAUSE Universal Machine' },
+    { key:'reset', x: UTM_X + 0.13, col:[0.76, 0.30, 0.24, 1], em:[0.12,0.03,0.02], label:'Click to RESET Universal Machine' }
+  ];
+  for (const b of btnSpecs) {
+    // Brass bezel ring
+    addObj({ mesh:MESH.cyl, pos:[b.x, UTM_Y + 0.068, UTM_Z + 0.185], scale:[0.042, 0.012, 0.042], color:darkBrass, metallic:0.86, roughness:0.26 });
+    const btnObj = addObj({
+      mesh:MESH.cyl, pos:[b.x, UTM_Y + 0.078, UTM_Z + 0.185], scale:[0.030, 0.018, 0.030],
+      color:b.col, emissive:b.em, metallic:0.55, roughness:0.28
+    });
+    if (b.key === 'step')  utmAnim.btnStep = btnObj;
+    if (b.key === 'run')   utmAnim.btnRun = btnObj;
+    if (b.key === 'reset') utmAnim.btnReset = btnObj;
+    interactables.push({
+      id: b.key, label: b.label,
+      pos: [b.x, UTM_Y + 0.078, UTM_Z + 0.185], radius: 0.042
+    });
+  }
+
+  // Brass Tape Platen Bed (flat dark brass bed directly underneath the moving paper tape)
+  addObj({ pos:[UTM_X, UTM_Y + 0.118, UTM_Z - 0.04], scale:[0.44, 0.018, 0.095], color:darkBrass, metallic:0.82, roughness:0.32 });
+  // Left & Right Brass Guide Rollers
+  for (const rx of [-0.215, 0.215]) {
+    addObj({ mesh:MESH.cyl, pos:[UTM_X + rx, UTM_Y + 0.124, UTM_Z - 0.04], rot:[Math.PI/2, 0, 0], scale:[0.024, 0.105, 0.024], color:brass, metallic:0.9, roughness:0.2 });
+    // Roller bearing posts
+    addObj({ pos:[UTM_X + rx, UTM_Y + 0.095, UTM_Z - 0.095], scale:[0.022, 0.075, 0.018], color:darkBrass, metallic:0.85, roughness:0.28 });
+    addObj({ pos:[UTM_X + rx, UTM_Y + 0.095, UTM_Z + 0.015], scale:[0.022, 0.075, 0.018], color:darkBrass, metallic:0.85, roughness:0.28 });
+  }
+
+  // LIVE 3D MOVING PAPER TAPE STRIP!
+  addObj({
+    mesh: MESH.utmTape,
+    pos: [UTM_X, UTM_Y + 0.130, UTM_Z - 0.04],
+    tex: utmTapeTexObj.tex,
+    roughness: 0.82,
+    emissive: [0.09, 0.08, 0.05],
+    doubleSided: true
+  });
+
+  // Left Supply Reel & Right Take-Up Reel (Brass Flanges + Exposed Wound Paper Spools + Spinning Spokes!)
+  for (const side of [-1, 1]) {
+    const rx = UTM_X + side * 0.315;
+    const ry = UTM_Y + 0.175;
+    const rz = UTM_Z - 0.04;
+    // Upright brass stanchion bracket
+    addObj({ pos:[rx, UTM_Y + 0.125, rz - 0.062], scale:[0.036, 0.135, 0.018], color:darkBrass, metallic:0.85, roughness:0.28 });
+    addObj({ pos:[rx, UTM_Y + 0.125, rz + 0.062], scale:[0.036, 0.135, 0.018], color:darkBrass, metallic:0.85, roughness:0.28 });
+    // Center brass axle pin
+    addObj({ mesh:MESH.cyl, pos:[rx, ry, rz], rot:[Math.PI/2, 0, 0], scale:[0.022, 0.145, 0.022], color:brass, metallic:0.9, roughness:0.2 });
+    // Wound parchment paper roll (clearly visible between the front and rear brass flanges!)
+    const roll = addObj({
+      mesh:MESH.cyl, pos:[rx, ry, rz], rot:[Math.PI/2, 0, 0],
+      scale:[0.124, 0.070, 0.124], color:[0.93, 0.86, 0.70, 1], roughness:0.84
+    });
+    // Rear brass flange disk
+    addObj({
+      mesh:MESH.cyl, pos:[rx, ry, rz - 0.040], rot:[Math.PI/2, 0, 0],
+      scale:[0.152, 0.008, 0.152], color:brass, metallic:0.88, roughness:0.22
+    });
+    // Animated front octagonal brass flange disk
+    const reel = addObj({
+      mesh:MESH.cyl8, pos:[rx, ry, rz + 0.040], rot:[Math.PI/2, 0, 0],
+      scale:[0.152, 0.008, 0.152], color:brass, metallic:0.88, roughness:0.22
+    });
+    // Animated dark-bronze indicator spoke bar on the front flange so reel rotation is unmistakable!
+    const spoke = addObj({
+      mesh:MESH.box, pos:[rx, ry, rz + 0.046],
+      scale:[0.136, 0.014, 0.006], color:[0.22, 0.15, 0.08, 1], metallic:0.75, roughness:0.32
+    });
+    if (side === -1) { utmAnim.leftRoll = roll; utmAnim.leftReel = reel; utmAnim.leftSpoke = spoke; }
+    else             { utmAnim.rightRoll = roll; utmAnim.rightReel = reel; utmAnim.rightSpoke = spoke; }
+  }
+
+  // Arched Brass Read/Write Head Gantry over Center Active Tape Cell
+  const gx = UTM_X, gz = UTM_Z - 0.04;
+  // Front & rear vertical brass columns
+  addObj({ pos:[gx - 0.068, UTM_Y + 0.185, gz - 0.058], scale:[0.024, 0.16, 0.024], color:brass, metallic:0.88, roughness:0.22 });
+  addObj({ pos:[gx + 0.068, UTM_Y + 0.185, gz - 0.058], scale:[0.024, 0.16, 0.024], color:brass, metallic:0.88, roughness:0.22 });
+  // Overhead brass bridge
+  addObj({ pos:[gx, UTM_Y + 0.258, gz - 0.02], scale:[0.175, 0.034, 0.11], color:brass, metallic:0.88, roughness:0.22 });
+  // Solenoid electromagnet coil cylinder
+  addObj({ mesh:MESH.cyl, pos:[gx, UTM_Y + 0.215, gz], scale:[0.052, 0.068, 0.052], color:[0.62,0.30,0.14,1], metallic:0.78, roughness:0.32 });
+  // Illuminated brass head viewing frame right around the active cell
+  utmAnim.headGlow = addObj({
+    pos:[gx, UTM_Y + 0.146, gz], scale:[0.058, 0.008, 0.082],
+    color:[0.95, 0.78, 0.34, 1], emissive:[0.55, 0.38, 0.08], metallic:0.7, roughness:0.25, castShadow:false
+  });
+  // Animated Brass Ink Stylus / Stamp (plunges down when writing!)
+  utmAnim.stylus = addObj({
+    mesh:MESH.cone, pos:[gx, UTM_Y + 0.168, gz], rot:[Math.PI, 0, 0],
+    scale:[0.022, 0.048, 0.022], color:[0.92,0.75,0.34,1], metallic:0.92, roughness:0.18
+  });
+  // Animated Brass Escapement Gear on Right Side of Gantry
+  utmAnim.gearWheel = addObj({
+    mesh:MESH.cyl8, pos:[gx + 0.095, UTM_Y + 0.24, gz - 0.02], rot:[0, 0, Math.PI/2],
+    scale:[0.065, 0.014, 0.065], color:brass, metallic:0.9, roughness:0.2
+  });
+  // Top Status Indicator Glass Bulb (Amber idle / Emerald running / Crimson halted!)
+  addObj({ mesh:MESH.cyl, pos:[gx, UTM_Y + 0.285, gz - 0.02], scale:[0.034, 0.022, 0.034], color:darkBrass, metallic:0.86, roughness:0.25 });
+  utmAnim.statusBulb = addObj({
+    mesh:MESH.sphere, pos:[gx, UTM_Y + 0.312, gz - 0.02], scale:[0.044, 0.048, 0.044],
+    color:[1.0, 0.85, 0.45, 1], emissive:[1.1, 0.72, 0.20], roughness:0.18, castShadow:false
+  });
+
+  // Also make the entire UTM body clickable to focus if standing far away
+  interactables.push({
+    id: 'focus-utm', label: 'Click to Inspect Universal Turing Machine (F)',
+    pos: [UTM_X, UTM_Y + 0.18, UTM_Z - 0.02], radius: 0.30
+  });
+}
+
+// Volumetric Sunbeam God-Ray Planes slanting from the tall Georgian window into the study
+const sunbeamPlanes = [
+  { pos:[-0.45, 1.48, -1.35], rx: 0.52, ry: -0.22, rz: 0.24, sx: 1.55, sy: 3.4, seed: 1.0 },
+  { pos:[ 0.45, 1.52, -1.45], rx: 0.52, ry: -0.22, rz: 0.24, sx: 1.45, sy: 3.3, seed: 2.7 },
+  { pos:[-0.05, 1.38, -1.20], rx: 0.52, ry:  0.45, rz: 0.20, sx: 1.65, sy: 3.3, seed: 4.1 }
+];
+
+buildRoom();
+buildKingsCollegeChapel();
+buildFireplaceAndNook();
+buildBookcasesAndEastWall();
+buildDeskAndUTM();
+drawUTMTapeTexture(0, 0);
+drawUTMPanelTexture();
+
+// ============================================================================
+// 8. CAMERA, CONTROLS (WASD + POINTER LOCK + DRAG PAN + SMOOTH FOCUS)
+// ============================================================================
+const cam = {
+  x: 0.15, y: 1.52, z: 1.32,
+  yaw: -0.06, pitch: -0.14,
+  eyeHeight: 1.52,
+  bobPhase: 0,
+  targetMode: null, // null = free walk, 'desk' | 'window' = smooth camera glide
+  glide: null
+};
+
+const keys = new Set();
+let isPointerLocked = false;
+let isDragging = false;
+let dragMoved = false;
+let lastMouseX = 0, lastMouseY = 0;
+let hoveredInteractable = null;
+
+const reticleEl = document.getElementById('reticle');
+const hoverHintEl = document.getElementById('hover-hint');
+const walkBannerEl = document.getElementById('walk-banner');
+let bannerDismissed = false;
+function dismissBanner() {
+  if (!bannerDismissed) {
+    bannerDismissed = true;
+    walkBannerEl.style.opacity = '0';
+  }
+}
+
+function glideCameraTo(tx, ty, tz, tyaw, tpitch, mode) {
+  dismissBanner();
+  if (document.pointerLockElement === canvas) document.exitPointerLock();
+  cam.targetMode = mode;
+  // Shortest angle wrap for yaw
+  let dy = tyaw - cam.yaw;
+  while (dy > Math.PI) dy -= Math.PI * 2;
+  while (dy < -Math.PI) dy += Math.PI * 2;
+  cam.glide = {
+    sx: cam.x, sy: cam.y, sz: cam.z, syaw: cam.yaw, spitch: cam.pitch,
+    tx, ty, tz, tyaw: cam.yaw + dy, tpitch,
+    t: 0, dur: 0.72
+  };
+  document.getElementById('btn-focus').classList.toggle('active', mode === 'desk');
+  document.getElementById('btn-window').classList.toggle('active', mode === 'window');
+}
+
+function toggleDeskFocus() {
+  if (cam.targetMode === 'desk') {
+    glideCameraTo(0.15, 1.52, 1.15, -0.06, -0.14, null);
+  } else {
+    // Ideal museum close-up of the 3D Universal Turing Machine with King's College Chapel right behind it!
+    glideCameraTo(UTM_X, 1.24, UTM_Z + 0.62, 0.0, -0.42, 'desk');
+  }
+}
+function goWindowView() {
+  glideCameraTo(-0.05, 1.56, -2.05, 0.0, 0.06, 'window');
+}
+
+// Compute camera forward/right vectors
+function getCamVectors() {
+  const cy = Math.cos(cam.yaw), sy = Math.sin(cam.yaw);
+  const cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch);
+  const fwd = [ -sy * cp, sp, -cy * cp ];
+  const right = [ cy, 0, -sy ];
+  return { fwd, right };
+}
+
+// Raycast against interactive 3D UTM buttons
+function raycastInteractables(ndcX, ndcY) {
+  const aspect = canvas.width / Math.max(1, canvas.height);
+  const proj = M4.perspective(55 * Math.PI / 180, aspect, 0.06, 120);
+  const { fwd } = getCamVectors();
+  const view = M4.lookAt(cam.x, cam.y, cam.z, cam.x + fwd[0], cam.y + fwd[1], cam.z + fwd[2], 0, 1, 0);
+  const invVP = M4.invert(M4.mul(proj, view));
+
+  const unproj = (x, y, z) => {
+    const w = invVP[3]*x + invVP[7]*y + invVP[11]*z + invVP[15];
+    return [
+      (invVP[0]*x + invVP[4]*y + invVP[8]*z + invVP[12]) / w,
+      (invVP[1]*x + invVP[5]*y + invVP[9]*z + invVP[13]) / w,
+      (invVP[2]*x + invVP[6]*y + invVP[10]*z + invVP[14]) / w
+    ];
+  };
+  const pNear = unproj(ndcX, ndcY, -1);
+  const pFar  = unproj(ndcX, ndcY,  1);
+  let dx = pFar[0] - pNear[0], dy = pFar[1] - pNear[1], dz = pFar[2] - pNear[2];
+  const dl = Math.hypot(dx, dy, dz) || 1;
+  dx /= dl; dy /= dl; dz /= dl;
+
+  let best = null, bestT = 3.2;
+  for (const obj of interactables) {
+    // Only offer focus-utm when further away; buttons take priority when close
+    const ocx = cam.x - obj.pos[0], ocy = cam.y - obj.pos[1], ocz = cam.z - obj.pos[2];
+    const b = ocx*dx + ocy*dy + ocz*dz;
+    const c = ocx*ocx + ocy*ocy + ocz*ocz - obj.radius*obj.radius;
+    const disc = b*b - c;
+    if (disc >= 0) {
+      const t = -b - Math.sqrt(disc);
+      if (t > 0.05 && t < bestT) {
+        // Give smaller physical buttons priority over the broad focus-utm bounding sphere
+        if (best && best.id !== 'focus-utm' && obj.id === 'focus-utm') continue;
+        if (obj.id === 'focus-utm' && cam.targetMode === 'desk') continue;
+        bestT = t;
+        best = obj;
+      }
+    }
+  }
+  return best;
+}
+
+function triggerInteractable(obj) {
+  if (!obj) return false;
+  ensureAudio();
+  if (obj.id === 'step') {
+    utmAnim.btnPress.step = 1;
+    utm.running = false;
+    utm.step();
+    return true;
+  }
+  if (obj.id === 'run') {
+    utmAnim.btnPress.run = 1;
+    toggleRunUTM();
+    return true;
+  }
+  if (obj.id === 'reset') {
+    utmAnim.btnPress.reset = 1;
+    utm.reset();
+    playStepClick('step');
+    return true;
+  }
+  if (obj.id === 'focus-utm') {
+    toggleDeskFocus();
+    return true;
+  }
+  return false;
+}
+
+// Mouse & Pointer Lock Handlers
+canvas.addEventListener('mousedown', (e) => {
+  if (e.button !== 0) return;
+  ensureAudio();
+  dismissBanner();
+  isDragging = true;
+  dragMoved = false;
+  lastMouseX = e.clientX;
+  lastMouseY = e.clientY;
+  canvas.classList.add('dragging');
+});
+
+window.addEventListener('mousemove', (e) => {
+  if (isPointerLocked) {
+    cam.glide = null;
+    cam.targetMode = null;
+    cam.yaw -= e.movementX * 0.0022;
+    cam.pitch = Math.max(-1.25, Math.min(1.15, cam.pitch - e.movementY * 0.0022));
+    hoveredInteractable = raycastInteractables(0, 0);
+  } else if (isDragging) {
+    const dx = e.clientX - lastMouseX;
+    const dy = e.clientY - lastMouseY;
+    if (Math.hypot(dx, dy) > 3) dragMoved = true;
+    lastMouseX = e.clientX;
+    lastMouseY = e.clientY;
+    cam.glide = null;
+    cam.yaw -= dx * 0.0036;
+    cam.pitch = Math.max(-1.25, Math.min(1.15, cam.pitch - dy * 0.0036));
+  } else {
+    const rect = canvas.getBoundingClientRect();
+    const ndcX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+    const ndcY = 1 - ((e.clientY - rect.top) / rect.height) * 2;
+    hoveredInteractable = raycastInteractables(ndcX, ndcY);
+  }
+
+  // Update reticle & hover prompt
+  reticleEl.classList.toggle('hovering', !!hoveredInteractable);
+  if (hoveredInteractable) {
+    hoverHintEl.textContent = hoveredInteractable.label;
+    hoverHintEl.classList.add('visible');
+    if (!isPointerLocked && !isDragging) canvas.style.cursor = 'pointer';
+  } else {
+    hoverHintEl.classList.remove('visible');
+    if (!isPointerLocked && !isDragging) canvas.style.cursor = 'grab';
+  }
+});
+
+window.addEventListener('mouseup', (e) => {
+  if (!isDragging) return;
+  isDragging = false;
+  canvas.classList.remove('dragging');
+  if (!dragMoved && e.target === canvas) {
+    if (hoveredInteractable && triggerInteractable(hoveredInteractable)) return;
+    // Engage Pointer Lock if not in Desk Focus mode (so desk clicks stay effortless!)
+    if (!isPointerLocked && cam.targetMode !== 'desk' && canvas.requestPointerLock) {
+      try { canvas.requestPointerLock(); } catch (_) {}
+    }
+  }
+});
+
+document.addEventListener('pointerlockchange', () => {
+  isPointerLocked = document.pointerLockElement === canvas;
+  canvas.classList.toggle('locked', isPointerLocked);
+  reticleEl.classList.toggle('visible', isPointerLocked);
+});
+
+// Keyboard Controls (ignored while typing inside the custom UTM editor)
+function isTypingTarget(el) {
+  return el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT');
+}
+
+window.addEventListener('keydown', (e) => {
+  if (isTypingTarget(document.activeElement)) return;
+  const code = e.code;
+  keys.add(code);
+  if (['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(code)) {
+    dismissBanner();
+    if (cam.targetMode) {
+      cam.targetMode = null; cam.glide = null;
+      document.getElementById('btn-focus').classList.remove('active');
+      document.getElementById('btn-window').classList.remove('active');
+    }
+  }
+  if (code === 'Space') {
+    e.preventDefault();
+    ensureAudio();
+    utm.running = false;
+    utmAnim.btnPress.step = 1;
+    utm.step();
+  } else if (code === 'KeyR') {
+    ensureAudio();
+    utmAnim.btnPress.run = 1;
+    toggleRunUTM();
+  } else if (code === 'KeyT') {
+    ensureAudio();
+    utmAnim.btnPress.reset = 1;
+    utm.reset();
+    playStepClick('step');
+  } else if (code === 'KeyF') {
+    e.preventDefault();
+    toggleDeskFocus();
+  } else if (code === 'Tab') {
+    e.preventDefault();
+    toggleDrawer();
+  } else if (code === 'Slash' && e.shiftKey) {
+    document.getElementById('help-modal').classList.toggle('open');
+  }
+});
+
+window.addEventListener('keyup', (e) => { keys.delete(e.code); });
+
+// Smooth Walking + AABB Sliding Collision
+function updateCamera(dt) {
+  if (cam.glide) {
+    const g = cam.glide;
+    g.t = Math.min(1, g.t + dt / g.dur);
+    const e = 1 - Math.pow(1 - g.t, 3); // cubic ease-out
+    cam.x = g.sx + (g.tx - g.sx) * e;
+    cam.y = g.sy + (g.ty - g.sy) * e;
+    cam.z = g.sz + (g.tz - g.sz) * e;
+    cam.yaw = g.syaw + (g.tyaw - g.syaw) * e;
+    cam.pitch = g.spitch + (g.tpitch - g.spitch) * e;
+    if (g.t >= 1) cam.glide = null;
+    return;
+  }
+
+  let mx = 0, mz = 0;
+  if (keys.has('KeyW') || keys.has('ArrowUp'))    mz += 1;
+  if (keys.has('KeyS') || keys.has('ArrowDown'))  mz -= 1;
+  if (keys.has('KeyD') || keys.has('ArrowRight')) mx += 1;
+  if (keys.has('KeyA') || keys.has('ArrowLeft'))  mx -= 1;
+
+  const targetEye = keys.has('KeyC') ? 1.14 : 1.52;
+  cam.eyeHeight += (targetEye - cam.eyeHeight) * Math.min(1, dt * 10);
+
+  if (mx !== 0 || mz !== 0) {
+    const len = Math.hypot(mx, mz);
+    mx /= len; mz /= len;
+    const speed = (keys.has('ShiftLeft') || keys.has('ShiftRight')) ? 3.2 : 1.95;
+    const sy = Math.sin(cam.yaw), cy = Math.cos(cam.yaw);
+    const dx = (-sy * mz + cy * mx) * speed * dt;
+    const dz = (-cy * mz - sy * mx) * speed * dt;
+
+    const r = 0.28;
+    const canPlace = (nx, nz) => {
+      if (nx < -3.02 || nx > 3.02 || nz < -2.42 || nz > 2.48) return false;
+      for (const c of colliders) {
+        if (nx + r > c.minX && nx - r < c.maxX && nz + r > c.minZ && nz - r < c.maxZ) return false;
+      }
+      return true;
+    };
+    if (canPlace(cam.x + dx, cam.z)) cam.x += dx;
+    if (canPlace(cam.x, cam.z + dz)) cam.z += dz;
+    cam.bobPhase += dt * (speed > 2.5 ? 10.5 : 7.5);
+  }
+  const bob = (mx !== 0 || mz !== 0) ? Math.sin(cam.bobPhase) * 0.018 : 0;
+  cam.y = cam.eyeHeight + bob;
+}
+
+// ============================================================================
+// 9. HUD & UNIVERSAL TURING MACHINE UI BINDINGS
+// ============================================================================
+const progSelect = document.getElementById('prog-select');
+const hudTapeEl  = document.getElementById('hud-tape');
+const statStatus = document.getElementById('stat-status');
+const statusDot  = document.getElementById('status-dot');
+const statState  = document.getElementById('stat-state');
+const statHead   = document.getElementById('stat-head');
+const statSteps  = document.getElementById('stat-steps');
+const rulePrev   = document.getElementById('rule-preview');
+const btnRun     = document.getElementById('btn-run');
+const speedSlider= document.getElementById('speed-slider');
+const speedLabel = document.getElementById('speed-label');
+const drawerEl   = document.getElementById('inspector-drawer');
+const progDescEl = document.getElementById('prog-desc');
+const sdEl       = document.getElementById('sd-encoding');
+const rulesTbody = document.getElementById('rules-tbody');
+const editTapeEl = document.getElementById('edit-tape');
+const editInitEl = document.getElementById('edit-init');
+const editRulesEl= document.getElementById('edit-rules');
+const editorMsg  = document.getElementById('editor-msg');
+
+for (const p of UTM_PROGRAMS) {
+  const opt = document.createElement('option');
+  opt.value = p.id; opt.textContent = p.name;
+  progSelect.appendChild(opt);
+}
+
+function populateEditorFromProgram() {
+  editTapeEl.value = utm.program.initialTape;
+  editInitEl.value = `${utm.program.initialState}, ${utm.program.initialHead}`;
+  editRulesEl.value = utm.program.rules.map(r => `${r.state}, ${r.read} -> ${r.write}, ${r.move}, ${r.next}`).join('\n');
+  editorMsg.textContent = '';
+}
+
+function syncUTMUI(ev) {
+  tapeRevision++;
+  const activeRule = utm.getActiveRule();
+
+  // Status badge
+  const statusStr = utm.halted ? 'HALTED' : (utm.running ? 'RUNNING' : 'READY');
+  statStatus.textContent = statusStr;
+  statusDot.className = 'status-dot' + (utm.halted ? ' halted' : (utm.running ? ' running' : ''));
+  statState.textContent = utm.state;
+  statHead.textContent = String(utm.head);
+  statSteps.textContent = String(utm.steps);
+
+  btnRun.textContent = utm.running ? 'Pause' : 'Run';
+  btnRun.classList.toggle('running', utm.running);
+
+  if (utm.halted) {
+    rulePrev.textContent = `Halted after ${utm.steps} steps (state: ${utm.state})`;
+  } else if (activeRule) {
+    rulePrev.textContent = `Next: (${activeRule.state}, ${activeRule.read}) → ${activeRule.write}, ${activeRule.move}, ${activeRule.next}`;
+  } else {
+    rulePrev.textContent = `No rule for (${utm.state}, ${utm.readCell(utm.head)}) → HALT`;
+  }
+
+  // Render HUD tape ribbon (17 cells centered on head)
+  hudTapeEl.innerHTML = '';
+  const half = 8;
+  for (let off = -half; off <= half; off++) {
+    const pos = utm.head + off;
+    const sym = utm.readCell(pos);
+    const cell = document.createElement('div');
+    cell.className = 'tape-cell' + (off === 0 ? ' head' : '') + (sym === '_' ? ' blank' : '');
+    cell.innerHTML = `${sym === '_' ? '·' : sym}<span class="idx">${pos}</span>`;
+    hudTapeEl.appendChild(cell);
+  }
+
+  // Update Inspector Drawer Rules Table & Standard Description
+  progDescEl.textContent = utm.program.desc;
+  sdEl.textContent = utm.computeStandardDescription();
+  rulesTbody.innerHTML = '';
+  for (const r of utm.program.rules) {
+    const tr = document.createElement('tr');
+    if (activeRule && activeRule.state === r.state && activeRule.read === r.read) {
+      tr.className = 'active-rule';
+    }
+    tr.innerHTML = `<td>${r.state}</td><td>${r.read}</td><td>${r.write}</td><td>${r.move}</td><td>${r.next}</td>`;
+    rulesTbody.appendChild(tr);
+  }
+
+  // Update 3D brass instrument panel & stylus/sound
+  drawUTMPanelTexture();
+  if (ev === 'step') {
+    if (utm.lastAction && utm.lastAction.changed) {
+      utmAnim.stylusDrop = 1.0;
+      playStepClick('write');
+    } else {
+      utmAnim.stylusDrop = 0.45;
+      playStepClick('step');
+    }
+  } else if (ev === 'halt') {
+    playStepClick('halt');
+  } else if (ev === 'reset') {
+    utmAnim.headPos = utm.head;
+  }
+}
+
+utm.onChange(syncUTMUI);
+populateEditorFromProgram();
+syncUTMUI('init');
+
+function toggleRunUTM() {
+  if (utm.halted) utm.reset();
+  utm.running = !utm.running;
+  utm.stepAccum = 0;
+  syncUTMUI('toggle');
+}
+function toggleDrawer() {
+  drawerEl.classList.toggle('open');
+  document.getElementById('btn-inspector').classList.toggle('active', drawerEl.classList.contains('open'));
+}
+
+progSelect.addEventListener('change', () => {
+  const found = UTM_PROGRAMS.find(p => p.id === progSelect.value);
+  if (found) {
+    utm.loadProgram(found);
+    populateEditorFromProgram();
+  }
+});
+document.getElementById('btn-step').addEventListener('click', () => { ensureAudio(); utm.running = false; utmAnim.btnPress.step = 1; utm.step(); });
+document.getElementById('btn-run').addEventListener('click',  () => { ensureAudio(); utmAnim.btnPress.run = 1; toggleRunUTM(); });
+document.getElementById('btn-reset').addEventListener('click',() => { ensureAudio(); utmAnim.btnPress.reset = 1; utm.reset(); playStepClick('step'); });
+speedSlider.addEventListener('input', () => {
+  utm.speed = Number(speedSlider.value);
+  speedLabel.textContent = `${utm.speed}/s`;
+});
+document.getElementById('btn-focus').addEventListener('click', toggleDeskFocus);
+document.getElementById('btn-window').addEventListener('click', goWindowView);
+document.getElementById('btn-inspector').addEventListener('click', toggleDrawer);
+document.getElementById('btn-close-drawer').addEventListener('click', toggleDrawer);
+document.getElementById('btn-sound').addEventListener('click', (e) => {
+  soundEnabled = !soundEnabled;
+  e.target.textContent = soundEnabled ? 'Sound: On' : 'Sound: Off';
+});
+document.getElementById('btn-help').addEventListener('click', () => document.getElementById('help-modal').classList.add('open'));
+document.getElementById('btn-close-help').addEventListener('click', () => document.getElementById('help-modal').classList.remove('open'));
+document.getElementById('help-modal').addEventListener('click', (e) => {
+  if (e.target.id === 'help-modal') e.target.classList.remove('open');
+});
+
+// Custom Universal Turing Machine Program Parser
+document.getElementById('btn-apply-custom').addEventListener('click', () => {
+  try {
+    const initParts = editInitEl.value.split(',').map(s => s.trim());
+    const initState = initParts[0] || 'q0';
+    const initHead  = parseInt(initParts[1] || '0', 10) || 0;
+    const rawLines  = editRulesEl.value.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#') && !l.startsWith('//'));
+    const rules = [];
+    for (let i = 0; i < rawLines.length; i++) {
+      const m = rawLines[i].match(/^([^,\s]+)\s*,\s*([^\s->]+)\s*->\s*([^,\s]+)\s*,\s*([LRNlrn])\s*,\s*([^\s]+)$/);
+      if (!m) throw new Error(`Syntax error on line ${i + 1}: "${rawLines[i]}"`);
+      rules.push({ state: m[1], read: m[2], write: m[3], move: m[4].toUpperCase(), next: m[5] });
+    }
+    if (!rules.length) throw new Error('Enter at least one transition rule.');
+    utm.loadProgram({
+      id: 'custom',
+      name: `Custom Machine (${rules.length} rules)`,
+      desc: 'Custom transition table currently simulated by Turing\'s Universal Machine.',
+      initialTape: editTapeEl.value.trim(),
+      initialState: initState,
+      initialHead: initHead,
+      rules
+    });
+    editorMsg.className = 'editor-msg';
+    editorMsg.textContent = `Loaded ${rules.length} rules onto the Universal Machine.`;
+  } catch (err) {
+    editorMsg.className = 'editor-msg err';
+    editorMsg.textContent = err.message;
+  }
+});
+
+// ============================================================================
+// 10. ANIMATION & MAIN WEBGL2 RENDER LOOP
+// ============================================================================
+// Sun shining from outside North window (+X slightly, +Y afternoon, -Z outside!)
+const sunRaw = [0.46, 0.44, -0.77];
+const sunLen = Math.hypot(...sunRaw);
+const SUN_DIR = [sunRaw[0]/sunLen, sunRaw[1]/sunLen, sunRaw[2]/sunLen];
+
+// Shadow camera centered on desk & room interior
+const lightView = M4.lookAt(
+  SUN_DIR[0] * 9.5, 1.0 + SUN_DIR[1] * 9.5, -0.8 + SUN_DIR[2] * 9.5,
+  0.0, 0.9, -0.7,
+  0, 1, 0
+);
+const lightProj = M4.ortho(-4.8, 4.8, -3.6, 4.4, 1.5, 18.0);
+const lightVP = M4.mul(lightProj, lightView);
+
+function resizeCanvas() {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const w = Math.floor(window.innerWidth * dpr);
+  const h = Math.floor(window.innerHeight * dpr);
+  if (canvas.width !== w || canvas.height !== h) {
+    canvas.width = w; canvas.height = h;
+  }
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+let lastTime = performance.now();
+let clockTickAccum = 0;
+
+function updateUTMVisuals(dt, timeSec) {
+  // Advance UTM if running
+  if (utm.running && !utm.halted) {
+    utm.stepAccum += dt * utm.speed;
+    while (utm.stepAccum >= 1.0 && utm.running && !utm.halted) {
+      utm.stepAccum -= 1.0;
+      utm.step();
+    }
+  }
+
+  // Smoothly interpolate animated head position for silky-smooth tape glide & reel spin!
+  const diff = utm.head - utmAnim.headPos;
+  utmAnim.headPos += diff * Math.min(1, dt * (9.5 + utm.speed * 1.4));
+  if (Math.abs(utm.head - utmAnim.headPos) < 0.0008) utmAnim.headPos = utm.head;
+
+  // Decay ink stylus punch & button depressions
+  utmAnim.stylusDrop = Math.max(0, utmAnim.stylusDrop - dt * 5.2);
+  for (const k of ['step', 'run', 'reset']) {
+    utmAnim.btnPress[k] = Math.max(0, utmAnim.btnPress[k] - dt * 6.5);
+  }
+
+  // Redraw 3D paper tape texture only when head position, tape content, or stylus stamp pulse changes
+  if (Math.abs(utmAnim.headPos - lastDrawnTapePos) > 0.001 || lastDrawnTapeRev !== tapeRevision || utmAnim.stylusDrop > 0.01) {
+    drawUTMTapeTexture(utmAnim.headPos, utmAnim.stylusDrop);
+    lastDrawnTapePos = utmAnim.headPos;
+    lastDrawnTapeRev = tapeRevision;
+  }
+
+  // Spin both brass paper reels, spokes & escapement gear cleanly around their exact axles!
+  const reelAngle = -utmAnim.headPos * 0.95;
+  const ry = UTM_Y + 0.175, rz = UTM_Z - 0.04;
+  const setSpinZ = (obj, tx, ty, tz, ang, sx, sy, sz) => {
+    const m = M4.mul(M4.translate(tx, ty, tz), M4.mul(M4.rotX(Math.PI/2), M4.mul(M4.rotY(-ang), M4.scale(sx, sy, sz))));
+    obj.model = m; obj.normalMat = M4.normalMat3(m);
+  };
+  setSpinZ(utmAnim.leftReel,  UTM_X - 0.315, ry, rz + 0.040, reelAngle, 0.152, 0.008, 0.152);
+  setSpinZ(utmAnim.rightReel, UTM_X + 0.315, ry, rz + 0.040, reelAngle, 0.152, 0.008, 0.152);
+  setObjTransform(utmAnim.leftSpoke,  UTM_X - 0.315, ry, rz + 0.046, 0, 0, reelAngle, 0.136, 0.014, 0.006);
+  setObjTransform(utmAnim.rightSpoke, UTM_X + 0.315, ry, rz + 0.046, 0, 0, reelAngle, 0.136, 0.014, 0.006);
+  {
+    const gm = M4.mul(M4.translate(UTM_X + 0.095, UTM_Y + 0.24, rz + 0.02),
+               M4.mul(M4.rotZ(Math.PI/2), M4.mul(M4.rotY(reelAngle * 2.4), M4.scale(0.065, 0.014, 0.065))));
+    utmAnim.gearWheel.model = gm;
+    utmAnim.gearWheel.normalMat = M4.normalMat3(gm);
+  }
+
+  // Plunge brass stylus smoothly onto the active tape cell on write
+  const dropOffset = Math.sin(utmAnim.stylusDrop * Math.PI) * 0.018;
+  setObjTransform(utmAnim.stylus, UTM_X, UTM_Y + 0.168 - dropOffset, rz, Math.PI, 0, 0, 0.022, 0.048, 0.022);
+
+  // Depress 3D brass buttons when pressed
+  const bx = { step: UTM_X - 0.13, run: UTM_X, reset: UTM_X + 0.13 };
+  setObjTransform(utmAnim.btnStep,  bx.step,  UTM_Y + 0.078 - utmAnim.btnPress.step  * 0.007, UTM_Z + 0.185, 0,0,0, 0.030, 0.018, 0.030);
+  setObjTransform(utmAnim.btnRun,   bx.run,   UTM_Y + 0.078 - utmAnim.btnPress.run   * 0.007, UTM_Z + 0.185, 0,0,0, 0.030, 0.018, 0.030);
+  setObjTransform(utmAnim.btnReset, bx.reset, UTM_Y + 0.078 - utmAnim.btnPress.reset * 0.007, UTM_Z + 0.185, 0,0,0, 0.030, 0.018, 0.030);
+
+  // Status Indicator Lamp color & pulse
+  const pulse = 0.78 + 0.22 * Math.sin(timeSec * (utm.running ? 7.0 : 2.2));
+  if (utm.halted) {
+    utmAnim.statusBulb.color = [1.0, 0.35, 0.30, 1];
+    utmAnim.statusBulb.emissive = [1.4 * pulse, 0.24 * pulse, 0.16 * pulse];
+    utmAnim.headGlow.emissive = [0.6, 0.15, 0.10];
+  } else if (utm.running) {
+    utmAnim.statusBulb.color = [0.35, 1.0, 0.56, 1];
+    utmAnim.statusBulb.emissive = [0.22 * pulse, 1.45 * pulse, 0.55 * pulse];
+    utmAnim.headGlow.emissive = [0.55 + utmAnim.stylusDrop * 0.7, 0.45 + utmAnim.stylusDrop * 0.4, 0.12];
+  } else {
+    utmAnim.statusBulb.color = [1.0, 0.84, 0.42, 1];
+    utmAnim.statusBulb.emissive = [1.15 * pulse, 0.74 * pulse, 0.20 * pulse];
+    utmAnim.headGlow.emissive = [0.45 + utmAnim.stylusDrop * 0.7, 0.32 + utmAnim.stylusDrop * 0.4, 0.08];
+  }
+
+  // Update mantel clock hands once per second
+  clockTickAccum += dt;
+  if (clockTickAccum >= 1.0) {
+    clockTickAccum -= 1.0;
+    drawClockFace(timeSec);
+  }
+}
+
+function drawMeshList(list, projView, camPos, fireColor, timeSec) {
+  for (const o of list) {
+    if (o.doubleSided) gl.disable(gl.CULL_FACE);
+    else gl.enable(gl.CULL_FACE);
+
+    gl.uniformMatrix4fv(uMain.uModel, false, o.model);
+    gl.uniformMatrix3fv(uMain.uNormalMat, false, o.normalMat);
+    gl.uniform4fv(uMain.uColor, o.color);
+    gl.uniform3fv(uMain.uEmissive, o.emissive);
+    gl.uniform1f(uMain.uRoughness, o.roughness);
+    gl.uniform1f(uMain.uMetallic, o.metallic);
+    gl.uniform1f(uMain.uIsExterior, o.isExterior);
+    gl.uniform1f(uMain.uReceiveShadow, o.receiveShadow ? 1.0 : 0.0);
+
+    gl.activeTexture(gl.TEXTURE0);
+    if (o.tex) {
+      gl.bindTexture(gl.TEXTURE_2D, o.tex);
+      gl.uniform1f(uMain.uUseTex, 1.0);
+    } else {
+      gl.bindTexture(gl.TEXTURE_2D, TEX.white);
+      gl.uniform1f(uMain.uUseTex, 0.0);
+    }
+
+    gl.bindVertexArray(o.mesh.vao);
+    gl.drawElements(gl.TRIANGLES, o.mesh.count, o.mesh.type, 0);
+  }
+}
+
+function render(now) {
+  const dt = Math.min(0.05, (now - lastTime) / 1000);
+  lastTime = now;
+  const timeSec = now * 0.001;
+
+  updateCamera(dt);
+  updateUTMVisuals(dt, timeSec);
+
+  // Build camera matrices
+  const aspect = canvas.width / Math.max(1, canvas.height);
+  const proj = M4.perspective(55 * Math.PI / 180, aspect, 0.06, 140);
+  const { fwd } = getCamVectors();
+  const view = M4.lookAt(cam.x, cam.y, cam.z, cam.x + fwd[0], cam.y + fwd[1], cam.z + fwd[2], 0, 1, 0);
+  const viewProj = M4.mul(proj, view);
+
+  // Dynamic organic fireplace light flicker
+  const flick = 0.88 + 0.10 * Math.sin(timeSec * 8.3) + 0.06 * Math.sin(timeSec * 14.7 + 1.3) + 0.04 * Math.sin(timeSec * 23.1);
+  const fireColor = [3.4 * flick, 1.38 * flick, 0.36 * flick];
+
+  // =========================================================================
+  // PASS 1: DIRECTIONAL SUN SHADOW MAP
+  // =========================================================================
+  gl.bindFramebuffer(gl.FRAMEBUFFER, shadowFBO);
+  gl.viewport(0, 0, SHADOW_SIZE, SHADOW_SIZE);
+  gl.clear(gl.DEPTH_BUFFER_BIT);
+  gl.enable(gl.DEPTH_TEST);
+  gl.depthMask(true);
+  gl.enable(gl.CULL_FACE);
+  gl.cullFace(gl.BACK);
+
+  gl.useProgram(shadowProg);
+  gl.uniformMatrix4fv(uShadow.uLightVP, false, lightVP);
+  for (const o of opaqueObjects) {
+    if (!o.castShadow) continue;
+    gl.uniformMatrix4fv(uShadow.uModel, false, o.model);
+    gl.bindVertexArray(o.mesh.vao);
+    gl.drawElements(gl.TRIANGLES, o.mesh.count, o.mesh.type, 0);
+  }
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+  // =========================================================================
+  // PASS 2: MAIN LIT SCENE
+  // =========================================================================
+  gl.viewport(0, 0, canvas.width, canvas.height);
+  gl.clearColor(0.08, 0.06, 0.05, 1);
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  gl.enable(gl.DEPTH_TEST);
+  gl.depthFunc(gl.LESS);
+  gl.depthMask(true);
+  gl.disable(gl.BLEND);
+
+  gl.useProgram(mainProg);
+  gl.uniformMatrix4fv(uMain.uViewProj, false, viewProj);
+  gl.uniformMatrix4fv(uMain.uLightVP, false, lightVP);
+  gl.uniform3f(uMain.uCamPos, cam.x, cam.y, cam.z);
+  gl.uniform3fv(uMain.uSunDir, SUN_DIR);
+  gl.uniform3f(uMain.uSunColor, 3.25, 2.52, 1.62);
+  gl.uniform3f(uMain.uFirePos, -2.30, 0.48, 0.0);
+  gl.uniform3fv(uMain.uFireColor, fireColor);
+  gl.uniform3f(uMain.uLampPos, DESK_X - 0.56, DESK_Y + 0.34, DESK_Z - 0.14);
+  gl.uniform3f(uMain.uLampColor, 1.85, 1.42, 0.78);
+  gl.uniform3f(uMain.uCeilPos, 0.0, 2.55, 0.10);
+  gl.uniform3f(uMain.uCeilColor, 0.82, 0.68, 0.48);
+
+  gl.uniform1i(uMain.uTex, 0);
+  gl.activeTexture(gl.TEXTURE1);
+  gl.bindTexture(gl.TEXTURE_2D, shadowTex);
+  gl.uniform1i(uMain.uShadowMap, 1);
+
+  drawMeshList(opaqueObjects, viewProj, [cam.x, cam.y, cam.z], fireColor, timeSec);
+
+  // =========================================================================
+  // PASS 3: CAMBRIDGE GOLDEN-HOUR SKY DOME (drawn at depth = 1.0)
+  // =========================================================================
+  gl.depthFunc(gl.LEQUAL);
+  gl.disable(gl.CULL_FACE);
+  gl.useProgram(skyProg);
+  gl.uniformMatrix4fv(uSky.uViewProj, false, viewProj);
+  gl.uniform3f(uSky.uCamPos, cam.x, cam.y, cam.z);
+  gl.uniform3fv(uSky.uSunDir, SUN_DIR);
+  gl.uniform1f(uSky.uTime, timeSec);
+  gl.bindVertexArray(skyCubeVAO.vao);
+  gl.drawElements(gl.TRIANGLES, skyCubeVAO.count, skyCubeVAO.type, 0);
+  gl.depthFunc(gl.LESS);
+
+  // =========================================================================
+  // PASS 4: TRANSPARENT WINDOW GLASS, FIREPLACE FLAMES, GOD-RAYS & DUST MOTES
+  // =========================================================================
+  gl.enable(gl.BLEND);
+  gl.depthMask(false);
+
+  // Window Glass Panes (standard alpha blend)
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+  gl.useProgram(mainProg);
+  drawMeshList(transparentObjects, viewProj, [cam.x, cam.y, cam.z], fireColor, timeSec);
+
+  // Additive Fireplace Flames & Volumetric Window Sunbeams
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+  gl.disable(gl.CULL_FACE);
+  gl.useProgram(fxProg);
+  gl.uniformMatrix4fv(uFX.uViewProj, false, viewProj);
+  gl.uniform1f(uFX.uTime, timeSec);
+  gl.bindVertexArray(MESH.plane.vao);
+
+  // Hearth Flames
+  gl.uniform1i(uFX.uMode, 0);
+  for (const fl of flameQuads) {
+    const m = M4.trs(fl.pos[0], fl.pos[1], fl.pos[2], 0, fl.rotY, 0, fl.sx, fl.sy, 1);
+    gl.uniformMatrix4fv(uFX.uModel, false, m);
+    gl.uniform1f(uFX.uSeed, fl.seed);
+    gl.drawElements(gl.TRIANGLES, MESH.plane.count, MESH.plane.type, 0);
+  }
+
+  // Sunbeam God-Rays streaming through the Georgian window
+  gl.uniform1i(uFX.uMode, 1);
+  for (const sb of sunbeamPlanes) {
+    const m = M4.trs(sb.pos[0], sb.pos[1], sb.pos[2], sb.rx, sb.ry, sb.rz, sb.sx, sb.sy, 1);
+    gl.uniformMatrix4fv(uFX.uModel, false, m);
+    gl.uniform1f(uFX.uSeed, sb.seed);
+    gl.drawElements(gl.TRIANGLES, MESH.plane.count, MESH.plane.type, 0);
+  }
+
+  // Floating Golden Dust Motes in Window Light
+  gl.useProgram(dustProg);
+  gl.uniformMatrix4fv(uDust.uViewProj, false, viewProj);
+  gl.uniform1f(uDust.uTime, timeSec);
+  gl.bindVertexArray(dustVAO);
+  gl.drawArrays(gl.POINTS, 0, DUST_COUNT);
+
+  gl.depthMask(true);
+  gl.disable(gl.BLEND);
+
+  requestAnimationFrame(render);
+}
+
+requestAnimationFrame(render);
+})();
+</script>
+</body>
+</html>

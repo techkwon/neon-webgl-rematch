@@ -1,0 +1,1594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Chamonix Freeride — WebGL2 Ski Simulator</title>
+<style>
+html,body{margin:0;height:100%;background:#0a1018;overflow:hidden;font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;color:#fff;user-select:none;-webkit-user-select:none}
+canvas{position:fixed;left:0;top:0;width:100%;height:100%;display:block}
+#hud{position:fixed;inset:0;pointer-events:none;text-shadow:0 1px 6px rgba(0,20,50,.65)}
+#vig{position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(255,255,255,0) 52%,rgba(190,215,255,.0) 100%);opacity:0;transition:none}
+#white{position:absolute;inset:0;background:#eef4fb;opacity:0}
+#speed{position:absolute;left:28px;bottom:26px;font-weight:200;font-size:64px;line-height:1;letter-spacing:-1px}
+#speed small{font-size:15px;font-weight:400;letter-spacing:2px;margin-left:8px;opacity:.75}
+#stats{position:absolute;left:30px;bottom:100px;font-size:13px;letter-spacing:2px;opacity:.85;line-height:1.7}
+#stats b{font-weight:600;font-size:15px;letter-spacing:1px}
+#av{position:absolute;right:28px;top:22px;text-align:right;font-size:13px;letter-spacing:2px;line-height:1.6}
+#av .t{font-weight:700;font-size:15px}
+#msg{position:absolute;left:0;right:0;top:20%;text-align:center;font-size:34px;font-weight:300;letter-spacing:6px;opacity:0;transition:opacity .35s}
+#help{position:absolute;right:28px;bottom:24px;text-align:right;font-size:12px;letter-spacing:1.5px;line-height:1.8;opacity:.7}
+#help b{font-weight:600;color:#cfe6ff}
+#overlay{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 60%,rgba(20,40,70,.55),rgba(5,10,20,.88));z-index:5;text-align:center}
+#overlay h1{font-weight:200;font-size:54px;letter-spacing:14px;margin:0 0 6px 14px}
+#overlay h2{font-weight:400;font-size:14px;letter-spacing:7px;margin:0 0 34px 7px;color:#9cc4f0}
+#overlay p{max-width:560px;font-size:14px;line-height:1.7;color:#cfdcec;margin:6px 20px}
+#overlay kbd{display:inline-block;border:1px solid rgba(180,210,255,.45);border-radius:4px;padding:1px 7px;margin:0 2px;font-family:inherit;font-size:12px;background:rgba(120,160,220,.14)}
+#start{margin-top:26px;padding:15px 54px;font-size:16px;letter-spacing:6px;color:#fff;background:linear-gradient(#3b86d6,#1f5fae);border:1px solid #9cc9ff;border-radius:3px;cursor:pointer;font-family:inherit;box-shadow:0 0 30px rgba(80,150,255,.35)}
+#start:disabled{opacity:.35;cursor:default;box-shadow:none}
+#start:not(:disabled):hover{background:linear-gradient(#4a97ea,#2a6ec2)}
+#bar{width:320px;height:3px;background:rgba(255,255,255,.15);margin-top:22px;border-radius:2px;overflow:hidden}
+#bar i{display:block;height:100%;width:0;background:#8cc4ff}
+#loadmsg{margin-top:10px;font-size:12px;letter-spacing:3px;color:#8fb2d8;min-height:16px}
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<div id="hud">
+  <div id="vig"></div>
+  <div id="white"></div>
+  <div id="av"></div>
+  <div id="msg"></div>
+  <div id="stats">ALT <b id="alt">0</b> m &nbsp; SLOPE <b id="slp">0</b>° &nbsp; RUN <b id="dst">0</b> m</div>
+  <div id="speed"><span id="spd">0</span><small>KM/H</small></div>
+  <div id="help"><b>A D</b> / <b>← →</b> carve &nbsp; <b>W</b> tuck &nbsp; <b>S</b> brake<br><b>SPACE</b> hold &amp; release to jump<br><b>MOUSE</b> look &nbsp; <b>R</b> restart &nbsp; <b>M</b> mute</div>
+</div>
+<div id="overlay">
+  <h1>MONT BLANC</h1>
+  <h2>FREERIDE · CHAMONIX</h2>
+  <p id="intro">Ski the high glacier above Chamonix. Carve fresh lines, tuck for speed, hit the icefall steps — and watch the wind-loaded slope to the left: it will release if you ski it.</p>
+  <p><kbd>A</kbd><kbd>D</kbd> / <kbd>←</kbd><kbd>→</kbd> carve &nbsp; <kbd>W</kbd> tuck &nbsp; <kbd>S</kbd> brake &nbsp; <kbd>Space</kbd> hold &amp; release to jump<br><kbd>Mouse</kbd> look around &nbsp; <kbd>R</kbd> restart &nbsp; <kbd>M</kbd> mute &nbsp; <kbd>Esc</kbd> pause<br>Headphones recommended — sound is spatial.</p>
+  <div id="bar"><i id="barfill"></i></div>
+  <div id="loadmsg">PREPARING TERRAIN…</div>
+  <button id="start" disabled>START</button>
+</div>
+
+<script>
+(()=>{
+'use strict';
+const $=id=>document.getElementById(id);
+const canvas=$('gl');
+function fatal(msg){const m=$('loadmsg');m.textContent=msg;m.style.color='#ff9c9c';m.style.letterSpacing='1px';$('start').style.display='none';throw new Error(msg);}
+const gl=canvas.getContext('webgl2',{antialias:true,alpha:false,powerPreference:'high-performance'});
+if(!gl)fatal('WebGL2 is not available in this browser.');
+if(!gl.getExtension('EXT_color_buffer_float'))fatal('This GPU does not support float render targets (EXT_color_buffer_float).');
+
+/* ===================================================================== */
+/*  constants & helpers                                                  */
+/* ===================================================================== */
+const HALF=3072, HN=2048, HSP=2*HALF/(HN-1), SHN=1024;
+const SUN=[0.5134,0.8010,0.3081];
+const G=9.81, GRIP=1.25;
+const clamp=(x,a,b)=>x<a?a:x>b?b:x;
+const mix=(a,b,t)=>a+(b-a)*t;
+const sstep=(a,b,x)=>{const t=clamp((x-a)/(b-a),0,1);return t*t*(3-2*t);};
+const angWrap=a=>{a%=Math.PI*2;if(a>Math.PI)a-=Math.PI*2;else if(a<-Math.PI)a+=Math.PI*2;return a;};
+const rnd=(a=1,b)=>b===undefined?Math.random()*a:a+Math.random()*(b-a);
+function mul4(a,b){const o=new Float32Array(16);for(let c=0;c<4;c++)for(let r=0;r<4;r++){let s=0;for(let k=0;k<4;k++)s+=a[k*4+r]*b[c*4+k];o[c*4+r]=s;}return o;}
+function persp(fovy,asp,n,f){const t=1/Math.tan(fovy/2),o=new Float32Array(16);o[0]=t/asp;o[5]=t;o[10]=(f+n)/(n-f);o[11]=-1;o[14]=2*f*n/(n-f);return o;}
+function viewM(r,u,f,e,rotOnly){const o=new Float32Array(16);
+  o[0]=r[0];o[4]=r[1];o[8]=r[2];o[1]=u[0];o[5]=u[1];o[9]=u[2];o[2]=-f[0];o[6]=-f[1];o[10]=-f[2];
+  o[12]=rotOnly?0:-(r[0]*e[0]+r[1]*e[1]+r[2]*e[2]);o[13]=rotOnly?0:-(u[0]*e[0]+u[1]*e[1]+u[2]*e[2]);o[14]=rotOnly?0:(f[0]*e[0]+f[1]*e[1]+f[2]*e[2]);o[15]=1;return o;}
+const dot3=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+const cross3=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
+const norm3=a=>{const l=Math.hypot(a[0],a[1],a[2])||1;return[a[0]/l,a[1]/l,a[2]/l];};
+// JS integer hash value-noise (only used for slab outline)
+function ihash(x,y){let h=Math.imul(x|0,374761393)+Math.imul(y|0,668265263);h=Math.imul(h^(h>>>13),1274126177);return((h^(h>>>16))>>>0)/4294967296;}
+function vnoise(x,y){const ix=Math.floor(x),iy=Math.floor(y),fx=x-ix,fy=y-iy,ux=fx*fx*(3-2*fx),uy=fy*fy*(3-2*fy);
+  return mix(mix(ihash(ix,iy),ihash(ix+1,iy),ux),mix(ihash(ix,iy+1),ihash(ix+1,iy+1),ux),uy)*2-1;}
+const xcen=q=>380*Math.sin(q/900+0.6)+160*Math.sin(q/420+2.0);
+const wflo=q=>240+90*Math.sin(q/650+1.0);
+
+/* ===================================================================== */
+/*  GLSL                                                                  */
+/* ===================================================================== */
+const HDR='#version 300 es\nprecision highp float;\nprecision highp int;\nprecision highp sampler2D;\n';
+const COMMON=`
+const float HALF=3072.0;
+const float HN=2048.0;
+const float HSP=${HSP.toFixed(7)};
+const vec3 SUN=vec3(0.5134,0.8010,0.3081);
+uint hu(uvec2 v){
+  v=v*1664525u+1013904223u;
+  v.x+=v.y*1664525u; v.y+=v.x*1664525u;
+  v^=v>>16u;
+  v.x+=v.y*1664525u; v.y+=v.x*1664525u;
+  v^=v>>16u;
+  return v.x;
+}
+float hash1(vec2 p){return float(hu(uvec2(ivec2(floor(p)))))*(1.0/4294967296.0);}
+vec2 grad2(vec2 i){float a=float(hu(uvec2(ivec2(i))))*(6.28318530718/4294967296.0);return vec2(cos(a),sin(a));}
+vec3 noised(vec2 p){
+  vec2 i=floor(p),f=fract(p);
+  vec2 u=f*f*f*(f*(f*6.0-15.0)+10.0);
+  vec2 du=30.0*f*f*(f*(f-2.0)+1.0);
+  vec2 ga=grad2(i),gb=grad2(i+vec2(1.0,0.0)),gc=grad2(i+vec2(0.0,1.0)),gd=grad2(i+vec2(1.0,1.0));
+  float va=dot(ga,f),vb=dot(gb,f-vec2(1.0,0.0)),vc=dot(gc,f-vec2(0.0,1.0)),vd=dot(gd,f-vec2(1.0,1.0));
+  float v=va+u.x*(vb-va)+u.y*(vc-va)+u.x*u.y*(va-vb-vc+vd);
+  vec2 d=ga+u.x*(gb-ga)+u.y*(gc-ga)+u.x*u.y*(ga-gb-gc+gd)+du*(u.yx*(va-vb-vc+vd)+vec2(vb,vc)-va);
+  return vec3(v,d);
+}
+const mat2 M2=mat2(0.8,-0.6,0.6,0.8);
+float fbmT(vec2 p,int oct){
+  float a=0.5,s=0.0;vec2 d=vec2(0.0);
+  for(int i=0;i<8;i++){if(i>=oct)break;vec3 n=noised(p);d+=n.yz;s+=a*n.x/(1.0+dot(d,d));a*=0.5;p=M2*p*2.02;}
+  return s;
+}
+float fbm(vec2 p,int oct){
+  float a=0.5,s=0.0;
+  for(int i=0;i<8;i++){if(i>=oct)break;s+=a*noised(p).x;a*=0.5;p=M2*p*2.02;}
+  return s;
+}
+float ridgeN(vec2 p){
+  float s=0.0,a=0.5,w=1.0;
+  for(int i=0;i<5;i++){vec3 n=noised(p);float r=1.0-abs(n.x*1.7);r*=r;s+=a*r*w;w=clamp(r*1.5,0.0,1.0);a*=0.5;p=M2*p*2.03;}
+  return s*1.9;
+}
+float smin(float a,float b,float k){float h=clamp(0.5+0.5*(b-a)/k,0.0,1.0);return mix(b,a,h)-k*h*(1.0-h);}
+float p2(float x){return x*x;}
+
+vec3 tone(vec3 c){
+  c*=0.62;
+  c=(c*(2.51*c+0.03))/(c*(2.43*c+0.59)+0.14);
+  return pow(clamp(c,0.0,1.0),vec3(1.0/2.2));
+}
+vec3 hazeCol(vec3 d){
+  vec2 h=normalize(d.xz+vec2(1e-5));
+  float sd=max(dot(h,normalize(SUN.xz)),0.0);
+  return mix(vec3(0.60,0.74,0.93),vec3(0.98,0.90,0.80),pow(sd,5.0)*0.4);
+}
+vec3 skyGrad(vec3 d){
+  float y=clamp(d.y,0.0,1.0);
+  vec3 zen=vec3(0.10,0.25,0.62)*1.1,hor=vec3(0.64,0.79,0.98);
+  vec3 c=mix(hor,zen,pow(y,0.42));
+  float sd=max(dot(d,SUN),0.0);
+  c+=vec3(1.0,0.75,0.5)*(pow(sd,6.0)*0.16+pow(sd,28.0)*0.3);
+  return c;
+}
+vec3 applyFog(vec3 col,vec3 wp,vec3 cam){
+  vec3 dv=wp-cam;float dist=length(dv);vec3 d=dv/max(dist,1e-3);
+  float hm=(wp.y+cam.y)*0.5;
+  float beta=0.00013*exp(-max(hm-1800.0,0.0)/1400.0);
+  float f=1.0-exp(-dist*beta);
+  return mix(col,hazeCol(d),f);
+}
+vec3 lightSnow(vec3 alb,vec3 N,float sh,float ao){
+  float ndl=max(dot(N,SUN),0.0);
+  vec3 sky=vec3(0.34,0.54,0.95)*(0.55+0.45*N.y);
+  return alb*(vec3(3.1,2.85,2.5)*ndl*sh+sky*ao+vec3(0.10,0.11,0.13)*ao);
+}
+vec2 snowDetail(vec2 p,float dist){
+  float f=1.0-smoothstep(40.0,380.0,dist);
+  vec3 a=noised(p*0.35),b=noised(p*1.6+vec2(7.3,1.7));
+  return (a.yz*0.35*0.55+b.yz*1.6*0.07)*f;
+}
+vec2 rockDetail(vec2 p,float dist){
+  float f=1.0-smoothstep(60.0,500.0,dist);
+  vec3 a=noised(p*0.12),b=noised(p*0.55+vec2(3.1,9.2));
+  return (a.yz*0.12*3.0+b.yz*0.55*0.8)*f;
+}
+`;
+
+// ---- terrain height function (generation only, on GPU, read back once) ----
+const GEN_FS=HDR+COMMON+`
+float xcen(float q){return 380.0*sin(q/900.0+0.6)+160.0*sin(q/420.0+2.0);}
+float wflo(float q){return 240.0+90.0*sin(q/650.0+1.0);}
+float cliffF(vec2 p,float q,float q0,float drop,float seed){
+  float off=60.0*noised(vec2(p.x*0.012,seed)).x+25.0*noised(vec2(p.x*0.05,seed+3.0)).x;
+  float s=q-q0+off;
+  float stp=smoothstep(-9.0,9.0,s);
+  float lip=4.0*exp(-p2((s+22.0)/11.0));
+  return -drop*stp+lip;
+}
+float terrainH(vec2 p){
+  float q=-p.y;
+  float xc=xcen(q),wf=wflo(q);
+  float d=p.x-xc,ad=abs(d);
+  float e=max(ad-wf,0.0);
+  float t=clamp((q+HALF)/(2.0*HALF),0.0,1.0);
+  float base=3600.0-1450.0*(1.0-pow(1.0-t,1.25));
+  float fl=fbmT(p*0.0035+vec2(11.0,3.0),4)*48.0+fbmT(p*0.016+vec2(5.0,7.0),3)*9.0;
+  fl*=1.0-smoothstep(0.0,400.0,e);
+  float foot=0.70*e*e/(e+60.0);
+  float upper=1.55*max(e-650.0,0.0);
+  float wall=foot+upper;
+  float rn=ridgeN(p*0.0012+vec2(3.7,1.3));
+  float spn=ridgeN(p*0.0042+vec2(9.0,2.0));
+  float head=exp(-p2((q+HALF)/900.0));
+  float cap=620.0+700.0*rn+430.0*head;
+  wall=smin(wall,cap,200.0);
+  wall+=smoothstep(450.0,1300.0,e)*360.0*spn*spn;
+  wall+=smoothstep(30.0,500.0,e)*(95.0*fbmT(p*0.009+vec2(2.0,8.0),5)+30.0*fbmT(p*0.035,4));
+  float h=base+fl+wall;
+  float cm=1.0-smoothstep(wf*0.9,wf*1.6+200.0,ad);
+  h+=cm*(cliffF(p,q,-2420.0,8.0,1.0)+cliffF(p,q,-1750.0,14.0,2.0)+cliffF(p,q,150.0,22.0,3.0)+cliffF(p,q,1750.0,18.0,4.0));
+  return h;
+}
+out vec4 o;
+void main(){
+  vec2 ij=gl_FragCoord.xy-0.5;
+  vec2 p=-HALF+ij*HSP;
+  o=vec4(terrainH(p),0.0,0.0,1.0);
+}`;
+const FS_VS=HDR+`void main(){vec2 p=vec2(float((gl_VertexID<<1)&2),float(gl_VertexID&2));gl_Position=vec4(p*2.0-1.0,0.0,1.0);}`;
+
+const SHADOW_FS=HDR+COMMON+`
+uniform sampler2D uH;
+out vec4 o;
+float hf(vec2 p){vec2 tc=(p+HALF)/HSP;ivec2 i=clamp(ivec2(tc+0.5),ivec2(0),ivec2(2047));return texelFetch(uH,i,0).r;}
+void main(){
+  vec2 ij=gl_FragCoord.xy-0.5;
+  vec2 p=-HALF+ij*(2.0*HALF/1023.0);
+  float h0=hf(p)+3.0;
+  vec2 ld=normalize(SUN.xz);
+  float slope=SUN.y/length(SUN.xz);
+  float t=6.0,sh=1.0;
+  for(int i=0;i<100;i++){
+    vec2 q=p+ld*t;
+    if(abs(q.x)>HALF||abs(q.y)>HALF)break;
+    float ry=h0+t*slope;
+    float th=hf(q);
+    sh=min(sh,clamp((ry-th)/(0.05*t+5.0),0.0,1.0));
+    t*=1.0655;
+  }
+  o=vec4(sh,0.0,0.0,1.0);
+}`;
+const DATA_FS=HDR+COMMON+`
+uniform sampler2D uH;
+out vec4 o;
+float hh(ivec2 i){return texelFetch(uH,clamp(i,ivec2(0),ivec2(2047)),0).r;}
+void main(){
+  ivec2 i=ivec2(gl_FragCoord.xy);
+  float hl=hh(i-ivec2(1,0)),hr=hh(i+ivec2(1,0)),hd=hh(i-ivec2(0,1)),hn=hh(i+ivec2(0,1));
+  float gx=(hr-hl)/(2.0*HSP),gz=(hn-hd)/(2.0*HSP);
+  float h=hh(i);
+  float ring=(hh(i-ivec2(5,0))+hh(i+ivec2(5,0))+hh(i-ivec2(0,5))+hh(i+ivec2(0,5)))*0.25;
+  o=vec4(gx,gz,ring-h,0.0);
+}`;
+
+// ---- shared terrain height lookup for vertex shaders ----
+const VS_H=`
+uniform sampler2D uHeight;
+uniform sampler2D uState;
+uniform vec4 uZone;
+float baseH(vec2 p){
+  vec2 c=clamp(p,vec2(-HALF),vec2(HALF));
+  vec2 tc=(c+HALF)/HSP;
+  ivec2 i0=clamp(ivec2(floor(tc)),ivec2(0),ivec2(2046));
+  vec2 f=tc-vec2(i0);
+  float a=texelFetch(uHeight,i0,0).r,b=texelFetch(uHeight,i0+ivec2(1,0),0).r;
+  float cc=texelFetch(uHeight,i0+ivec2(0,1),0).r,dd=texelFetch(uHeight,i0+ivec2(1,1),0).r;
+  float h=mix(mix(a,b,f.x),mix(cc,dd,f.x),f.y);
+  return h-length(p-c)*0.35;
+}
+float groundH(vec2 p){
+  float h=baseH(p);
+  vec2 zc=(p-uZone.xy)/uZone.z;
+  if(zc.x>0.0&&zc.y>0.0&&zc.x<1.0&&zc.y<1.0){
+    vec4 s=textureLod(uState,zc,0.0);
+    h-=1.2*smoothstep(0.3,0.7,s.g);
+    h+=0.9*s.b;
+  }
+  return h;
+}
+`;
+
+const TERRAIN_VS=HDR+COMMON+VS_H+`
+layout(location=0) in vec2 aGrid;
+uniform mat4 uVP;
+uniform vec2 uCenter;
+uniform float uSp,uBias;
+out vec3 vW;
+void main(){
+  vec2 p=uCenter+(aGrid-64.0)*uSp;
+  float h=groundH(p)-uBias;
+  vW=vec3(p.x,h,p.y);
+  gl_Position=uVP*vec4(vW,1.0);
+}`;
+
+const TERRAIN_FS=HDR+COMMON+`
+uniform sampler2D uData,uShadow,uState;
+uniform vec3 uCam;
+uniform vec4 uZone;
+uniform float uTime;
+in vec3 vW;
+out vec4 o;
+float cellPat(vec2 p,out float cid){
+  vec2 ci=floor(p),cf=fract(p);
+  float md=8.0;cid=0.0;
+  for(int j=-1;j<=1;j++)for(int i=-1;i<=1;i++){
+    vec2 g=vec2(float(i),float(j));
+    vec2 of=vec2(hash1(ci+g),hash1(ci+g+vec2(17.0,5.0)));
+    float dd=length(g+of-cf);
+    if(dd<md){md=dd;cid=hash1(ci+g+vec2(3.0,31.0));}
+  }
+  return md;
+}
+void main(){
+  vec2 cp=clamp(vW.xz,-HALF,HALF);
+  vec2 uv=((cp+HALF)/HSP+0.5)/HN;
+  vec4 dt=texture(uData,uv);
+  vec3 N=normalize(vec3(-dt.x,1.0,-dt.y));
+  float conc=dt.z;
+  float shadow=texture(uShadow,((cp+HALF)/(2.0*HALF)*1023.0+0.5)/1024.0).r;
+  vec3 V=uCam-vW;float dist=length(V);V/=dist;
+  float cosT=N.y;
+
+  float nz=fbm(vW.xz*0.035,3);
+  float rock=smoothstep(0.64,0.47,cosT+0.20*nz);
+
+  vec2 sd=snowDetail(vW.xz,dist);
+  vec2 rd=rockDetail(vW.xz,dist);
+  vec2 gd=mix(sd,rd,rock);
+  N=normalize(N+vec3(-gd.x,0.0,-gd.y));
+
+  vec3 snowC=vec3(0.93,0.95,1.0);
+  float bandN=noised(vec2(vW.y*0.11+nz*3.0,(vW.x+vW.z)*0.004)).x;
+  vec3 rockC=mix(vec3(0.19,0.17,0.17),vec3(0.47,0.33,0.24),smoothstep(-0.35,0.45,bandN+fbm(vW.xz*0.08,3)));
+  rockC*=0.65+0.7*(fbm(vW.xz*0.6,3)+0.5);
+  float ice=smoothstep(0.05,0.35,fbm(vW.xz*0.006+vec2(3.0,1.0),3)+0.18)*(1.0-smoothstep(0.80,0.95,cosT))*(1.0-rock);
+  vec3 iceC=vec3(0.48,0.68,0.92);
+
+  vec3 alb=mix(snowC,iceC,ice*0.85);
+  alb=mix(alb,rockC,rock);
+
+  // avalanche state
+  vec2 zc=(vW.xz-uZone.xy)/uZone.z;
+  bool inZ=zc.x>0.0&&zc.y>0.0&&zc.x<1.0&&zc.y<1.0;
+  float rel=0.0,deb=0.0,crown=0.0;
+  if(inZ){
+    vec4 st=texture(uState,zc);
+    rel=smoothstep(0.35,0.65,st.g);deb=smoothstep(0.1,0.6,st.b);
+    if(rel>0.01){
+      vec2 up=normalize(vec2(dt.x,dt.y)+vec2(1e-5));
+      float gU=texture(uState,(vW.xz+up*5.0-uZone.xy)/uZone.z).g;
+      crown=rel*(1.0-smoothstep(0.3,0.7,gU));
+      vec3 bed=vec3(0.60,0.68,0.82)*(0.8+0.3*noised(vW.xz*0.8).x);
+      alb=mix(alb,bed,rel*(1.0-rock)*(1.0-deb));
+      alb*=1.0-0.55*crown;
+      N=normalize(mix(N,normalize(vec3(-up.x*1.5,0.35,-up.y*1.5)),crown*0.8));
+    }
+    if(deb>0.01){
+      float cid;float md=cellPat(vW.xz/3.4,cid);
+      vec3 ch=vec3(0.84,0.88,0.96)*(0.62+0.5*cid)*(0.55+0.45*smoothstep(0.0,0.45,md));
+      alb=mix(alb,ch,deb*0.92);
+      N=normalize(N+deb*vec3(cid-0.5,0.0,hash1(vW.xz/3.4+7.0)-0.5)*0.9);
+    }
+  }
+
+  float ao=clamp(1.0-conc*0.15,0.5,1.1);
+  float sh=shadow;
+  vec3 col=lightSnow(alb,N,sh,ao);
+  // glints & ice specular
+  vec3 Hh=normalize(V+SUN);
+  float ndh=max(dot(N,Hh),0.0);
+  col+=vec3(3.0,2.8,2.5)*pow(ndh,mix(40.0,220.0,ice))*(0.03+0.8*ice)*sh*(1.0-rock);
+  float glint=step(0.987,hash1(floor(vW.xz*85.0)));
+  col+=vec3(3.0,2.9,2.7)*glint*pow(ndh,3.0)*sh*(1.0-rock)*(1.0-smoothstep(15.0,100.0,dist))*0.9;
+  col=applyFog(col,vW,uCam);
+  vec3 outc=tone(col)+(hash1(gl_FragCoord.xy)-0.5)/255.0;
+  o=vec4(outc,1.0);
+}`;
+
+// ---- ski tracks ----
+const TRACK_VS=HDR+COMMON+VS_H+`
+layout(location=0) in vec2 aPos;
+layout(location=1) in vec2 aSide;
+layout(location=2) in vec4 aMisc;
+uniform mat4 uVP;
+uniform vec3 uCam;
+out vec2 vP;out vec3 vA;out vec2 vS;
+void main(){
+  float dist=length(aPos-uCam.xz);
+  float w=aMisc.w*(1.0+min(dist/120.0,3.0));
+  vec2 p=aPos+aSide*(aMisc.x-0.5)*w;
+  float h=groundH(p)+0.05+0.003*dist;
+  vP=p;vA=aMisc.xyz;vS=aSide;
+  gl_Position=uVP*vec4(p.x,h,p.y,1.0);
+}`;
+const TRACK_FS=HDR+COMMON+`
+uniform sampler2D uData,uShadow,uState;
+uniform vec3 uCam;
+uniform vec4 uZone;
+in vec2 vP;in vec3 vA;in vec2 vS;
+out vec4 o;
+void main(){
+  vec2 zc=(vP-uZone.xy)/uZone.z;
+  if(zc.x>0.0&&zc.y>0.0&&zc.x<1.0&&zc.y<1.0){
+    vec4 s=texture(uState,zc);
+    if(s.g>0.5&&vA.z<s.r)discard;
+    if(s.b>0.3)discard;
+  }
+  float c=vA.x*2.0-1.0,ac=abs(c);
+  float nse=0.8+0.4*noised(vP*2.7).x;
+  float alpha=(1.0-smoothstep(0.5,1.0,ac))*(0.4+0.6*vA.y)*nse;
+  if(alpha<0.01)discard;
+  vec2 cp=clamp(vP,-HALF,HALF);
+  vec2 uv=((cp+HALF)/HSP+0.5)/HN;
+  vec4 dt=texture(uData,uv);
+  vec3 N=normalize(vec3(-dt.x,1.0,-dt.y));
+  float dist=length(vec3(vP.x,0.0,vP.y)-vec3(uCam.x,0.0,uCam.z));
+  vec2 sd=snowDetail(vP,dist);
+  N=normalize(N+vec3(-sd.x,0.0,-sd.y));
+  float groove=1.0-smoothstep(0.0,0.7,ac);
+  N=normalize(N-vec3(vS.x,0.0,vS.y)*c*(0.7+0.9*vA.y));
+  float shadow=texture(uShadow,((cp+HALF)/(2.0*HALF)*1023.0+0.5)/1024.0).r;
+  float ao=clamp(1.0-dt.z*0.15,0.5,1.1)*(1.0-0.22*groove*vA.y);
+  vec3 alb=vec3(0.82,0.88,0.99)*(1.0-0.12*groove);
+  vec3 col=lightSnow(alb,N,shadow,ao);
+  vec3 wp=vec3(vP.x,uCam.y-dist*0.3,vP.y);
+  col=applyFog(col,wp,uCam);
+  o=vec4(tone(col),alpha);
+}`;
+
+// ---- sky ----
+const SKY_VS=HDR+`out vec2 vN;void main(){vec2 p=vec2(float((gl_VertexID<<1)&2),float(gl_VertexID&2));vN=p*2.0-1.0;gl_Position=vec4(vN,1.0,1.0);}`;
+const SKY_FS=HDR+COMMON+`
+uniform vec3 uR,uU,uF;
+uniform float uTan,uAsp,uTime;
+in vec2 vN;
+out vec4 o;
+float ridgeH(float a,float k){
+  vec2 c=vec2(cos(a),sin(a));
+  float n=ridgeN(c*(1.7+0.6*k)+vec2(k*5.3,2.1));
+  float m=fbm(c*(8.0+3.0*k)+vec2(k*3.1,0.7),3);
+  float h=(0.015+0.075*n+0.03*m)*(1.0-0.2*k);
+  h+=0.115*exp(-p2((a+0.95)/0.13))*(1.0-0.35*k);
+  h+=0.10*max(0.0,1.0-abs(a-0.55)/0.04)*(1.0-0.3*k);
+  h+=0.14*exp(-p2((a-2.55)/0.16))*(1.0-0.2*k);
+  return h;
+}
+void main(){
+  vec3 d=normalize(uF+uR*(vN.x*uAsp*uTan)+uU*(vN.y*uTan));
+  float y=d.y;
+  vec3 col=skyGrad(d);
+  float sdp=dot(d,SUN);
+  vec3 sun=vec3(1.0,0.93,0.8)*smoothstep(0.99935,0.99975,sdp)*9.0;
+  if(y>0.0){
+    vec2 uv=d.xz/(y+0.18)*0.9+vec2(uTime*0.006,uTime*0.002);
+    float c=fbm(uv*vec2(1.2,2.4),5)*1.6+0.1;
+    float m=smoothstep(0.15,0.8,c)*smoothstep(0.0,0.22,y)*0.8;
+    vec3 cc=mix(vec3(0.75,0.82,0.95),vec3(1.15,1.1,1.05),smoothstep(0.1,0.9,c));
+    col=mix(col,cc,m);sun*=1.0-m;
+  }
+  col+=sun;
+  float a=atan(d.x,-d.z);
+  float e=asin(clamp(y,-1.0,1.0));
+  vec3 haze=hazeCol(d);
+  for(int k=2;k>=0;k--){
+    if(e>0.3)break;
+    float fk=float(k);
+    float R=ridgeH(a,fk);
+    float w=fwidth(e)*1.5+1e-4;
+    float m=1.0-smoothstep(R-w,R+w,e);
+    if(m<=0.001)continue;
+    float da=0.004;
+    float dR=ridgeH(a+da,fk)-ridgeH(a-da,fk);
+    float side=sign(sin(2.1118-a));
+    float lit=clamp(0.5-dR*side*40.0,0.0,1.0);
+    float tx=fbm(vec2(a*55.0+fk*4.0,e*45.0),3)+0.5;
+    float hf=clamp(e/max(R,0.01),0.0,1.0);
+    float snow=smoothstep(0.1,0.5,hf+(tx-0.5)*0.6);
+    vec3 rock=vec3(0.26,0.24,0.27)*(0.5+0.8*lit);
+    vec3 sn=vec3(1.0,1.02,1.08)*(0.5+0.9*lit);
+    vec3 lc=mix(rock,sn,snow)*(0.8+0.4*tx);
+    float hz=0.30+0.26*fk+(1.0-clamp(e/0.08,0.0,1.0))*0.15;
+    lc=mix(lc,haze,hz);
+    col=mix(col,lc,m);
+  }
+  col=mix(col,haze*0.96,1.0-smoothstep(-0.07,0.0,y));
+  o=vec4(tone(col),1.0);
+}`;
+
+// ---- avalanche blocks (instanced) ----
+const BLOCK_VS=HDR+COMMON+`
+layout(location=0) in vec3 aP;
+layout(location=1) in vec4 iA;
+layout(location=2) in vec4 iB;
+layout(location=3) in vec4 iC;
+uniform mat4 uVP;
+out vec3 vW;out float vSh;
+mat3 rx(float a){float c=cos(a),s=sin(a);return mat3(1.0,0.0,0.0,0.0,c,s,0.0,-s,c);}
+mat3 ry(float a){float c=cos(a),s=sin(a);return mat3(c,0.0,-s,0.0,1.0,0.0,s,0.0,c);}
+mat3 rz(float a){float c=cos(a),s=sin(a);return mat3(c,s,0.0,-s,c,0.0,0.0,0.0,1.0);}
+void main(){
+  vec3 up=normalize(vec3(-iC.x,1.0,-iC.y));
+  vec3 t=normalize(cross(vec3(0.0,0.0,1.0),up));
+  vec3 b=cross(t,up);
+  mat3 R=mat3(t,up,b)*ry(iB.x)*rx(iB.y)*rz(iB.z);
+  vec3 cn=sign(aP);
+  uint k=uint(cn.x+1.0)+2u*uint(cn.y+1.0)+4u*uint(cn.z+1.0);
+  float jit=float(hu(uvec2(k,uint(iB.w*1000.0))))*(1.0/4294967296.0);
+  vec3 local=aP*vec3(iA.w,iC.z,iA.w)*(0.78+0.44*jit);
+  vW=iA.xyz+R*local;
+  vSh=iC.w;
+  gl_Position=uVP*vec4(vW,1.0);
+}`;
+const BLOCK_FS=HDR+COMMON+`
+uniform vec3 uCam;
+in vec3 vW;in float vSh;
+out vec4 o;
+void main(){
+  vec3 N=normalize(cross(dFdx(vW),dFdy(vW)));
+  if(dot(N,uCam-vW)<0.0)N=-N;
+  vec3 alb=mix(vec3(0.90,0.93,1.0),vec3(0.60,0.62,0.68),vSh*0.55);
+  vec3 col=lightSnow(alb,N,1.0,0.85);
+  col=applyFog(col,vW,uCam);
+  o=vec4(tone(col),1.0);
+}`;
+
+// ---- powder / spray sprites ----
+const PUFF_VS=HDR+`
+layout(location=0) in vec2 aQ;
+layout(location=1) in vec4 iA;
+layout(location=2) in vec4 iB;
+uniform mat4 uVP;
+uniform vec3 uR,uU;
+out vec2 vQ;out vec4 vB;out vec3 vW;
+void main(){
+  vQ=aQ;vB=iB;
+  vW=iA.xyz+(uR*aQ.x+uU*aQ.y)*iA.w;
+  gl_Position=uVP*vec4(vW,1.0);
+}`;
+const PUFF_FS=HDR+COMMON+`
+uniform vec3 uCam;
+in vec2 vQ;in vec4 vB;in vec3 vW;
+out vec4 o;
+void main(){
+  float r=length(vQ);
+  if(r>1.0)discard;
+  float ca=cos(vB.y*6.283),sa=sin(vB.y*6.283);
+  vec2 q=mat2(ca,-sa,sa,ca)*vQ*2.2+vB.y*31.0;
+  float n=fbm(q,3)+0.5;
+  float a=smoothstep(1.0,0.1,r)*(0.45+0.9*n);
+  a=clamp(a*vB.x,0.0,1.0);
+  float lit=0.55+0.45*smoothstep(-0.9,0.9,-vQ.y+0.3*n);
+  vec3 col=mix(vec3(0.95,1.0,1.18),vec3(2.2,2.15,2.1),lit*vB.z);
+  col=applyFog(col,vW,uCam);
+  vec3 c=tone(col);
+  o=vec4(c*a,a);
+}`;
+
+// ---- skis / poles ----
+const SKI_VS=HDR+`
+layout(location=0) in vec3 aP;
+layout(location=1) in vec3 aN;
+layout(location=2) in vec3 aX;
+uniform mat3 uR,uVR;
+uniform vec3 uT,uScale;
+uniform mat4 uP;
+out vec3 vN;out vec3 vRel;out vec3 vX;
+void main(){
+  vec3 rel=uR*(aP*uScale)+uT;
+  vRel=rel;vN=uR*aN;vX=aX;
+  gl_Position=uP*vec4(uVR*rel,1.0);
+}`;
+const SKI_FS=HDR+COMMON+`
+uniform vec3 uColor,uEye;
+uniform int uMode;
+uniform sampler2D uShadow;
+in vec3 vN;in vec3 vRel;in vec3 vX;
+out vec4 o;
+void main(){
+  vec3 N=normalize(vN);
+  vec3 alb=uColor;
+  if(uMode==0){
+    if(vX.z<0.5){
+      alb=vec3(0.80,0.08,0.06);
+      if(abs(vX.y)<0.2)alb=vec3(0.96,0.96,0.96);
+      if(vX.x>0.9)alb=vec3(0.12,0.12,0.14);
+    }else if(vX.z<1.5)alb=vec3(0.04,0.04,0.05);
+    else alb=vec3(0.15,0.15,0.17);
+  }
+  vec3 wp=uEye+vRel;
+  vec2 cp=clamp(wp.xz,-HALF,HALF);
+  float sh=texture(uShadow,((cp+HALF)/(2.0*HALF)*1023.0+0.5)/1024.0).r;
+  vec3 V=normalize(-vRel);
+  vec3 col=lightSnow(alb,N,sh,0.9);
+  col+=vec3(2.5)*pow(max(dot(N,normalize(SUN+V)),0.0),50.0)*sh*0.35;
+  o=vec4(tone(col),1.0);
+}`;
+
+/* ===================================================================== */
+/*  GL utilities                                                          */
+/* ===================================================================== */
+function mkProg(vs,fs,name){
+  const mk=(t,src)=>{const s=gl.createShader(t);gl.shaderSource(s,src);gl.compileShader(s);
+    if(!gl.getShaderParameter(s,gl.COMPILE_STATUS)){const l=gl.getShaderInfoLog(s);console.error(name,l);fatal('Shader error ('+name+'): '+String(l).slice(0,240));}return s;};
+  const p=gl.createProgram();gl.attachShader(p,mk(gl.VERTEX_SHADER,vs));gl.attachShader(p,mk(gl.FRAGMENT_SHADER,fs));gl.linkProgram(p);
+  if(!gl.getProgramParameter(p,gl.LINK_STATUS)){const l=gl.getProgramInfoLog(p);console.error(name,l);fatal('Link error ('+name+'): '+String(l).slice(0,240));}
+  const U={};const n=gl.getProgramParameter(p,gl.ACTIVE_UNIFORMS);
+  for(let i=0;i<n;i++){const inf=gl.getActiveUniform(p,i);U[inf.name.replace('[0]','')]=gl.getUniformLocation(p,inf.name);}
+  return{p,U};
+}
+function mkTex(w,h,ifmt,fmt,type,data,filter){
+  const t=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,t);
+  gl.texImage2D(gl.TEXTURE_2D,0,ifmt,w,h,0,fmt,type,data);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,filter);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,filter);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+  return t;
+}
+function mkFBO(tex){const f=gl.createFramebuffer();gl.bindFramebuffer(gl.FRAMEBUFFER,f);gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,tex,0);
+  if(gl.checkFramebufferStatus(gl.FRAMEBUFFER)!==gl.FRAMEBUFFER_COMPLETE)fatal('Framebuffer incomplete.');return f;}
+function mkBuf(target,data,usage){const b=gl.createBuffer();gl.bindBuffer(target,b);gl.bufferData(target,data,usage||gl.STATIC_DRAW);return b;}
+const sleep=()=>new Promise(r=>setTimeout(r,0));
+const barfill=$('barfill'),loadmsg=$('loadmsg');
+function progress(f,msg){barfill.style.width=(f*100).toFixed(1)+'%';if(msg)loadmsg.textContent=msg;}
+
+/* ===================================================================== */
+/*  programs & static GPU resources                                       */
+/* ===================================================================== */
+const P={};
+let HGT=null,texH,texData,texShadow,texState;
+const ZS=2048,ZN=1024;
+let ZX0=0,ZZ0=0;
+const ST=new Float32Array(ZN*ZN*4);
+let stDirtyMin=1e9,stDirtyMax=-1;
+const emptyVAO=gl.createVertexArray();
+
+async function generateTerrain(){
+  progress(0.02,'RAISING THE MASSIF…');
+  P.gen=mkProg(FS_VS,GEN_FS,'gen');
+  P.shadow=mkProg(FS_VS,SHADOW_FS,'shadow');
+  P.data=mkProg(FS_VS,DATA_FS,'data');
+  gl.bindVertexArray(emptyVAO);
+  const tH=mkTex(HN,HN,gl.RGBA32F,gl.RGBA,gl.FLOAT,null,gl.NEAREST);
+  const fH=mkFBO(tH);
+  gl.viewport(0,0,HN,HN);gl.useProgram(P.gen.p);gl.enable(gl.SCISSOR_TEST);
+  HGT=new Float32Array(HN*HN);
+  const strips=16,sh=HN/strips,tmp=new Float32Array(HN*sh*4);
+  for(let k=0;k<strips;k++){
+    gl.scissor(0,k*sh,HN,sh);gl.drawArrays(gl.TRIANGLES,0,3);
+    gl.readPixels(0,k*sh,HN,sh,gl.RGBA,gl.FLOAT,tmp);
+    const off=k*sh*HN;for(let i=0;i<HN*sh;i++)HGT[off+i]=tmp[i*4];
+    progress(0.02+0.4*(k+1)/strips);await sleep();
+  }
+  gl.disable(gl.SCISSOR_TEST);
+  gl.bindFramebuffer(gl.FRAMEBUFFER,null);gl.deleteFramebuffer(fH);gl.deleteTexture(tH);
+  texH=mkTex(HN,HN,gl.R32F,gl.RED,gl.FLOAT,HGT,gl.NEAREST);
+
+  progress(0.45,'CASTING SHADOWS…');await sleep();
+  texShadow=mkTex(SHN,SHN,gl.RGBA8,gl.RGBA,gl.UNSIGNED_BYTE,null,gl.LINEAR);
+  const fS=mkFBO(texShadow);gl.viewport(0,0,SHN,SHN);gl.useProgram(P.shadow.p);
+  gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,texH);gl.uniform1i(P.shadow.U.uH,0);
+  gl.enable(gl.SCISSOR_TEST);
+  const ss=16,sr=SHN/ss;
+  for(let k=0;k<ss;k++){gl.scissor(0,k*sr,SHN,sr);gl.drawArrays(gl.TRIANGLES,0,3);gl.finish();progress(0.45+0.35*(k+1)/ss);await sleep();}
+  gl.disable(gl.SCISSOR_TEST);gl.deleteFramebuffer(fS);
+
+  progress(0.82,'CARVING NORMALS…');await sleep();
+  texData=mkTex(HN,HN,gl.RGBA16F,gl.RGBA,gl.FLOAT,null,gl.LINEAR);
+  const fD=mkFBO(texData);gl.viewport(0,0,HN,HN);gl.useProgram(P.data.p);
+  gl.bindTexture(gl.TEXTURE_2D,texH);gl.uniform1i(P.data.U.uH,0);
+  gl.drawArrays(gl.TRIANGLES,0,3);gl.finish();
+  gl.bindFramebuffer(gl.FRAMEBUFFER,null);gl.deleteFramebuffer(fD);
+  progress(0.9);
+}
+
+/* ===================================================================== */
+/*  terrain sampling on CPU (mirrors the GPU)                             */
+/* ===================================================================== */
+function baseH(x,z){
+  let cx=x<-HALF?-HALF:x>HALF?HALF:x,cz=z<-HALF?-HALF:z>HALF?HALF:z;
+  const tx=(cx+HALF)/HSP,tz=(cz+HALF)/HSP;
+  let i=Math.floor(tx),j=Math.floor(tz);if(i>HN-2)i=HN-2;if(j>HN-2)j=HN-2;if(i<0)i=0;if(j<0)j=0;
+  const fx=tx-i,fz=tz-j,o=j*HN+i;
+  const h=(HGT[o]*(1-fx)+HGT[o+1]*fx)*(1-fz)+(HGT[o+HN]*(1-fx)+HGT[o+HN+1]*fx)*fz;
+  const ox=x-cx,oz=z-cz;
+  return (ox|oz)?h-Math.hypot(ox,oz)*0.35:h;
+}
+function stBil(x,z,ch){
+  const u=(x-ZX0)/ZS*ZN-0.5,v=(z-ZZ0)/ZS*ZN-0.5;
+  if(u<0||v<0||u>=ZN-1||v>=ZN-1)return 0;
+  const i=Math.floor(u),j=Math.floor(v),fx=u-i,fz=v-j,o=(j*ZN+i)*4+ch;
+  return (ST[o]*(1-fx)+ST[o+4]*fx)*(1-fz)+(ST[o+ZN*4]*(1-fx)+ST[o+ZN*4+4]*fx)*fz;
+}
+function groundH(x,z){
+  let h=baseH(x,z);
+  const u=(x-ZX0)/ZS,v=(z-ZZ0)/ZS;
+  if(u>0&&v>0&&u<1&&v<1){h-=1.2*sstep(0.3,0.7,stBil(x,z,1));h+=0.9*stBil(x,z,2);}
+  return h;
+}
+function gradAt(x,z){const e=3;return[(groundH(x+e,z)-groundH(x-e,z))/(2*e),(groundH(x,z+e)-groundH(x,z-e))/(2*e)];}
+function normalAt(x,z){const g=gradAt(x,z);const l=Math.hypot(g[0],1,g[1]);return[-g[0]/l,1/l,-g[1]/l];}
+function baseGrad(x,z){const e=3;return[(baseH(x+e,z)-baseH(x-e,z))/(2*e),(baseH(x,z+e)-baseH(x,z-e))/(2*e)];}
+
+function stampState(x,z,rad,mode,t){
+  const cu=(x-ZX0)/ZS*ZN,cv=(z-ZZ0)/ZS*ZN,r=rad/ZS*ZN;
+  const i0=Math.max(0,Math.floor(cu-r-1)),i1=Math.min(ZN-1,Math.ceil(cu+r+1));
+  const j0=Math.max(0,Math.floor(cv-r-1)),j1=Math.min(ZN-1,Math.ceil(cv+r+1));
+  if(i1<i0||j1<j0)return;
+  for(let j=j0;j<=j1;j++)for(let i=i0;i<=i1;i++){
+    const dx=i+0.5-cu,dy=j+0.5-cv;if(dx*dx+dy*dy>r*r)continue;
+    const o=(j*ZN+i)*4;
+    if(mode===0){ST[o+1]=1;ST[o]=t;}else{ST[o+2]=1;}
+  }
+  if(j0<stDirtyMin)stDirtyMin=j0;if(j1>stDirtyMax)stDirtyMax=j1;
+}
+function flushState(){
+  if(stDirtyMax<0)return;
+  const rows=stDirtyMax-stDirtyMin+1;
+  gl.activeTexture(gl.TEXTURE3);gl.bindTexture(gl.TEXTURE_2D,texState);
+  gl.texSubImage2D(gl.TEXTURE_2D,0,0,stDirtyMin,ZN,rows,gl.RGBA,gl.FLOAT,ST.subarray(stDirtyMin*ZN*4,(stDirtyMax+1)*ZN*4));
+  stDirtyMin=1e9;stDirtyMax=-1;
+}
+
+/* ===================================================================== */
+/*  geometry                                                              */
+/* ===================================================================== */
+const GN=128;
+let vaoTerr,vaoRing,idxFullN,idxRingN;
+let vaoSkiMesh,skiVerts=0,vaoBox;
+let vaoBlocks,vboBlocks,vaoPuff,vboPuff;
+let vaoTrack,TR;
+const MAX_BLOCKS=4600,MAX_PUFF=6000;
+function buildGeometry(){
+  const gv=new Float32Array((GN+1)*(GN+1)*2);
+  for(let y=0;y<=GN;y++)for(let x=0;x<=GN;x++){gv[(y*(GN+1)+x)*2]=x;gv[(y*(GN+1)+x)*2+1]=y;}
+  const vbo=mkBuf(gl.ARRAY_BUFFER,gv);
+  const idx=(hole)=>{const a=[];for(let cy=0;cy<GN;cy++)for(let cx=0;cx<GN;cx++){
+    if(hole&&cx>=33&&cx<95&&cy>=33&&cy<95)continue;const i0=cy*(GN+1)+cx;a.push(i0,i0+1,i0+GN+1,i0+1,i0+GN+2,i0+GN+1);}return new Uint16Array(a);};
+  const mk=(ix)=>{const v=gl.createVertexArray();gl.bindVertexArray(v);gl.bindBuffer(gl.ARRAY_BUFFER,vbo);gl.enableVertexAttribArray(0);gl.vertexAttribPointer(0,2,gl.FLOAT,false,0,0);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,gl.createBuffer());gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,ix,gl.STATIC_DRAW);return v;};
+  const full=idx(false),ring=idx(true);idxFullN=full.length;idxRingN=ring.length;
+  vaoTerr=mk(full);vaoRing=mk(ring);
+
+  // ---- ski mesh ----
+  const sv=[];
+  const quad=(a,b,c,d,exp,type,ua,ub,sa,sb)=>{
+    const e1=[b[0]-a[0],b[1]-a[1],b[2]-a[2]],e2=[c[0]-a[0],c[1]-a[1],c[2]-a[2]];
+    let n=norm3(cross3(e1,e2));if(dot3(n,exp)<0)n=[-n[0],-n[1],-n[2]];
+    const P4=[[a,ua,sa],[b,ub,sa],[c,ub,sb],[a,ua,sa],[c,ub,sb],[d,ua,sb]];
+    for(const [p,u,s] of P4)sv.push(p[0],p[1],p[2],n[0],n[1],n[2],u,s,type);
+  };
+  const NS=24,L=1.7,th=0.016,secs=[];
+  for(let i=0;i<=NS;i++){const u=i/NS;const x=(u-0.5)*L;let y=0;
+    const tip=Math.max(0,(u-0.84)/0.16);y+=0.10*tip*tip;const tail=Math.max(0,(0.05-u)/0.05);y+=0.03*tail*tail;
+    const w=0.044+0.014*Math.pow(Math.abs(u-0.5)*2,2.5);secs.push([x,y,w,u]);}
+  for(let i=0;i<NS;i++){
+    const A=secs[i],B=secs[i+1];
+    const t0=[A[0],A[1]+th,-A[2]],t1=[B[0],B[1]+th,-B[2]],t2=[B[0],B[1]+th,B[2]],t3=[A[0],A[1]+th,A[2]];
+    quad(t0,t1,t2,t3,[0,1,0],0,A[3],B[3],-1,1);
+    const b0=[A[0],A[1],-A[2]],b1=[B[0],B[1],-B[2]],b2=[B[0],B[1],B[2]],b3=[A[0],A[1],A[2]];
+    quad(b0,b1,b2,b3,[0,-1,0],1,A[3],B[3],-1,1);
+    quad(b0,b1,t1,t0,[0,0,-1],2,A[3],B[3],-1,1);
+    quad(b3,b2,t2,t3,[0,0,1],2,A[3],B[3],-1,1);
+  }
+  const sk=new Float32Array(sv);skiVerts=sk.length/9;
+  vaoSkiMesh=gl.createVertexArray();gl.bindVertexArray(vaoSkiMesh);mkBuf(gl.ARRAY_BUFFER,sk);
+  gl.enableVertexAttribArray(0);gl.vertexAttribPointer(0,3,gl.FLOAT,false,36,0);
+  gl.enableVertexAttribArray(1);gl.vertexAttribPointer(1,3,gl.FLOAT,false,36,12);
+  gl.enableVertexAttribArray(2);gl.vertexAttribPointer(2,3,gl.FLOAT,false,36,24);
+
+  // ---- unit box (poles, boots, blocks) ----
+  const bv=[];
+  const faces=[[[0,0,1],[1,0,0],[0,1,0]],[[0,0,-1],[-1,0,0],[0,1,0]],[[1,0,0],[0,0,-1],[0,1,0]],[[-1,0,0],[0,0,1],[0,1,0]],[[0,1,0],[1,0,0],[0,0,-1]],[[0,-1,0],[1,0,0],[0,0,1]]];
+  for(const [n,u,v] of faces){
+    const c=(s,t)=>[n[0]*.5+u[0]*s*.5+v[0]*t*.5,n[1]*.5+u[1]*s*.5+v[1]*t*.5,n[2]*.5+u[2]*s*.5+v[2]*t*.5];
+    for(const [s,t] of [[-1,-1],[1,-1],[1,1],[-1,-1],[1,1],[-1,1]]){const p=c(s,t);bv.push(p[0],p[1],p[2],n[0],n[1],n[2],0,0,2);}
+  }
+  const bx=new Float32Array(bv);
+  vaoBox=gl.createVertexArray();gl.bindVertexArray(vaoBox);const bbuf=mkBuf(gl.ARRAY_BUFFER,bx);
+  gl.enableVertexAttribArray(0);gl.vertexAttribPointer(0,3,gl.FLOAT,false,36,0);
+  gl.enableVertexAttribArray(1);gl.vertexAttribPointer(1,3,gl.FLOAT,false,36,12);
+  gl.enableVertexAttribArray(2);gl.vertexAttribPointer(2,3,gl.FLOAT,false,36,24);
+
+  // ---- avalanche blocks ----
+  vaoBlocks=gl.createVertexArray();gl.bindVertexArray(vaoBlocks);
+  gl.bindBuffer(gl.ARRAY_BUFFER,bbuf);gl.enableVertexAttribArray(0);gl.vertexAttribPointer(0,3,gl.FLOAT,false,36,0);
+  vboBlocks=mkBuf(gl.ARRAY_BUFFER,new Float32Array(MAX_BLOCKS*12),gl.DYNAMIC_DRAW);
+  for(let k=0;k<3;k++){gl.enableVertexAttribArray(1+k);gl.vertexAttribPointer(1+k,4,gl.FLOAT,false,48,k*16);gl.vertexAttribDivisor(1+k,1);}
+
+  // ---- puffs ----
+  vaoPuff=gl.createVertexArray();gl.bindVertexArray(vaoPuff);
+  mkBuf(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,1,1,-1,-1,1,1,-1,1]));
+  gl.enableVertexAttribArray(0);gl.vertexAttribPointer(0,2,gl.FLOAT,false,0,0);
+  vboPuff=mkBuf(gl.ARRAY_BUFFER,new Float32Array(MAX_PUFF*8),gl.DYNAMIC_DRAW);
+  for(let k=0;k<2;k++){gl.enableVertexAttribArray(1+k);gl.vertexAttribPointer(1+k,4,gl.FLOAT,false,32,k*16);gl.vertexAttribDivisor(1+k,1);}
+
+  // ---- tracks ----
+  const cap=50000;
+  TR={cap,n:0,head:0,vbo:null,ski:[{v:false},{v:false}]};
+  vaoTrack=gl.createVertexArray();gl.bindVertexArray(vaoTrack);
+  TR.vbo=mkBuf(gl.ARRAY_BUFFER,new Float32Array(cap*32),gl.DYNAMIC_DRAW);
+  gl.enableVertexAttribArray(0);gl.vertexAttribPointer(0,2,gl.FLOAT,false,32,0);
+  gl.enableVertexAttribArray(1);gl.vertexAttribPointer(1,2,gl.FLOAT,false,32,8);
+  gl.enableVertexAttribArray(2);gl.vertexAttribPointer(2,4,gl.FLOAT,false,32,16);
+  const ti=new Uint32Array(cap*6);for(let k=0;k<cap;k++){const b=k*4,o=k*6;ti[o]=b;ti[o+1]=b+1;ti[o+2]=b+2;ti[o+3]=b+1;ti[o+4]=b+3;ti[o+5]=b+2;}
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,gl.createBuffer());gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,ti,gl.STATIC_DRAW);
+  gl.bindVertexArray(null);
+}
+const TRV=new Float32Array(32);
+function trackSeg(x0,z0,sx0,sz0,w0,d0,x1,z1,sx1,sz1,w1,d1,t){
+  let o=0;const put=(x,z,sx,sz,ac,d,w)=>{TRV[o++]=x;TRV[o++]=z;TRV[o++]=sx;TRV[o++]=sz;TRV[o++]=ac;TRV[o++]=d;TRV[o++]=t;TRV[o++]=w;};
+  put(x0,z0,sx0,sz0,0,d0,w0);put(x0,z0,sx0,sz0,1,d0,w0);put(x1,z1,sx1,sz1,0,d1,w1);put(x1,z1,sx1,sz1,1,d1,w1);
+  gl.bindVertexArray(null);gl.bindBuffer(gl.ARRAY_BUFFER,TR.vbo);gl.bufferSubData(gl.ARRAY_BUFFER,TR.head*128,TRV);
+  TR.head=(TR.head+1)%TR.cap;if(TR.n<TR.cap)TR.n++;
+}
+
+/* ===================================================================== */
+/*  slab / avalanche                                                      */
+/* ===================================================================== */
+const SL={q0:-1150,ad:170,aq:290};
+const AV={state:0,n:0,t0:0,cx:0,cz:0,cy:0,intensity:0,near:1e9,nearX:0,nearZ:0,nearY:0,moving:0,carried:0,flowX:0,flowZ:0,warned:false,stress:0};
+let B=null; // block arrays
+function initSlab(){
+  SL.dd0=-(wflo(SL.q0)+240);SL.xs=xcen(SL.q0)+SL.dd0;SL.zs=-SL.q0;
+  ZX0=SL.xs-700;ZZ0=SL.zs-1700;
+  const list=[];
+  const step=6.4;
+  for(let dq=-SL.aq-12;dq<=SL.aq+12;dq+=step)for(let dd=-SL.ad-12;dd<=SL.ad+12;dd+=step){
+    const jd=dd+rnd(-1.6,1.6),jq=dq+rnd(-1.6,1.6);
+    const q=SL.q0+jq,d=SL.dd0+jd,x=xcen(q)+d,z=-q;
+    const nz=vnoise(x/45,z/45);
+    const r=Math.pow(jd/SL.ad,2)+Math.pow(jq/SL.aq,2);
+    if(r>Math.pow(1+0.28*nz,2))continue;
+    const g=baseGrad(x,z),cosT=1/Math.sqrt(1+g[0]*g[0]+g[1]*g[1]);
+    if(cosT<0.52)continue;
+    list.push([x,z]);
+  }
+  const n=Math.min(list.length,MAX_BLOCKS);
+  B={n,x:new Float32Array(n),z:new Float32Array(n),vx:new Float32Array(n),vz:new Float32Array(n),
+     yaw:new Float32Array(n),pit:new Float32Array(n),rol:new Float32Array(n),size:new Float32Array(n),thick:new Float32Array(n),
+     mu:new Float32Array(n),rel:new Float32Array(n),seed:new Float32Array(n),spin:new Float32Array(n),
+     gx:new Float32Array(n),gz:new Float32Array(n),yoff:new Float32Array(n),state:new Uint8Array(n),
+     inst:new Float32Array(MAX_BLOCKS*12)};
+  for(let i=0;i<n;i++){B.x[i]=list[i][0];B.z[i]=list[i][1];}
+  resetSlab();
+}
+function resetSlab(){
+  for(let i=0;i<B.n;i++){
+    B.vx[i]=0;B.vz[i]=0;B.yaw[i]=rnd(6.28);B.pit[i]=0;B.rol[i]=0;B.size[i]=rnd(4.2,6.6);B.thick[i]=rnd(1.0,1.5);
+    B.mu[i]=rnd(0.24,0.40);B.rel[i]=1e9;B.seed[i]=Math.random();B.spin[i]=rnd(-1,1);B.state[i]=0;B.yoff[i]=0;
+  }
+  ST.fill(0);stDirtyMin=0;stDirtyMax=ZN-1;flushState();
+  AV.state=0;AV.moving=0;AV.intensity=0;AV.stress=0;AV.warned=false;AV.near=1e9;AV.carried=0;
+}
+function inSlab(x,z){
+  const q=-z,d=x-xcen(q);
+  const jd=d-SL.dd0,jq=q-SL.q0;
+  const nz=vnoise(x/45,z/45);
+  return Math.pow(jd/SL.ad,2)+Math.pow(jq/SL.aq,2)<=Math.pow(1+0.28*nz,2)*0.98;
+}
+function triggerAvalanche(x,z){
+  if(AV.state!==0)return;
+  AV.state=1;AV.t0=simT;
+  for(let i=0;i<B.n;i++){
+    const d=Math.hypot(B.x[i]-x,B.z[i]-z);
+    B.rel[i]=simT+0.25+d/48+rnd(0,0.35);
+  }
+  audioWhumpf(x,groundH(x,z),z);
+  showMsg('SLAB RELEASED',3.5);
+}
+
+// grid for repulsion
+const GC=8,GW=Math.ceil(ZS/GC);
+const gHead=new Int32Array(GW*GW),gNext=new Int32Array(MAX_BLOCKS);
+function updateAvalanche(dt){
+  if(AV.state===0)return;
+  const t=simT;
+  let nMove=0,sx=0,sz=0,sy=0,sw=0,pending=0;
+  // release
+  for(let i=0;i<B.n;i++){
+    const s=B.state[i];
+    if(s===0){
+      if(B.rel[i]<=t){
+        B.state[i]=1;const dx=B.x[i]-SL.xs,dz=B.z[i]-SL.zs;const l=Math.hypot(dx,dz)||1;B.vx[i]=dx/l*0.4;B.vz[i]=dz/l*0.4;
+        stampState(B.x[i],B.z[i],4.4,0,t);
+      }else pending++;
+    }
+  }
+  // spatial hash of all released blocks
+  gHead.fill(-1);
+  for(let i=0;i<B.n;i++){if(B.state[i]===0)continue;
+    const gx=Math.floor((B.x[i]-ZX0)/GC),gz=Math.floor((B.z[i]-ZZ0)/GC);if(gx<0||gz<0||gx>=GW||gz>=GW){gNext[i]=-1;continue;}
+    const c=gz*GW+gx;gNext[i]=gHead[c];gHead[c]=i;}
+  let near=1e9,nx=0,nz2=0,ny=0;
+  const px=S.p[0],pz=S.p[2];let carried=0,fx=0,fz=0,fw=0;
+  for(let i=0;i<B.n;i++){
+    if(B.state[i]!==1)continue;
+    nMove++;
+    let x=B.x[i],z=B.z[i],vx=B.vx[i],vz=B.vz[i];
+    const g=baseGrad(x,z);const g2=g[0]*g[0]+g[1]*g[1],inv=1/(1+g2),cosT=1/Math.sqrt(1+g2);
+    vx+=-G*g[0]*inv*dt;vz+=-G*g[1]*inv*dt;
+    // repulsion
+    const cgx=Math.floor((x-ZX0)/GC),cgz=Math.floor((z-ZZ0)/GC);
+    if(cgx>0&&cgz>0&&cgx<GW-1&&cgz<GW-1){
+      for(let oz=-1;oz<=1;oz++)for(let ox=-1;ox<=1;ox++){
+        let j=gHead[(cgz+oz)*GW+cgx+ox];
+        while(j>=0){
+          if(j!==i){const dx=x-B.x[j],dz=z-B.z[j],d2=dx*dx+dz*dz;
+            if(d2<30&&d2>1e-4){const d=Math.sqrt(d2),p=(5.5-d)/5.5*(B.state[j]===1?7:5)*dt;vx+=dx/d*p;vz+=dz/d*p;}}
+          j=gNext[j];
+        }
+      }
+    }
+    let sp=Math.hypot(vx,vz);
+    if(sp>0){
+      const fr=B.mu[i]*G*cosT+0.0042*sp*sp;
+      const ns=Math.max(0,sp-fr*dt);
+      // lateral jitter -> granular spreading
+      const k=ns/sp;vx*=k;vz*=k;sp=ns;
+      if(sp>2){vx+=rnd(-1,1)*sp*0.5*dt;vz+=rnd(-1,1)*sp*0.5*dt;}
+    }
+    const slopeA=G*Math.sqrt(g2)*inv; // gravity pull
+    if(sp<0.7&&slopeA<B.mu[i]*G*cosT*1.1){
+      B.state[i]=2;B.vx[i]=0;B.vz[i]=0;B.yoff[i]=rnd(0,1.1);stampState(x,z,3.4,1,t);continue;
+    }
+    x+=vx*dt;z+=vz*dt;
+    B.x[i]=x;B.z[i]=z;B.vx[i]=vx;B.vz[i]=vz;B.gx[i]=g[0];B.gz[i]=g[1];
+    B.yaw[i]+=B.spin[i]*sp*0.12*dt;
+    B.pit[i]+=Math.sin(B.seed[i]*40+t)*sp*0.08*dt+B.spin[i]*sp*0.05*dt;
+    B.rol[i]+=Math.cos(B.seed[i]*70+t*0.7)*sp*0.08*dt;
+    const w=sp+0.1;sx+=x*w;sz+=z*w;sy+=w*groundH(x,z);sw+=w;
+    const dxp=x-px,dzp=z-pz,d2=dxp*dxp+dzp*dzp;
+    if(d2<near){near=d2;nx=x;nz2=z;}
+    if(sp>2&&d2<9*9){carried++;fx+=vx;fz+=vz;fw++;}
+    // powder
+    if(sp>7&&Math.random()<sp*0.0012+0.01){
+      const y=baseH(x,z);
+      emitPuff(x+rnd(-3,3),y+rnd(1,4),z+rnd(-3,3),vx*0.5+rnd(-3,3),rnd(2,8),vz*0.5+rnd(-3,3),rnd(9,16),rnd(34,70),rnd(5,9),0.55,0.5,0.9);
+    }
+  }
+  // settled blocks calm down
+  for(let i=0;i<B.n;i++)if(B.state[i]===2){B.pit[i]*=Math.exp(-dt*2);B.rol[i]*=Math.exp(-dt*2);}
+  AV.moving=nMove;
+  AV.cx=nMove?sx/sw:0;AV.cz=nMove?sz/sw:0;AV.cy=nMove?sy/sw:0;
+  AV.intensity=clamp(nMove/900,0,1)*(0.4+0.6*clamp(sw/Math.max(nMove,1)/18,0,1));
+  AV.near=Math.sqrt(near);AV.nearX=nx;AV.nearZ=nz2;AV.nearY=baseH(nx,nz2)+3;
+  AV.carried=carried;if(fw){AV.flowX=fx/fw;AV.flowZ=fz/fw;}
+  if(nMove===0&&pending===0)AV.state=2;
+}
+
+/* ===================================================================== */
+/*  particles (spray / powder)                                            */
+/* ===================================================================== */
+const PP={n:0,head:0,x:new Float32Array(MAX_PUFF),y:new Float32Array(MAX_PUFF),z:new Float32Array(MAX_PUFF),vx:new Float32Array(MAX_PUFF),vy:new Float32Array(MAX_PUFF),vz:new Float32Array(MAX_PUFF),
+  age:new Float32Array(MAX_PUFF),life:new Float32Array(MAX_PUFF),s0:new Float32Array(MAX_PUFF),s1:new Float32Array(MAX_PUFF),a0:new Float32Array(MAX_PUFF),drag:new Float32Array(MAX_PUFF),lift:new Float32Array(MAX_PUFF),seed:new Float32Array(MAX_PUFF),lit:new Float32Array(MAX_PUFF),
+  inst:new Float32Array(MAX_PUFF*8)};
+function emitPuff(x,y,z,vx,vy,vz,s0,s1,life,a0,drag,lit){
+  const i=PP.head;PP.head=(PP.head+1)%MAX_PUFF;
+  PP.x[i]=x;PP.y[i]=y;PP.z[i]=z;PP.vx[i]=vx;PP.vy[i]=vy;PP.vz[i]=vz;PP.age[i]=0;PP.life[i]=life;PP.s0[i]=s0;PP.s1[i]=s1;PP.a0[i]=a0;PP.drag[i]=drag;PP.lift[i]=0;PP.seed[i]=Math.random();PP.lit[i]=lit;
+}
+function updatePuffs(dt){
+  let c=0;const I=PP.inst;
+  for(let i=0;i<MAX_PUFF;i++){
+    if(PP.life[i]<=0)continue;
+    PP.age[i]+=dt;const a=PP.age[i],l=PP.life[i];
+    if(a>=l){PP.life[i]=0;continue;}
+    const k=Math.exp(-PP.drag[i]*dt);PP.vx[i]*=k;PP.vy[i]*=k;PP.vz[i]*=k;
+    PP.vy[i]-=2.0*dt*(PP.s1[i]<3?1:0.15)-PP.lift[i]*dt;
+    PP.x[i]+=PP.vx[i]*dt;PP.y[i]+=PP.vy[i]*dt;PP.z[i]+=PP.vz[i]*dt;
+    const u=a/l;
+    const size=mix(PP.s0[i],PP.s1[i],Math.sqrt(u));
+    const alpha=PP.a0[i]*Math.min(1,a*4)*Math.pow(1-u,1.4);
+    const o=c*8;I[o]=PP.x[i];I[o+1]=PP.y[i];I[o+2]=PP.z[i];I[o+3]=size;I[o+4]=alpha;I[o+5]=PP.seed[i];I[o+6]=PP.lit[i];I[o+7]=0;c++;
+  }
+  PP.n=c;
+}
+
+/* ===================================================================== */
+/*  skier                                                                 */
+/* ===================================================================== */
+const S={p:[0,0,0],v:[0,0,0],psi:0,lean:0,tuck:0,charge:0,jumpReq:0,jumpBuf:0,grounded:true,airT:0,slip:0,speed:0,mode:0,modeT:0,bside:1,sprayAcc:0,carriedT:0,rough:0,startZ:0,maxSpeed:0,rock:0,coyote:0};
+const KEY={l:false,r:false,up:false,dn:false,jump:false};
+let simT=0,msgTimer=0;
+function showMsg(t,sec){const m=$('msg');m.textContent=t;m.style.opacity=1;msgTimer=sec;}
+function resetSkier(){
+  const q=-2600,x=xcen(q)-110,z=-q;
+  S.p=[x,groundH(x,z),z];S.v=[0,0,0];S.psi=0.0;S.lean=0;S.tuck=0;S.charge=0;S.jumpReq=0;S.grounded=true;S.airT=0;S.slip=0;S.speed=0;S.mode=0;S.modeT=0;S.startZ=z;
+  cam.bodyYaw=S.psi;cam.autoPitch=-0.1;look.yaw=0;look.pitch=0;
+  TR.ski[0].v=false;TR.ski[1].v=false;
+}
+function resetRun(){resetSlab();resetSkier();$('white').style.opacity=0;$('msg').style.opacity=0;}
+
+function landing(imp){
+  const x=S.p[0],y=S.p[1],z=S.p[2];
+  if(imp>2.5){
+    audioThud(clamp(imp/14,0.1,1),x,y,z);
+    const n=Math.min(40,Math.floor(imp*2.5));
+    for(let i=0;i<n;i++)emitPuff(x+rnd(-.5,.5),y+0.2,z+rnd(-.5,.5),rnd(-4,4)*(1+imp*0.1),rnd(1,4+imp*0.4),rnd(-4,4)*(1+imp*0.1),rnd(.5,1),rnd(2,3.5),rnd(.9,1.6),0.65,2.0,0.9);
+    AV.stress+=imp*0.02*(inSlab(x,z)?1:0);
+  }
+  if(imp>16&&S.mode===0){S.mode=3;S.modeT=2.2;S.v[0]*=0.35;S.v[1]*=0.35;S.v[2]*=0.35;showMsg('WIPEOUT',2.2);audioThud(1,x,y,z);}
+}
+function trackPos(i,x,z,spd){
+  // ski positions and ribbon emission
+  const r=[Math.cos(S.psi),0,Math.sin(S.psi)];
+  const off=(i?1:-1)*0.18;
+  const px=x+r[0]*off,pz=z+r[2]*off;
+  const T=TR.ski[i];
+  const slipA=Math.min(1,Math.abs(S.slip)/5);
+  const w=0.11+0.5*slipA+(S.mode===0&&KEY.dn?0.25:0);
+  const dep=clamp(0.55+0.45*Math.abs(S.lean)-0.35*slipA+0.25*Math.min(1,spd/25),0.35,1);
+  if(!T.v){T.v=true;T.x=px;T.z=pz;T.sx=r[0];T.sz=r[2];T.w=w;T.d=dep;return;}
+  const dx=px-T.x,dz=pz-T.z,d=Math.hypot(dx,dz);
+  if(d<0.45)return;
+  const sx=-dz/d,sz=dx/d;
+  trackSeg(T.x,T.z,T.sx,T.sz,T.w,T.d,px,pz,sx,sz,w,dep,simT);
+  T.x=px;T.z=pz;T.sx=sx;T.sz=sz;T.w=w;T.d=dep;
+}
+
+function stepSki(dt){
+  simT+=dt;
+  const Pp=S.p,V=S.v;
+  const locked=S.mode!==0;
+  const st=locked?0:((KEY.r?1:0)-(KEY.l?1:0));
+  S.lean+=(st-S.lean)*(1-Math.exp(-dt*(st!==0?4.5:6.5)));
+  S.tuck+=(((KEY.up&&!locked)?1:0)-S.tuck)*(1-Math.exp(-dt*4));
+  const brake=KEY.dn&&!locked;
+  // jump charge
+  if(KEY.jump&&!locked){S.charge=Math.min(1,S.charge+dt/0.55);}
+  else if(S.charge>0){if(S.charge>0.06){S.jumpReq=S.charge;S.jumpBuf=0.18;}S.charge=0;}
+  if(S.jumpBuf>0){S.jumpBuf-=dt;if(S.jumpBuf<=0)S.jumpReq=0;}
+  if(S.modeT>0){S.modeT-=dt;if(S.modeT<=0&&(S.mode===2||S.mode===3)){S.mode=0;if(S.mode===0)showMsg('',0.01);}}
+
+  V[1]-=G*dt;
+  let sp=Math.hypot(V[0],V[1],V[2]);
+  if(sp>0.01){const kd=mix(0.0034,0.0017,S.tuck);const f=Math.max(0,sp-kd*sp*sp*dt)/sp;V[0]*=f;V[1]*=f;V[2]*=f;sp*=f;}
+
+  // avalanche carries the skier
+  if(AV.state===1&&AV.carried>0&&S.mode<2){
+    if(S.mode===0){S.mode=1;showMsg('CAUGHT IN THE AVALANCHE',3);audioThud(0.8,Pp[0],Pp[1],Pp[2]);}
+    S.carriedT=0.6;
+  }
+  if(S.mode===1){
+    S.carriedT-=dt;
+    if(AV.carried>0){const k=1-Math.exp(-3.2*dt);V[0]+=(AV.flowX-V[0])*k;V[2]+=(AV.flowZ-V[2])*k;S.carriedT=0.6;}
+    if(S.carriedT<=0){
+      if(AV.moving===0||AV.near<10){S.mode=2;S.modeT=3.2;V[0]=V[1]=V[2]=0;showMsg('BURIED — DIGGING OUT…',3.2);}
+      else{S.mode=0;}
+    }
+  }
+
+  if(S.grounded){
+    const n=normalAt(Pp[0],Pp[2]);
+    let vn=dot3(V,n);if(vn<0){V[0]-=n[0]*vn;V[1]-=n[1]*vn;V[2]-=n[2]*vn;}
+    const cosT=n[1];
+    const tang=()=>{const fh=[Math.sin(S.psi),0,-Math.cos(S.psi)];const d=dot3(fh,n);return norm3([fh[0]-n[0]*d,fh[1]-n[1]*d,fh[2]-n[2]*d]);};
+    let f=tang();
+    const vf0=dot3(V,f);sp=Math.hypot(V[0],V[1],V[2]);
+    const edge=Math.abs(S.lean);
+    if(S.mode===0){
+      if(brake&&sp>1.0){
+        const hv=Math.hypot(V[0],V[2]);
+        if(hv>0.5){const pv=Math.atan2(V[0],-V[2]);const side=edge>0.1?Math.sign(S.lean):S.bside;S.bside=side;
+          const dd=angWrap(pv+side*1.25-S.psi);S.psi+=clamp(dd,-4.5*dt,4.5*dt);}
+      }else{
+        const vm=Math.max(Math.abs(vf0),0.5);
+        const kmax=Math.min(1/9,0.9*GRIP*G*cosT/(vm*vm));
+        const om=S.lean*(kmax*vm+1.1*Math.exp(-vm/3.5));
+        S.psi+=om*dt;
+      }
+    }
+    f=tang();
+    const r=cross3(f,n);
+    const vr=dot3(V,r);
+    const gk=brake?0.55:(0.45+0.55*edge);
+    const aG=GRIP*gk*G*cosT*(S.mode===0?1:0.3);
+    const app=Math.min(Math.abs(vr)/dt,aG),dv=-Math.sign(vr)*app*dt;
+    V[0]+=r[0]*dv;V[1]+=r[1]*dv;V[2]+=r[2]*dv;
+    S.slip=vr+dv;
+    // rocks
+    const rockF=sstep(0.55,0.38,cosT);S.rock=rockF;
+    sp=Math.hypot(V[0],V[1],V[2]);
+    const mu=0.042+0.03*edge+(brake?0.10:0)+0.5*rockF+(S.mode===3?0.35:0)+(S.mode===1?0.02:0);
+    const fr=mu*G*cosT*dt;
+    if(sp>fr){const k=(sp-fr)/sp;V[0]*=k;V[1]*=k;V[2]*=k;}else{V[0]=V[1]=V[2]=0;}
+    // pole push when crawling along flats (W)
+    if(S.mode===0&&KEY.up&&sp<5){const k=2.4*dt;V[0]+=f[0]*k;V[1]+=f[1]*k;V[2]+=f[2]*k;}
+    // jump
+    if(S.jumpReq>0&&S.mode===0){
+      const js=2.6+4.4*S.jumpReq;V[0]+=n[0]*js;V[1]+=n[1]*js;V[2]+=n[2]*js;S.grounded=false;S.jumpReq=0;S.jumpBuf=0;S.airT=0;S.coyote=0;
+      audioWhoosh(0.5);
+    }
+  }else{
+    if(S.mode===0)S.psi+=S.lean*1.8*dt;
+    if(S.jumpReq>0&&S.coyote>0&&S.mode===0){}
+    S.slip*=Math.exp(-dt*2);
+  }
+
+  Pp[0]+=V[0]*dt;Pp[1]+=V[1]*dt;Pp[2]+=V[2]*dt;
+  // world bounds
+  if(Pp[0]<-HALF+40&&V[0]<0)V[0]*=-0.3;if(Pp[0]>HALF-40&&V[0]>0)V[0]*=-0.3;
+  if(Pp[2]<-HALF+40&&V[2]<0)V[2]*=-0.3;if(Pp[2]>HALF-40&&V[2]>0)V[2]*=-0.3;
+
+  const gh=groundH(Pp[0],Pp[2]);
+  const gap=Pp[1]-gh;
+  const n2=normalAt(Pp[0],Pp[2]);
+  const vn2=dot3(V,n2);
+  if(gap<=0||(S.grounded&&gap<0.05&&vn2<0.45)){
+    if(!S.grounded&&S.airT>0.15)landing(-vn2);
+    Pp[1]=gh;
+    if(vn2<0){V[0]-=n2[0]*vn2;V[1]-=n2[1]*vn2;V[2]-=n2[2]*vn2;}
+    S.grounded=true;S.airT=0;
+  }else{S.grounded=false;S.airT+=dt;S.coyote=0;}
+
+  S.speed=Math.hypot(V[0],V[1],V[2]);
+  if(S.speed>S.maxSpeed)S.maxSpeed=S.speed;
+
+  // tracks
+  if(S.grounded&&S.speed>0.8&&S.mode!==1&&S.mode!==2){
+    if(stBil(Pp[0],Pp[2],2)>0.25){TR.ski[0].v=TR.ski[1].v=false;}
+    else{trackPos(0,Pp[0],Pp[2],S.speed);trackPos(1,Pp[0],Pp[2],S.speed);}
+  }else{TR.ski[0].v=false;TR.ski[1].v=false;}
+
+  // spray
+  if(S.grounded&&S.speed>5&&S.mode===0){
+    const slipA=Math.abs(S.slip),edge=Math.abs(S.lean);
+    const rate=(slipA>1.2?slipA*14:0)+(edge>0.55?edge*S.speed*0.9:0)+(brake?S.speed*3:0)+S.speed*0.15;
+    S.sprayAcc+=rate*dt;
+    while(S.sprayAcc>=1){S.sprayAcc-=1;
+      const side=(Math.random()<0.5?-1:1);const r=[Math.cos(S.psi),0,Math.sin(S.psi)];
+      const dir=(Math.abs(S.slip)>1?-Math.sign(S.slip):-Math.sign(S.lean||1))*(0.5+0.5*Math.random());
+      emitPuff(Pp[0]+r[0]*0.18*side,Pp[1]+0.1,Pp[2]+r[2]*0.18*side,V[0]*0.5+r[0]*dir*(2+Math.min(6,slipA)),rnd(0.8,2.6),V[2]*0.5+r[2]*dir*(2+Math.min(6,slipA)),rnd(0.25,0.5),rnd(1.4,2.6),rnd(0.6,1.2),0.55,2.2,0.9);
+    }
+  }
+  // snow collapse: stress on the slab
+  if(AV.state===0&&S.mode===0){
+    const g=gradAt(Pp[0],Pp[2]);const tan=Math.hypot(g[0],g[1]);
+    if(S.grounded&&inSlab(Pp[0],Pp[2])&&tan>0.5){
+      AV.stress+=dt*(0.16+0.02*S.speed+0.35*Math.abs(S.lean)*S.speed/20);
+      if(AV.stress>0.62&&!AV.warned){AV.warned=true;showMsg('WHUMPF — THE SLOPE IS SETTLING',2.4);audioThud(0.5,Pp[0],Pp[1],Pp[2]);}
+      if(AV.stress>=1)triggerAvalanche(Pp[0],Pp[2]);
+    }else AV.stress=Math.max(0,AV.stress-dt*0.25);
+  }
+}
+
+/* ===================================================================== */
+/*  camera & input                                                        */
+/* ===================================================================== */
+const cam={eye:[0,0,0],yaw:0,pitch:0,roll:0,fov:1.3,r:[1,0,0],u:[0,1,0],f:[0,0,-1],bodyYaw:0,autoPitch:0,eyeH:1.72,shake:0};
+const look={yaw:0,pitch:0};
+let aspect=1,W=1,H=1,resScale=1;
+function updateCamera(dt){
+  const dy=angWrap(S.psi-cam.bodyYaw);cam.bodyYaw+=dy*(1-Math.exp(-dt*9));
+  const hv=Math.hypot(S.v[0],S.v[2]);
+  const sp=Math.atan2(S.v[1],Math.max(hv,2))*(S.grounded?0.6:0.5);
+  cam.autoPitch+=(sp-cam.autoPitch)*(1-Math.exp(-dt*4));
+  const eyeT=1.72-0.62*S.tuck-0.40*S.charge-(S.mode===2?0.7:0)-(S.mode===3?0.9:0);
+  cam.eyeH+=(eyeT-cam.eyeH)*(1-Math.exp(-dt*8));
+  let yaw=cam.bodyYaw+look.yaw,pitch=clamp(cam.autoPitch+look.pitch-S.tuck*0.12-S.charge*0.1,-1.5,1.5);
+  const t=performance.now()/1000;
+  const speedN=clamp(S.speed/38,0,1);
+  let shake=0.0025*speedN*(S.grounded?1:0.2)+S.rock*0.02;
+  if(AV.state===1&&AV.moving>0)shake+=0.012*clamp(1-AV.near/250,0,1)*AV.intensity;
+  if(S.mode===1)shake+=0.012;
+  const sx=Math.sin(t*43)*shake+Math.sin(t*71)*shake*0.6,sy=Math.sin(t*37+1)*shake;
+  let roll=-S.lean*0.10*Math.min(1,S.speed/15)+Math.sin(t*29)*shake*1.5;
+  if(S.mode===3)roll+=Math.sin(S.modeT*7)*0.5*Math.min(1,S.modeT);
+  const cy=Math.cos(yaw),syw=Math.sin(yaw),cp=Math.cos(pitch),spp=Math.sin(pitch);
+  const f=[syw*cp,spp,-cy*cp],r0=[cy,0,syw],u0=cross3(r0,f);
+  const cr=Math.cos(roll+sx*3),sr=Math.sin(roll+sx*3);
+  cam.f=f;cam.r=[r0[0]*cr+u0[0]*sr,r0[1]*cr+u0[1]*sr,r0[2]*cr+u0[2]*sr];cam.u=[u0[0]*cr-r0[0]*sr,u0[1]*cr-r0[1]*sr,u0[2]*cr-r0[2]*sr];
+  const fh=[Math.sin(cam.bodyYaw),0,-Math.cos(cam.bodyYaw)];
+  cam.eye=[S.p[0]+fh[0]*0.12+sx,S.p[1]+cam.eyeH+sy,S.p[2]+fh[2]*0.12];
+  const gE=groundH(cam.eye[0],cam.eye[2])+0.25;if(cam.eye[1]<gE)cam.eye[1]=gE;
+  cam.fov=(70+16*speedN*speedN+4*S.tuck+(S.mode===1?6:0))*Math.PI/180;
+  cam.yaw=yaw;cam.pitch=pitch;
+}
+let paused=true,locked=false,started=false;
+addEventListener('keydown',e=>{
+  if(e.repeat&&e.code!=='KeyR')return;
+  switch(e.code){
+    case'KeyA':case'ArrowLeft':KEY.l=true;break;
+    case'KeyD':case'ArrowRight':KEY.r=true;break;
+    case'KeyW':case'ArrowUp':KEY.up=true;break;
+    case'KeyS':case'ArrowDown':KEY.dn=true;break;
+    case'Space':KEY.jump=true;break;
+    case'KeyR':if(started&&!paused)resetRun();break;
+    case'KeyM':toggleMute();break;
+    default:return;
+  }
+  e.preventDefault();
+});
+addEventListener('keyup',e=>{
+  switch(e.code){
+    case'KeyA':case'ArrowLeft':KEY.l=false;break;
+    case'KeyD':case'ArrowRight':KEY.r=false;break;
+    case'KeyW':case'ArrowUp':KEY.up=false;break;
+    case'KeyS':case'ArrowDown':KEY.dn=false;break;
+    case'Space':KEY.jump=false;break;
+    default:return;
+  }
+  e.preventDefault();
+});
+addEventListener('blur',()=>{KEY.l=KEY.r=KEY.up=KEY.dn=KEY.jump=false;});
+addEventListener('mousemove',e=>{
+  if(paused)return;
+  if(locked||(e.buttons&1)){
+    look.yaw=clamp(look.yaw+e.movementX*0.0022,-2.6,2.6);
+    look.pitch=clamp(look.pitch-e.movementY*0.0022,-1.3,1.3);
+  }
+});
+document.addEventListener('pointerlockchange',()=>{
+  const was=locked;locked=document.pointerLockElement===canvas;
+  if(was&&!locked&&started)pause(true);
+});
+function pause(on){
+  paused=on;
+  const ov=$('overlay');
+  if(on){ov.style.display='flex';$('start').textContent='RESUME';$('intro').textContent='Paused.';KEY.l=KEY.r=KEY.up=KEY.dn=KEY.jump=false;}
+  else ov.style.display='none';
+}
+function resize(){
+  const dpr=Math.min(window.devicePixelRatio||1,2);
+  W=Math.max(2,Math.floor(innerWidth*dpr*resScale));H=Math.max(2,Math.floor(innerHeight*dpr*resScale));
+  canvas.width=W;canvas.height=H;aspect=W/H;
+}
+addEventListener('resize',resize);
+
+/* ===================================================================== */
+/*  audio                                                                 */
+/* ===================================================================== */
+const AU={on:false,muted:false};
+function toggleMute(){if(!AU.on)return;AU.muted=!AU.muted;AU.master.gain.setTargetAtTime(AU.muted?0:0.9,AU.ctx.currentTime,0.05);}
+function setPos(p,x,y,z){if(p.positionX){p.positionX.value=x;p.positionY.value=y;p.positionZ.value=z;}else p.setPosition(x,y,z);}
+function makeIR(ctx,sec,decay){
+  const len=Math.floor(ctx.sampleRate*sec),b=ctx.createBuffer(2,len,ctx.sampleRate);
+  for(let c=0;c<2;c++){const d=b.getChannelData(c);let lp=0;for(let i=0;i<len;i++){const t=i/len;lp+=(Math.random()*2-1-lp)*(0.55-0.4*t);d[i]=lp*Math.pow(1-t,decay)*(i<200?i/200:1);}}
+  return b;
+}
+function noiseBuf(ctx,sec,type){
+  const len=Math.floor(ctx.sampleRate*sec),b=ctx.createBuffer(1,len,ctx.sampleRate),d=b.getChannelData(0);
+  let l=0,b0=0,b1=0,b2=0,b3=0,b4=0,b5=0,b6=0;
+  for(let i=0;i<len;i++){const w=Math.random()*2-1;
+    if(type==='white')d[i]=w;
+    else if(type==='brown'){l=(l+0.02*w)/1.02;d[i]=l*3.5;}
+    else{b0=0.99886*b0+w*0.0555179;b1=0.99332*b1+w*0.0750759;b2=0.969*b2+w*0.153852;b3=0.8665*b3+w*0.3104856;b4=0.55*b4+w*0.5329522;b5=-0.7616*b5-w*0.016898;d[i]=(b0+b1+b2+b3+b4+b5+b6+w*0.5362)*0.11;b6=w*0.115926;}}
+  const fade=Math.floor(ctx.sampleRate*0.15);
+  for(let i=0;i<fade;i++){const k=i/fade;d[len-fade+i]=d[len-fade+i]*(1-k)+d[i]*k;}
+  return b;
+}
+function initAudio(){
+  if(AU.on)return;
+  const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;
+  const ctx=new AC({latencyHint:'interactive'});AU.ctx=ctx;
+  const master=ctx.createGain();master.gain.value=0.9;AU.master=master;
+  const comp=ctx.createDynamicsCompressor();comp.threshold.value=-16;comp.ratio.value=5;comp.attack.value=0.008;comp.release.value=0.25;
+  const muff=ctx.createBiquadFilter();muff.type='lowpass';muff.frequency.value=20000;muff.Q.value=0.2;AU.muff=muff;
+  master.connect(muff);muff.connect(comp);comp.connect(ctx.destination);
+  const conv=ctx.createConvolver();conv.buffer=makeIR(ctx,3.4,2.2);const rev=ctx.createGain();rev.gain.value=0.5;conv.connect(rev);rev.connect(master);
+  const bus=ctx.createGain();bus.connect(master);const send=ctx.createGain();send.gain.value=0.28;bus.connect(send);send.connect(conv);AU.bus=bus;
+  const white=noiseBuf(ctx,4,'white'),pink=noiseBuf(ctx,5,'pink'),brown=noiseBuf(ctx,6,'brown');AU.white=white;
+  const voice=(buf,type,f,q,ref,roll)=>{
+    const s=ctx.createBufferSource();s.buffer=buf;s.loop=true;
+    const flt=ctx.createBiquadFilter();flt.type=type;flt.frequency.value=f;flt.Q.value=q;
+    const g=ctx.createGain();g.gain.value=0;
+    const pan=ctx.createPanner();pan.panningModel='HRTF';pan.distanceModel='inverse';pan.refDistance=ref||1;pan.rolloffFactor=roll===undefined?1:roll;pan.maxDistance=20000;
+    s.connect(flt);flt.connect(g);g.connect(pan);pan.connect(bus);s.start(0,Math.random()*buf.duration*0.8);
+    return{s,flt,g,pan};
+  };
+  AU.windL=voice(pink,'bandpass',400,0.5,1,1);AU.windR=voice(pink,'bandpass',420,0.5,1,1);
+  AU.whistle=voice(white,'bandpass',1600,9,1,1);
+  AU.amb=voice(pink,'lowpass',450,0.7,25,1);AU.amb2=voice(white,'bandpass',900,2.5,25,1);
+  AU.skiL=voice(white,'bandpass',1800,0.9,1,1);AU.skiR=voice(white,'bandpass',1900,0.9,1,1);
+  AU.hissL=voice(white,'highpass',5200,0.5,1,1);AU.hissR=voice(white,'highpass',5400,0.5,1,1);
+  AU.skiLow=voice(brown,'lowpass',500,0.7,1,1);
+  AU.rumble=voice(brown,'lowpass',150,0.7,260,0.75);AU.roar=voice(pink,'bandpass',380,0.5,160,0.9);AU.crack=voice(white,'bandpass',950,0.9,70,1);
+  const sub=ctx.createOscillator();sub.type='sine';sub.frequency.value=38;const sg=ctx.createGain();sg.gain.value=0;sub.connect(sg);sg.connect(AU.rumble.pan);sub.start();AU.sub=sub;AU.subG=sg;
+  AU.gust=0.5;AU.gustT=0;AU.rockN=0;
+  AU.on=true;
+}
+function burst(opts){
+  const ctx=AU.ctx;if(!ctx)return;
+  const t=ctx.currentTime;
+  const pan=ctx.createPanner();pan.panningModel='HRTF';pan.distanceModel='inverse';pan.refDistance=opts.ref||2;pan.rolloffFactor=opts.roll||1;pan.maxDistance=20000;setPos(pan,opts.x,opts.y,opts.z);pan.connect(AU.bus);
+  if(opts.osc){const o=ctx.createOscillator();o.type='sine';o.frequency.setValueAtTime(opts.osc[0],t);o.frequency.exponentialRampToValueAtTime(opts.osc[1],t+opts.osc[2]);
+    const g=ctx.createGain();g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(opts.vol,t+0.02);g.gain.exponentialRampToValueAtTime(0.0001,t+opts.osc[2]);o.connect(g);g.connect(pan);o.start(t);o.stop(t+opts.osc[2]+0.1);}
+  if(opts.noise){const s=ctx.createBufferSource();s.buffer=AU.white;const f=ctx.createBiquadFilter();f.type=opts.noise.type;f.frequency.value=opts.noise.f;f.Q.value=opts.noise.q||0.7;
+    const g=ctx.createGain();g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(opts.noise.vol,t+0.01);g.gain.exponentialRampToValueAtTime(0.0001,t+opts.noise.dur);s.connect(f);f.connect(g);g.connect(pan);s.start(t,Math.random()*2);s.stop(t+opts.noise.dur+0.1);}
+}
+function audioThud(v,x,y,z){if(!AU.on)return;burst({x,y,z,ref:3,osc:[120,40,0.3],vol:0.9*v,noise:{type:'lowpass',f:700,vol:0.8*v,dur:0.35}});}
+function audioWhoosh(v){if(!AU.on)return;burst({x:S.p[0],y:S.p[1]+1,z:S.p[2],ref:3,noise:{type:'bandpass',f:900,q:0.8,vol:0.25*v,dur:0.4}});}
+function audioWhumpf(x,y,z){if(!AU.on)return;
+  burst({x,y,z,ref:12,roll:0.6,osc:[85,26,1.5],vol:1.0,noise:{type:'lowpass',f:380,vol:0.9,dur:1.6}});
+  burst({x,y,z,ref:25,roll:0.6,noise:{type:'highpass',f:2400,q:0.7,vol:0.55,dur:0.14}});
+  setTimeout(()=>{if(AU.on)burst({x:x+30,y,z:z-20,ref:25,roll:0.6,noise:{type:'highpass',f:1800,q:0.7,vol:0.4,dur:0.2}});},180);
+}
+function updateAudio(dt,white){
+  if(!AU.on)return;
+  const ctx=AU.ctx,t=ctx.currentTime,L=ctx.listener;
+  const e=cam.eye;
+  if(L.positionX){L.positionX.value=e[0];L.positionY.value=e[1];L.positionZ.value=e[2];
+    L.forwardX.value=cam.f[0];L.forwardY.value=cam.f[1];L.forwardZ.value=cam.f[2];L.upX.value=cam.u[0];L.upY.value=cam.u[1];L.upZ.value=cam.u[2];}
+  else{L.setPosition(e[0],e[1],e[2]);L.setOrientation(cam.f[0],cam.f[1],cam.f[2],cam.u[0],cam.u[1],cam.u[2]);}
+  const sp=S.speed,vn=clamp(sp/38,0,1);
+  AU.gustT-=dt;if(AU.gustT<=0){AU.gust=0.25+Math.random()*0.75;AU.gustT=2+Math.random()*4;}
+  const gust=AU.gust;
+  const alt=clamp((S.p[1]-2000)/1800,0,1);
+  const fh=[Math.sin(cam.bodyYaw),0,-Math.cos(cam.bodyYaw)],rh=[Math.cos(cam.bodyYaw),0,Math.sin(cam.bodyYaw)];
+  // rush of air at the ears
+  const rush=(0.02+0.95*Math.pow(vn,1.7))*0.55;
+  const bf=260+sp*20;
+  for(const [w,sd] of [[AU.windL,-1],[AU.windR,1]]){
+    w.g.gain.setTargetAtTime(rush*(0.8+0.2*gust),t,0.08);w.flt.frequency.setTargetAtTime(bf*(sd<0?1:1.06),t,0.1);
+    setPos(w.pan,e[0]+fh[0]*0.9+rh[0]*0.45*sd,e[1]-0.05,e[2]+fh[2]*0.9+rh[2]*0.45*sd);
+  }
+  AU.whistle.g.gain.setTargetAtTime(Math.pow(vn,3)*0.1*(0.5+gust*0.5),t,0.15);
+  AU.whistle.flt.frequency.setTargetAtTime(1100+vn*1700+gust*300,t,0.2);
+  setPos(AU.whistle.pan,e[0]+fh[0]*0.7,e[1]+0.1,e[2]+fh[2]*0.7);
+  // mountain ambience: slowly drifting wind sources
+  const ot=performance.now()/1000;
+  const ax=e[0]+Math.cos(ot*0.05)*70,az=e[2]+Math.sin(ot*0.05)*70,ay=e[1]+30+Math.sin(ot*0.11)*20;
+  AU.amb.g.gain.setTargetAtTime((0.12+0.22*alt)*(0.4+0.8*gust),t,0.6);setPos(AU.amb.pan,ax,ay,az);
+  AU.amb.flt.frequency.setTargetAtTime(300+gust*400,t,0.6);
+  AU.amb2.g.gain.setTargetAtTime(0.02+0.06*gust*alt,t,0.8);setPos(AU.amb2.pan,e[0]-Math.cos(ot*0.07)*90,e[1]+40,e[2]-Math.sin(ot*0.07)*90);
+  AU.amb2.flt.frequency.setTargetAtTime(700+gust*500,t,0.8);
+  // skis on snow
+  const gr=S.grounded&&S.mode!==2;
+  const slipA=Math.min(1,Math.abs(S.slip)/4),edge=Math.abs(S.lean);
+  const base=gr?Math.pow(clamp(sp/20,0,1),0.9)*(0.28+0.55*Math.max(slipA,edge*0.7)):0;
+  const rock=S.rock*(gr?1:0);
+  const fcen=1500+sp*55+slipA*500-rock*600;
+  const feet=[S.p[0],S.p[1]+0.05,S.p[2]];
+  for(const [sv,hv,sd] of [[AU.skiL,AU.hissL,-1],[AU.skiR,AU.hissR,1]]){
+    sv.g.gain.setTargetAtTime(base*0.55+rock*0.25*clamp(sp/10,0,1),t,0.05);sv.flt.frequency.setTargetAtTime(fcen,t,0.06);
+    hv.g.gain.setTargetAtTime(base*(0.12+0.35*slipA),t,0.05);
+    const px=feet[0]+rh[0]*0.18*sd,pz=feet[2]+rh[2]*0.18*sd;
+    setPos(sv.pan,px,feet[1],pz);setPos(hv.pan,px,feet[1],pz);
+  }
+  AU.skiLow.g.gain.setTargetAtTime(gr?clamp(sp/25,0,1)*0.28*(0.5+S.rough):0,t,0.08);setPos(AU.skiLow.pan,feet[0],feet[1],feet[2]);
+  // avalanche
+  const av=AV.state===1&&AV.moving>0;
+  const I=av?AV.intensity:0;
+  if(av){
+    setPos(AU.rumble.pan,AV.cx,AV.cy+10,AV.cz);setPos(AU.roar.pan,AV.cx,AV.cy+10,AV.cz);setPos(AU.crack.pan,AV.nearX,AV.nearY,AV.nearZ);
+    const d=Math.hypot(AV.cx-e[0],AV.cz-e[2]);
+    AU.rumble.flt.frequency.setTargetAtTime(110+200*I,t,0.2);
+    AU.roar.flt.frequency.setTargetAtTime(260+500*I,t,0.2);
+    AU.crack.flt.frequency.setTargetAtTime(800+900*Math.random(),t,0.03);
+    const near=clamp(1-AV.near/400,0,1);
+    AU.crack.g.gain.setTargetAtTime(I*(0.1+0.7*near)*(0.2+0.8*Math.random()),t,0.025);
+    AU.crack.flt.Q.setTargetAtTime(0.9,t,0.1);
+    AU.roar.g.gain.setTargetAtTime(I*0.6*(0.7+0.3*Math.random()),t,0.12);
+    AU.rumble.g.gain.setTargetAtTime(I*1.5,t,0.25);AU.subG.gain.setTargetAtTime(I*0.5,t,0.3);
+  }else{
+    for(const v of [AU.rumble,AU.roar,AU.crack])v.g.gain.setTargetAtTime(0,t,0.8);
+    AU.subG.gain.setTargetAtTime(0,t,0.8);
+  }
+  AU.muff.frequency.setTargetAtTime(mix(20000,650,white),t,0.12);
+}
+
+/* ===================================================================== */
+/*  render                                                                */
+/* ===================================================================== */
+let progTerrain,progTrack,progSky,progBlock,progPuff,progSki;
+const NLEV=8;
+function render(time){
+  gl.bindFramebuffer(gl.FRAMEBUFFER,null);gl.viewport(0,0,W,H);
+  gl.depthMask(true);gl.clearDepth(1);gl.clear(gl.DEPTH_BUFFER_BIT);
+  const proj=persp(cam.fov,aspect,0.2,70000);
+  const view=viewM(cam.r,cam.u,cam.f,cam.eye,false);
+  const vp=mul4(proj,view);
+  gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,texH);
+  gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,texData);
+  gl.activeTexture(gl.TEXTURE2);gl.bindTexture(gl.TEXTURE_2D,texShadow);
+  gl.activeTexture(gl.TEXTURE3);gl.bindTexture(gl.TEXTURE_2D,texState);
+  const zone=[ZX0,ZZ0,ZS,0];
+  gl.disable(gl.BLEND);gl.disable(gl.CULL_FACE);
+  // terrain
+  gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);
+  const T=progTerrain;gl.useProgram(T.p);
+  gl.uniformMatrix4fv(T.U.uVP,false,vp);gl.uniform3fv(T.U.uCam,cam.eye);gl.uniform4fv(T.U.uZone,zone);gl.uniform1f(T.U.uTime,time);
+  gl.uniform1i(T.U.uHeight,0);gl.uniform1i(T.U.uData,1);gl.uniform1i(T.U.uShadow,2);gl.uniform1i(T.U.uState,3);
+  for(let l=0;l<NLEV;l++){
+    const sp=3*Math.pow(2,l);
+    const cx=Math.round(cam.eye[0]/sp)*sp,cz=Math.round(cam.eye[2]/sp)*sp;
+    gl.uniform2f(T.U.uCenter,cx,cz);gl.uniform1f(T.U.uSp,sp);gl.uniform1f(T.U.uBias,l===0?0:0.02*sp);
+    if(l===0){gl.bindVertexArray(vaoTerr);gl.drawElements(gl.TRIANGLES,idxFullN,gl.UNSIGNED_SHORT,0);}
+    else{gl.bindVertexArray(vaoRing);gl.drawElements(gl.TRIANGLES,idxRingN,gl.UNSIGNED_SHORT,0);}
+  }
+  // sky: only where the terrain left depth at 1.0 (cheap early-z rejection)
+  gl.depthMask(false);
+  gl.useProgram(progSky.p);gl.bindVertexArray(emptyVAO);
+  gl.uniform3fv(progSky.U.uR,cam.r);gl.uniform3fv(progSky.U.uU,cam.u);gl.uniform3fv(progSky.U.uF,cam.f);
+  gl.uniform1f(progSky.U.uTan,Math.tan(cam.fov/2));gl.uniform1f(progSky.U.uAsp,aspect);gl.uniform1f(progSky.U.uTime,time);
+  gl.drawArrays(gl.TRIANGLES,0,3);
+  gl.depthMask(true);
+  // tracks
+  if(TR.n>0){
+    gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);gl.enable(gl.POLYGON_OFFSET_FILL);gl.polygonOffset(-2,-2);
+    const K=progTrack;gl.useProgram(K.p);
+    gl.uniformMatrix4fv(K.U.uVP,false,vp);gl.uniform3fv(K.U.uCam,cam.eye);gl.uniform4fv(K.U.uZone,zone);
+    gl.uniform1i(K.U.uHeight,0);gl.uniform1i(K.U.uData,1);gl.uniform1i(K.U.uShadow,2);gl.uniform1i(K.U.uState,3);
+    gl.bindVertexArray(vaoTrack);gl.drawElements(gl.TRIANGLES,TR.n*6,gl.UNSIGNED_INT,0);
+    gl.disable(gl.POLYGON_OFFSET_FILL);gl.disable(gl.BLEND);gl.depthMask(true);
+  }
+  // avalanche blocks
+  if(AV.state>0){
+    let c=0;const I=B.inst;
+    for(let i=0;i<B.n;i++){
+      if(B.state[i]===0)continue;
+      const x=B.x[i],z=B.z[i];
+      const mask=1.0; // blocks sit on the bed
+      let y=baseH(x,z)-(B.state[i]===0?0:1.2*sstep(0.3,0.7,stBil(x,z,1)))+B.thick[i]*0.5*0.9+B.yoff[i];
+      if(B.state[i]===1)y+=Math.sin(B.seed[i]*20+simT*3)*0.3+0.4;
+      const o=c*12;
+      I[o]=x;I[o+1]=y;I[o+2]=z;I[o+3]=B.size[i];
+      I[o+4]=B.yaw[i];I[o+5]=B.pit[i];I[o+6]=B.rol[i];I[o+7]=B.seed[i];
+      I[o+8]=B.gx[i];I[o+9]=B.gz[i];I[o+10]=B.thick[i];I[o+11]=B.seed[i]*0.8;
+      c++;
+    }
+    if(c>0){
+      gl.useProgram(progBlock.p);gl.uniformMatrix4fv(progBlock.U.uVP,false,vp);gl.uniform3fv(progBlock.U.uCam,cam.eye);
+      gl.bindVertexArray(vaoBlocks);gl.bindBuffer(gl.ARRAY_BUFFER,vboBlocks);gl.bufferSubData(gl.ARRAY_BUFFER,0,I,0,c*12);
+      gl.drawArraysInstanced(gl.TRIANGLES,0,36,c);
+    }
+  }
+  // puffs
+  if(PP.n>0){
+    gl.enable(gl.BLEND);gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);
+    gl.useProgram(progPuff.p);gl.uniformMatrix4fv(progPuff.U.uVP,false,vp);gl.uniform3fv(progPuff.U.uCam,cam.eye);
+    gl.uniform3fv(progPuff.U.uR,cam.r);gl.uniform3fv(progPuff.U.uU,cam.u);
+    gl.bindVertexArray(vaoPuff);gl.bindBuffer(gl.ARRAY_BUFFER,vboPuff);gl.bufferSubData(gl.ARRAY_BUFFER,0,PP.inst,0,PP.n*8);
+    gl.drawArraysInstanced(gl.TRIANGLES,0,6,PP.n);
+    gl.disable(gl.BLEND);gl.depthMask(true);
+  }
+  // skis & poles in their own depth range
+  gl.clear(gl.DEPTH_BUFFER_BIT);
+  drawSkis();
+  gl.bindVertexArray(null);
+}
+function matFrom(X,Y,Z){return new Float32Array([X[0],X[1],X[2],Y[0],Y[1],Y[2],Z[0],Z[1],Z[2]]);}
+function drawSkis(){
+  const K=progSki;gl.useProgram(K.p);
+  const proj=persp(cam.fov,aspect,0.04,60);
+  const vr=new Float32Array([cam.r[0],cam.u[0],-cam.f[0],cam.r[1],cam.u[1],-cam.f[1],cam.r[2],cam.u[2],-cam.f[2]]);
+  gl.uniformMatrix4fv(K.U.uP,false,proj);gl.uniformMatrix3fv(K.U.uVR,false,vr);
+  gl.uniform3fv(K.U.uEye,cam.eye);gl.uniform1i(K.U.uShadow,2);
+  const n=S.grounded?normalAt(S.p[0],S.p[2]):[0,1,0];
+  let fh=[Math.sin(S.psi),0,-Math.cos(S.psi)];
+  let f;
+  if(S.grounded){const d=dot3(fh,n);f=norm3([fh[0]-n[0]*d,fh[1]-n[1]*d,fh[2]-n[2]*d]);}
+  else{const hv=Math.hypot(S.v[0],S.v[2]);const pa=Math.atan2(S.v[1],Math.max(hv,3))*0.7;f=norm3([fh[0]*Math.cos(pa),Math.sin(pa),fh[2]*Math.cos(pa)]);}
+  const nn=S.grounded?n:norm3(cross3(cross3(f,[0,1,0]),f).map((v,i)=>i===1?Math.max(v,0.2):v));
+  const r=cross3(f,nn);
+  const ed=S.lean*0.55*Math.min(1,0.3+S.speed/8)*(S.grounded?1:0.2);
+  const ce=Math.cos(ed),se=Math.sin(ed);
+  const nT=[nn[0]*ce+r[0]*se,nn[1]*ce+r[1]*se,nn[2]*ce+r[2]*se];
+  const rT=[r[0]*ce-nn[0]*se,r[1]*ce-nn[1]*se,r[2]*ce-nn[2]*se];
+  const e=cam.eye;
+  const fwdOff=0.62-0.1*S.tuck;
+  const draw=(vao,count,Rm,pos,scale,color,mode)=>{
+    gl.bindVertexArray(vao);gl.uniformMatrix3fv(K.U.uR,false,Rm);
+    gl.uniform3f(K.U.uT,pos[0]-e[0],pos[1]-e[1],pos[2]-e[2]);gl.uniform3fv(K.U.uScale,scale);gl.uniform3fv(K.U.uColor,color);gl.uniform1i(K.U.uMode,mode);
+    gl.drawArrays(gl.TRIANGLES,0,count);
+  };
+  const Rs=matFrom(f,nT,rT);
+  for(const sd of[-1,1]){
+    const base=[S.p[0]+f[0]*fwdOff+rT[0]*0.17*sd+nn[0]*0.05,S.p[1]+f[1]*fwdOff+rT[1]*0.17*sd+nn[1]*0.05,S.p[2]+f[2]*fwdOff+rT[2]*0.17*sd+nn[2]*0.05];
+    draw(vaoSkiMesh,skiVerts,Rs,base,[1.1,1,1],[1,1,1],0);
+    const bp=[base[0]+nT[0]*0.05-f[0]*0.02,base[1]+nT[1]*0.05-f[1]*0.02,base[2]+nT[2]*0.05-f[2]*0.02];
+    draw(vaoBox,36,Rs,bp,[0.34,0.10,0.11],[0.12,0.12,0.14],1);
+    const bp2=[bp[0]+nT[0]*0.09,bp[1]+nT[1]*0.09,bp[2]+nT[2]*0.09];
+    draw(vaoBox,36,Rs,bp2,[0.18,0.22,0.12],[0.10,0.10,0.12],1);
+  }
+  // poles (attached to the body frame)
+  const bh=[Math.sin(cam.bodyYaw),0,-Math.cos(cam.bodyYaw)],br=[Math.cos(cam.bodyYaw),0,Math.sin(cam.bodyYaw)];
+  const t=performance.now()/1000;
+  for(const sd of[-1,1]){
+    const swing=Math.sin(t*3+sd)*0.02*Math.min(1,S.speed/10);
+    const hand=[e[0]+bh[0]*(0.42-0.2*S.tuck)+br[0]*0.36*sd,e[1]-0.62+0.25*S.tuck,e[2]+bh[2]*(0.42-0.2*S.tuck)+br[2]*0.36*sd];
+    const d=norm3([br[0]*0.22*sd-bh[0]*(0.75+swing)+0*0,-0.62-0.2*S.tuck,br[2]*0.22*sd-bh[2]*(0.75+swing)]);
+    const up2=norm3(cross3(cross3(d,[0,1,0]),d));
+    const side=cross3(d,up2);
+    const mid=[hand[0]+d[0]*0.6,hand[1]+d[1]*0.6,hand[2]+d[2]*0.6];
+    draw(vaoBox,36,matFrom(d,up2,side),mid,[1.2,0.016,0.016],[0.08,0.08,0.09],1);
+    draw(vaoBox,36,matFrom(d,up2,side),hand,[0.16,0.034,0.034],[0.75,0.1,0.08],1);
+    const tip=[hand[0]+d[0]*1.18,hand[1]+d[1]*1.18,hand[2]+d[2]*1.18];
+    draw(vaoBox,36,matFrom(d,up2,side),tip,[0.03,0.09,0.09],[0.1,0.1,0.1],1);
+  }
+}
+
+/* ===================================================================== */
+/*  HUD                                                                   */
+/* ===================================================================== */
+const hud={spd:$('spd'),alt:$('alt'),slp:$('slp'),dst:$('dst'),av:$('av'),white:$('white'),msg:$('msg')};
+let hudT=0,whiteLvl=0;
+function updateHUD(dt){
+  hudT-=dt;
+  if(msgTimer>0){msgTimer-=dt;if(msgTimer<=0)hud.msg.style.opacity=0;}
+  // whiteout
+  let target=0;
+  if(AV.state===1&&AV.moving>0)target=clamp(1-(AV.near-6)/60,0,1)*0.85*clamp(AV.intensity*3,0,1);
+  if(S.mode===1)target=Math.max(target,0.55);
+  if(S.mode===2)target=Math.max(target,0.9*clamp(S.modeT/1.2,0,1));
+  whiteLvl+=(target-whiteLvl)*(1-Math.exp(-dt*4));
+  hud.white.style.opacity=whiteLvl.toFixed(3);
+  if(hudT>0)return;hudT=0.08;
+  hud.spd.textContent=Math.round(S.speed*3.6);
+  hud.alt.textContent=Math.round(S.p[1]);
+  const g=gradAt(S.p[0],S.p[2]);hud.slp.textContent=Math.round(Math.atan(Math.hypot(g[0],g[1]))*180/Math.PI);
+  hud.dst.textContent=Math.max(0,Math.round(S.startZ-S.p[2]));
+  // avalanche info
+  let html;
+  if(AV.state===0){
+    const dx=SL.xs-S.p[0],dz=SL.zs-S.p[2],d=Math.hypot(dx,dz);
+    const bearing=angWrap(Math.atan2(dx,-dz)-cam.bodyYaw);
+    const arrow=Math.abs(bearing)<0.4?'↑':Math.abs(bearing)>2.7?'↓':bearing>0?(bearing>1.6?'↘':'→'):(bearing<-1.6?'↙':'←');
+    const risk=AV.stress>0.62?'<span style="color:#ff8a6a">SLOPE IS SETTLING</span>':'DANGER 3 · CONSIDERABLE';
+    html=`<div class="t">LOADED SLAB ${arrow} ${d>1000?(d/1000).toFixed(1)+' km':Math.round(d)+' m'}</div><div style="opacity:.8">${risk}</div>`;
+    if(inSlab(S.p[0],S.p[2]))html=`<div class="t" style="color:#ffb27a">YOU ARE ON THE SLAB</div><div style="opacity:.8">STRESS ${Math.round(clamp(AV.stress,0,1)*100)}%</div>`;
+  }else if(AV.state===1){
+    html=`<div class="t" style="color:#ff9a7a">AVALANCHE IN MOTION</div><div style="opacity:.8">${AV.moving} BLOCKS · ${AV.moving?Math.round(AV.near)+' m away':''}</div>`;
+  }else html=`<div class="t">AVALANCHE SETTLED</div><div style="opacity:.8">PRESS R TO RESET THE SLOPE</div>`;
+  hud.av.innerHTML=html;
+}
+
+/* ===================================================================== */
+/*  main loop                                                             */
+/* ===================================================================== */
+let last=performance.now(),acc=0,frames=0,fpsT=0,lowT=0,highT=0;
+const FIXED=1/120;
+function frame(now){
+  requestAnimationFrame(frame);
+  let dt=(now-last)/1000;last=now;if(dt>0.1)dt=0.1;if(dt<=0)return;
+  if(!paused){
+    acc+=dt;let guard=0;
+    while(acc>=FIXED&&guard++<16){stepSki(FIXED);acc-=FIXED;}
+    updateAvalanche(dt);
+    updatePuffs(dt);
+    flushState();
+    // cap the ribbons idle break while mid-air
+  }else{
+    // slow idle drift of the view on the start screen
+    look.yaw=Math.sin(now*0.00012)*0.35;look.pitch=0.02+Math.sin(now*0.0001)*0.03;
+  }
+  updateCamera(dt);
+  render(now/1000);
+  updateHUD(dt);
+  updateAudio(dt,whiteLvl);
+  // adaptive resolution
+  fpsT+=dt;frames++;
+  if(fpsT>1.5){const fps=frames/fpsT;frames=0;fpsT=0;
+    if(fps<38&&resScale>0.5){resScale=Math.max(0.5,resScale-0.1);resize();}
+    else if(fps>58&&resScale<1){resScale=Math.min(1,resScale+0.05);resize();}}
+}
+
+/* ===================================================================== */
+/*  boot                                                                  */
+/* ===================================================================== */
+async function boot(){
+  resize();
+  await generateTerrain();
+  texState=mkTex(ZN,ZN,gl.RGBA16F,gl.RGBA,gl.FLOAT,ST,gl.LINEAR);
+  progress(0.93,'MAKING SNOW…');await sleep();
+  progTerrain=mkProg(TERRAIN_VS,TERRAIN_FS,'terrain');
+  progTrack=mkProg(TRACK_VS,TRACK_FS,'track');
+  progSky=mkProg(SKY_VS,SKY_FS,'sky');
+  progBlock=mkProg(BLOCK_VS,BLOCK_FS,'blocks');
+  progPuff=mkProg(PUFF_VS,PUFF_FS,'puff');
+  progSki=mkProg(SKI_VS,SKI_FS,'ski');
+  buildGeometry();
+  initSlab();
+  resetSkier();
+  progress(1,'READY');
+  $('start').disabled=false;
+  window.__ski={S,AV,SL,B,KEY,cam,look,TR,stepSki,triggerAvalanche,groundH,baseH,resetRun,get simT(){return simT;},setPaused:(v)=>{paused=v;},skip:()=>{pause(false);started=true;}};
+  requestAnimationFrame(t=>{last=t;frame(t);});
+}
+$('start').addEventListener('click',()=>{
+  initAudio();
+  if(AU.ctx&&AU.ctx.state==='suspended')AU.ctx.resume();
+  started=true;pause(false);
+  try{const p=canvas.requestPointerLock();if(p&&p.catch)p.catch(()=>{});}catch(e){}
+  showMsg('',0.01);
+  setTimeout(()=>{if(!msgTimer){}},0);
+});
+canvas.addEventListener('click',()=>{if(started&&!paused&&!locked){try{const p=canvas.requestPointerLock();if(p&&p.catch)p.catch(()=>{});}catch(e){}}});
+boot().catch(err=>{console.error(err);loadmsg.textContent='ERROR: '+err.message;loadmsg.style.color='#ff9c9c';});
+})();
+</script>
+</body>
+</html>

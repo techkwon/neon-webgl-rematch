@@ -1,8 +1,8 @@
 {
- "title": "Gemini 4 Neon vs Hydrogen · Sonnet 5.5 · GPT-6.2 Sol — WebGL2 5라운드 재대결",
+ "title": "Gemini 4 Neon vs Hydrogen · Sonnet 5.5 · GPT-6.2 Sol — WebGL2 5라운드 재대결 + 구글 데모 3라운드",
  "episode": "누구나쉽게",
- "date": "2026-11-19",
- "video_url": "",
+ "date": "2026-11-20",
+ "video_url": "https://youtu.be/V39EiW1V1tQ",
  "models": {
   "neon": {
    "name": "Gemini 4 Neon",
@@ -92,13 +92,15 @@
    "Gemini API 가격 페이지 (ai.google.dev/gemini-api/docs/pricing, 2026-11-19 확인) — Neon",
    "Google 블로그 (2026-11-12) — Hydrogen 단가 (11편과 같음)",
    "OpenAI 가격 페이지 — GPT-6.2 Sol",
-   "Claude Code가 보고한 total_cost_usd — Sonnet"
+   "Claude Code가 보고한 total_cost_usd — Sonnet",
+   "Google Gemini 4 Neon 공개 블로그의 데모 설명 — 2부 과제 3개 (프롬프트는 공개되지 않아 설명을 바탕으로 직접 작성)"
   ],
   "note": "Neon은 gemini-4-neon-high, Hydrogen은 gemini-4-hydrogen-high, Sol은 reasoning effort high로 돌렸습니다."
  },
  "rounds": [
   {
    "id": "water",
+   "part": 1,
    "name": "물과 유리",
    "prompt": "Create a real-time WebGL2 water and glass visualizer built from pure math and signed distance functions: a glass object half-submerged in moving water, with refraction, reflection, chromatic dispersion and light absorption. Let the user orbit the camera with the mouse.\n\nSave the result as one self-contained file named index.html in the current directory. Use raw WebGL2 only, no external libraries or network requests. Do it in one go, do not ask questions.",
    "runs": {
@@ -246,6 +248,7 @@
   },
   {
    "id": "globe",
+   "part": 1,
    "name": "번개 지구본 + 소리",
    "prompt": "Build an interactive 3D Earth globe in WebGL2 where simulated lightning strikes appear around the world as glowing ripples, and each strike drives a Web Audio ambient music engine so the music reacts to the storm. Include a start button for audio and let the user drag to rotate the globe.\n\nSave the result as one self-contained file named index.html in the current directory. Use raw WebGL2 only, no external libraries or network requests. Do it in one go, do not ask questions.",
    "runs": {
@@ -393,6 +396,7 @@
   },
   {
    "id": "store",
+   "part": 1,
    "name": "쇼핑몰 첫 화면",
    "prompt": "Design a one-page product launch storefront for a premium mechanical keyboard: a WebGL2 topographic shader hero, a pinned four-stage scrollytelling section, a before/after split slider, a 3D wireframe spec card, and a live color configurator. Make it look like a top design agency built it.\n\nSave the result as one self-contained file named index.html in the current directory. Use raw WebGL2 only, no external libraries or network requests. Do it in one go, do not ask questions.",
    "runs": {
@@ -540,6 +544,7 @@
   },
   {
    "id": "city",
+   "part": 1,
    "name": "미래 도시 비행",
    "prompt": "Make a futuristic night city I can actually fly through in first person in WebGL2: procedurally generated towers, neon signs, rain, and moving traffic. WASD to move, mouse to look.\n\nSave the result as one self-contained file named index.html in the current directory. Use raw WebGL2 only, no external libraries or network requests. Do it in one go, do not ask questions.",
    "runs": {
@@ -687,6 +692,7 @@
   },
   {
    "id": "blackhole",
+   "part": 1,
    "name": "블랙홀 셰이더",
    "prompt": "Write a WebGL2 fragment shader demo of a black hole with a glowing accretion disk and gravitational lensing that bends the starfield behind it. Add a slow cinematic camera orbit and a small control to change the disk temperature.\n\nSave the result as one self-contained file named index.html in the current directory. Use raw WebGL2 only, no external libraries or network requests. Do it in one go, do not ask questions.",
    "runs": {
@@ -831,59 +837,655 @@
    ],
    "judges_done": 4,
    "judge_sheet": "judge/blackhole/sheet.jpg"
+  },
+  {
+   "id": "ski",
+   "part": 2,
+   "name": "몽블랑 스키",
+   "prompt": "Build a first-person WebGL2 freeride ski simulator on alpine terrain modeled after Mont Blanc and Chamonix, written from scratch with custom shaders and zero pre-made assets: snow, rock, sky and distant peaks, real-time ski physics (carving turns, speed, tucking, jumps), carved tracks that stay in the snow, a slab avalanche the skier can trigger, and spatial Web Audio (wind, skis on snow, the avalanche). Steer with the keyboard and look with the mouse. Include a start button for audio.\n\nSave the result as one self-contained file named index.html in the current directory. Use raw WebGL2 only, no external libraries or network requests. Do it in one go, do not ask questions.",
+   "runs": {
+    "neon": {
+     "seconds": 734,
+     "bytes": 136969,
+     "page": "runs/ski/neon/index.html",
+     "video": "video/ski-neon.mp4",
+     "poster": "poster/ski-neon.jpg",
+     "tokens": {
+      "input": 124612,
+      "cached": 1594505,
+      "output": 89656
+     },
+     "cost_usd": 1.958,
+     "cost_kind": "estimate",
+     "run_date": "2026-11-20",
+     "reused": false,
+     "rec_fps": 26.7
+    },
+    "hydrogen": {
+     "seconds": 899,
+     "bytes": 120673,
+     "page": "runs/ski/hydrogen/index.html",
+     "video": "video/ski-hydrogen.mp4",
+     "poster": "poster/ski-hydrogen.jpg",
+     "tokens": {
+      "input": 244615,
+      "cached": 6029369,
+      "output": 129854
+     },
+     "cost_usd": 1.341,
+     "cost_kind": "estimate",
+     "run_date": "2026-11-20",
+     "reused": false,
+     "rec_fps": 8.1
+    },
+    "sonnet": {
+     "seconds": 1440,
+     "bytes": 77476,
+     "page": "runs/ski/sonnet/index.html",
+     "video": "video/ski-sonnet.mp4",
+     "poster": "poster/ski-sonnet.jpg",
+     "tokens": {
+      "input": 235716,
+      "cached": 4299001,
+      "output": 192218
+     },
+     "cost_usd": 3.276,
+     "cost_kind": "reported",
+     "run_date": "2026-11-20",
+     "reused": false,
+     "rec_fps": 23.6
+    },
+    "sol": {
+     "seconds": 575,
+     "bytes": 58595,
+     "page": "runs/ski/sol/index.html",
+     "video": "video/ski-sol.mp4",
+     "poster": "poster/ski-sol.jpg",
+     "tokens": {
+      "input": 108918,
+      "cached": 2754816,
+      "output": 35589,
+      "helpers": 0,
+      "helper_usd": 0.0
+     },
+     "cost_usd": 0.849,
+     "cost_kind": "estimate",
+     "run_date": "2026-11-20",
+     "reused": false,
+     "rec_fps": 27.9
+    }
+   },
+   "points": {
+    "neon": 6,
+    "hydrogen": 11,
+    "sonnet": 10,
+    "sol": 13
+   },
+   "ballots": [
+    {
+     "judge": "neon",
+     "ranking": [
+      "sonnet",
+      "hydrogen",
+      "sol",
+      "neon"
+     ],
+     "reasons": {
+      "sol": "속도와 HUD는 안정적이고 원경 설산도 괜찮지만, 후반부 근경 지형이 밋밋한 갈색 덩어리로 보여 시각적 완성도가 떨어집니다.",
+      "hydrogen": "오디오 시작 화면과 HUD·암벽 연출이 매우 세련됐으나, 속도가 302 km/h까지 폭주하고 중간 프레임의 카메라 기울임과 폴 표현이 다소 부자연스럽습니다.",
+      "neon": "시야를 덮는 과도한 백색 눈부심과 함께 454 km/h 폭주, 고도 역상승 및 암벽 클리핑 등 심각한 물리·렌더링 오류가 발생합니다.",
+      "sonnet": "가장 사실적인 샤모니 암벽·설면 셰이더와 안정적이고 자연스러운 카빙 물리 구현이 돋보이며, 흰 눈 위 하단 HUD 가독성만 다소 아쉽습니다."
+     }
+    },
+    {
+     "judge": "hydrogen",
+     "ranking": [
+      "hydrogen",
+      "sol",
+      "sonnet",
+      "neon"
+     ],
+     "reasons": {
+      "sol": "원경의 몽블랑 산군과 HUD 가독성은 뛰어나지만, 후반 우측 근경 지형이 매끄러운 갈색 면으로 부자연스럽게 보이고 시작 버튼 화면이 나타나지 않습니다.",
+      "hydrogen": "오디오 시작 버튼 화면과 샤모니풍 화강암 봉우리, 설면 눈보라, 스키·폴 움직임 및 안정적인 HUD까지 프롬프트 요구를 가장 완성도 높게 구현했습니다.",
+      "neon": "초반 협곡과 HUD는 준수하나 중반 이후 과도한 백색 빛번짐과 비정상적 고도·속도 상승(454km/h), 후반 암벽 메쉬 내부 클리핑 버그가 뚜렷합니다.",
+      "sonnet": "암벽 질감과 스키·폴 주행 표현은 무난하지만, 설면이 지나치게 하얗게 날아간 데다 흰색 HUD 글자가 거의 읽히지 않고 시작 버튼 화면도 보이지 않습니다."
+     }
+    },
+    {
+     "judge": "sonnet",
+     "ranking": [
+      "sol",
+      "neon",
+      "sonnet",
+      "hydrogen"
+     ],
+     "reasons": {
+      "sol": "알프스 봉우리 원경과 하늘이 가장 사실적이고 HUD도 깔끔하지만, 후반에 화면을 가리는 거대한 면이 나타난다.",
+      "neon": "눈 협곡과 바위 능선, HUD, 점프 표시는 좋지만 후반 어두운 노이즈 텍스처가 부자연스럽고 눈이 지나치게 뿌옇다.",
+      "sonnet": "눈 질감과 붉은 스키 모델은 괜찮지만 장면이 하얗게 날아가 지형 구분이 어렵고 스키가 어색하게 흔들린다.",
+      "hydrogen": "시작 화면은 훌륭하지만 플레이 중에는 늘어난 듯한 텍스처의 거대한 면이 화면을 덮고 지형이 깨져 보이며 스키도 어색하다."
+     }
+    },
+    {
+     "judge": "sol",
+     "ranking": [
+      "sol",
+      "hydrogen",
+      "sonnet",
+      "neon"
+     ],
+     "reasons": {
+      "sol": "설산과 스키의 표현이 정교하고 속도 변화와 HUD가 자연스럽게 읽힙니다.",
+      "hydrogen": "오디오 시작 버튼과 조작 안내가 명확하지만 활강 속도가 시속 302km까지 치솟습니다.",
+      "neon": "협곡과 점프 연출은 인상적이지만 시속 454km와 급격한 고도 상승이 부자연스럽습니다.",
+      "sonnet": "활강 속도와 움직임은 자연스럽지만 흰 설원 위에서 HUD가 거의 보이지 않습니다."
+     }
+    }
+   ],
+   "judges_done": 4,
+   "judge_sheet": "judge/ski/sheet.jpg"
+  },
+  {
+   "id": "turing",
+   "part": 2,
+   "name": "튜링의 연구실",
+   "prompt": "Recreate Alan Turing's 1936 study at King's College, Cambridge as an interactive 3D scene in WebGL2: inside the room (desk, books, papers, fireplace, period furniture, warm window light) with King's College Chapel visible through the window, and on the desk a working Universal Turing Machine the user can run and step through (tape, read/write head and current state shown). Let the user walk around the room with the keyboard and look with the mouse.\n\nSave the result as one self-contained file named index.html in the current directory. Use raw WebGL2 only, no external libraries or network requests. Do it in one go, do not ask questions.",
+   "runs": {
+    "neon": {
+     "seconds": 894,
+     "bytes": 153840,
+     "page": "runs/turing/neon/index.html",
+     "video": "video/turing-neon.mp4",
+     "poster": "poster/turing-neon.jpg",
+     "tokens": {
+      "input": 161188,
+      "cached": 2093569,
+      "output": 118801
+     },
+     "cost_usd": 2.58,
+     "cost_kind": "estimate",
+     "run_date": "2026-11-20",
+     "reused": false,
+     "rec_fps": 20.4
+    },
+    "hydrogen": {
+     "seconds": 574,
+     "bytes": 108331,
+     "page": "runs/turing/hydrogen/index.html",
+     "video": "video/turing-hydrogen.mp4",
+     "poster": "poster/turing-hydrogen.jpg",
+     "tokens": {
+      "input": 303868,
+      "cached": 3269183,
+      "output": 123771
+     },
+     "cost_usd": 1.384,
+     "cost_kind": "estimate",
+     "run_date": "2026-11-20",
+     "reused": false,
+     "rec_fps": 22.7
+    },
+    "sonnet": {
+     "seconds": 2070,
+     "bytes": 103518,
+     "page": "runs/turing/sonnet/index.html",
+     "video": "video/turing-sonnet.mp4",
+     "poster": "poster/turing-sonnet.jpg",
+     "tokens": {
+      "input": 331008,
+      "cached": 4546501,
+      "output": 286576
+     },
+     "cost_usd": 4.526,
+     "cost_kind": "reported",
+     "run_date": "2026-11-20",
+     "reused": false,
+     "rec_fps": 21.3
+    },
+    "sol": {
+     "seconds": 755,
+     "bytes": 67123,
+     "page": "runs/turing/sol/index.html",
+     "video": "video/turing-sol.mp4",
+     "poster": "poster/turing-sol.jpg",
+     "tokens": {
+      "input": 115325,
+      "cached": 4022656,
+      "output": 46327,
+      "helpers": 0,
+      "helper_usd": 0.0
+     },
+     "cost_usd": 1.096,
+     "cost_kind": "estimate",
+     "run_date": "2026-11-20",
+     "reused": false,
+     "rec_fps": 20.0
+    }
+   },
+   "points": {
+    "neon": 14,
+    "hydrogen": 4,
+    "sonnet": 14,
+    "sol": 8
+   },
+   "ballots": [
+    {
+     "judge": "neon",
+     "ranking": [
+      "neon",
+      "sonnet",
+      "sol",
+      "hydrogen"
+     ],
+     "reasons": {
+      "neon": "창밖 킹스 칼리지 예배당과 따뜻한 채광, 실제 작동하며 테이프가 갱신되는 튜링 머신, 깔끔한 UI와 자유로운 이동·시점 전환까지 결함 없이 가장 완성도 높게 구현했다.",
+      "sol": "벽난로 불꽃과 예배당 전망, 아늑한 조명 등 3D 비주얼 완성도가 높으나, 마우스 시점 회전이 이루어지지 않고 튜링 머신의 상태 표시나 실행·스텝 작동이 보이지 않는다.",
+      "hydrogen": "튜링 머신이 실제로 실행되고 이동·시점 전환도 작동하지만, 후반 프레임에서 바닥과 카펫의 광원 Z-파이팅 버그가 뚜렷하고 조형과 UI 완성도가 가장 떨어진다.",
+      "sonnet": "서재 인테리어 디테일과 이동·시점 전환, 튜링 머신 구현이 매우 훌륭하지만, 창밖 예배당이 흐릿하고 큰 UI 패널이 칠판을 가리며 좌상단 제목이 창문 배경에 묻힌다."
+     }
+    },
+    {
+     "judge": "hydrogen",
+     "ranking": [
+      "neon",
+      "sonnet",
+      "sol",
+      "hydrogen"
+     ],
+     "reasons": {
+      "neon": "창밖의 킹스 칼리지 채플과 튜링 기계 칠판 등 서재 디테일이 뛰어나고, 깔끔한 하단 튜링 머신 실행 UI와 걷기·시점 이동이 오류 없이 완벽하게 작동합니다.",
+      "sonnet": "책장과 원형 테이블 등 1936년 서재 분위기와 채플 전망이 풍부하게 구현되었으나, 우측 튜링 머신 패널이 크고 복잡해 시야를 가립니다.",
+      "sol": "벽난로와 채플 전망, 책상 위 튜링 기계의 그래픽 완성도는 매우 높지만, 테이프·상태·실행 제어 UI가 드러나지 않고 시점 이동 및 상단 제목 오버레이 처리가 아쉽습니다.",
+      "hydrogen": "이동·시점 조작과 튜링 머신 실행 패널은 작동하지만, 3D 모델링이 전반적으로 단순하고 바닥과 카펫 위에 부자연스러운 사각형 빛 아티팩트가 나타납니다."
+     }
+    },
+    {
+     "judge": "sonnet",
+     "ranking": [
+      "sonnet",
+      "neon",
+      "sol",
+      "hydrogen"
+     ],
+     "reasons": {
+      "neon": "창문, 칠판, 책장, 카펫 등 방이 잘 꾸며졌고 하단의 튜링 머신 테이프 UI도 선명하지만, 창밖 채플이 흐릿하고 마지막 프레임에서 시점이 바닥으로 쏠린다.",
+      "sol": "벽난로 불꽃과 녹색 램프의 분위기는 좋지만, 방이 어둡고 카메라가 램프와 톱니에 가까워 장면이 가려지며 머신 UI도 거의 보이지 않는다.",
+      "hydrogen": "창문과 채플 라벨은 보이나 색감이 밋밋하고 패널이 화면을 많이 가리며, 바닥과 계단이 깨져 보이고 시점이 바닥으로 쏠린다.",
+      "sonnet": "책장, 책상, 의자, 카펫, 붉은 커튼과 따뜻한 창빛이 가장 풍부하고 완성도가 높으며, 작동하는 Universal Machine 패널과 이동 시점 변화도 잘 보인다."
+     }
+    },
+    {
+     "judge": "sol",
+     "ranking": [
+      "sonnet",
+      "neon",
+      "sol",
+      "hydrogen"
+     ],
+     "reasons": {
+      "neon": "창밖 예배당이 보이고 기계를 실행하면 테이프와 현재 상태가 바뀐다.",
+      "sol": "벽난로와 창밖 예배당을 정교하게 표현했지만 기계의 단계 실행은 화면에서 확인하기 어렵다.",
+      "hydrogen": "기계의 조작 버튼은 잘 보이지만 바닥과 양탄자에 밝은 사각형이 튀어 보인다.",
+      "sonnet": "책장과 가구가 촘촘하게 배치된 서재를 여러 각도에서 볼 수 있고 기계의 테이프와 상태, 조작 버튼도 한눈에 들어온다."
+     }
+    }
+   ],
+   "judges_done": 4,
+   "judge_sheet": "judge/turing/sheet.jpg"
+  },
+  {
+   "id": "labbench",
+   "part": 2,
+   "name": "원소 실험대",
+   "prompt": "Build a photorealistic 3D lab bench scene in WebGL2 that represents four AI model names as elements: two Bunsen burner flames stand for Carbon and Hydrogen, and two high-voltage gas discharge tubes glowing in their real emission colors stand for Argon and Neon. Use realistic glass, metal and wood materials, soft shadows, flame and glow effects, and a slowly orbiting camera the user can drag to orbit.\n\nSave the result as one self-contained file named index.html in the current directory. Use raw WebGL2 only, no external libraries or network requests. Do it in one go, do not ask questions.",
+   "runs": {
+    "neon": {
+     "seconds": 663,
+     "bytes": 102937,
+     "page": "runs/labbench/neon/index.html",
+     "video": "video/labbench-neon.mp4",
+     "poster": "poster/labbench-neon.jpg",
+     "tokens": {
+      "input": 125473,
+      "cached": 1556265,
+      "output": 100428
+     },
+     "cost_usd": 2.116,
+     "cost_kind": "estimate",
+     "run_date": "2026-11-20",
+     "reused": false,
+     "rec_fps": 12.9
+    },
+    "hydrogen": {
+     "seconds": 683,
+     "bytes": 91794,
+     "page": "runs/labbench/hydrogen/index.html",
+     "video": "video/labbench-hydrogen.mp4",
+     "poster": "poster/labbench-hydrogen.jpg",
+     "tokens": {
+      "input": 186010,
+      "cached": 2903850,
+      "output": 85483
+     },
+     "cost_usd": 0.92,
+     "cost_kind": "estimate",
+     "run_date": "2026-11-20",
+     "reused": false,
+     "rec_fps": 21.8
+    },
+    "sonnet": {
+     "seconds": 885,
+     "bytes": 57702,
+     "page": "runs/labbench/sonnet/index.html",
+     "video": "video/labbench-sonnet.mp4",
+     "poster": "poster/labbench-sonnet.jpg",
+     "tokens": {
+      "input": 139319,
+      "cached": 1433989,
+      "output": 124491
+     },
+     "cost_usd": 1.946,
+     "cost_kind": "reported",
+     "run_date": "2026-11-20",
+     "reused": false,
+     "rec_fps": 6.2
+    },
+    "sol": {
+     "seconds": 469,
+     "bytes": 46096,
+     "page": "runs/labbench/sol/index.html",
+     "video": "video/labbench-sol.mp4",
+     "poster": "poster/labbench-sol.jpg",
+     "tokens": {
+      "input": 84527,
+      "cached": 2120448,
+      "output": 28825,
+      "helpers": 0,
+      "helper_usd": 0.0
+     },
+     "cost_usd": 0.669,
+     "cost_kind": "estimate",
+     "run_date": "2026-11-20",
+     "reused": false,
+     "rec_fps": 25.1
+    }
+   },
+   "points": {
+    "neon": 9,
+    "hydrogen": 8,
+    "sonnet": 7,
+    "sol": 16
+   },
+   "ballots": [
+    {
+     "judge": "neon",
+     "ranking": [
+      "sol",
+      "hydrogen",
+      "neon",
+      "sonnet"
+     ],
+     "reasons": {
+      "sol": "나무·금속·유리 재질과 부드러운 그림자, 자연스러운 불꽃과 방전관 발광, 안정적인 카메라 오빗까지 전반적으로 가장 사실적이고 완성도가 높습니다.",
+      "sonnet": "프롬프트 요소는 갖췄으나 과도한 블룸으로 방전관 디테일이 뭉개지고 나무·유리 재질이 부자연스러우며 회전 중 가장자리 잘림과 UI 가독성 저하가 보입니다.",
+      "hydrogen": "타일 벽과 광택 목재 벤치, 가스 배관·고전압 전원장치 등 실험실 디테일과 오빗 표현이 깔끔하지만 불꽃이 다소 과노출되고 네온 색감이 약간 노랗게 보입니다.",
+      "neon": "불꽃 표현과 방전색, 유리 기구와 장비 구성은 우수하나 과도한 절차적 노이즈로 나무가 얼룩말 무늬처럼 보이고 금속 표면에도 잡티가 두드러집니다."
+     }
+    },
+    {
+     "judge": "hydrogen",
+     "ranking": [
+      "sol",
+      "sonnet",
+      "hydrogen",
+      "neon"
+     ],
+     "reasons": {
+      "sol": "유리·금속·나무 재질과 부드러운 그림자, 불꽃 및 아르곤·네온 방전관의 발광색 표현이 가장 사실적이고 화면 구성도 깔끔합니다.",
+      "sonnet": "탄소·수소 불꽃과 아르곤·네온 방전관, 유리 기구와 명판이 프롬프트를 잘 구현했으나 발광 블룸이 다소 과하고 재질이 약간 인위적입니다.",
+      "hydrogen": "실험실 스탠드와 전원 장치, 유리 기구 구성은 괜찮으나 불꽃이 뾰족하고 경직되어 있으며 전선과 기구 배치가 다소 산만합니다.",
+      "neon": "전반적인 요소 배치와 카메라 회전은 동작하지만 작업대 나무 무늬와 광택이 부자연스럽고 불꽃이 과장되어 사실감이 부족합니다."
+     }
+    },
+    {
+     "judge": "sonnet",
+     "ranking": [
+      "sol",
+      "neon",
+      "sonnet",
+      "hydrogen"
+     ],
+     "reasons": {
+      "sol": "불꽃 두 개와 아르곤·네온 방전관이 깔끔하게 표현되고 라벨과 UI도 정돈되어 있으며, 나무 벤치와 어두운 배경이 안정적이고 눈에 띄는 버그가 없다.",
+      "neon": "디테일과 불꽃·유리 소품, 발광 효과가 풍부하지만, 나무 질감이 호랑이 줄무늬처럼 어색하고 일부 각도에서 불꽃이 과하게 번진다.",
+      "sonnet": "방전관의 발광 색은 인상적이지만 블룸이 과해 화면이 뿌옇고, 카메라가 비커에 가려지거나 가까워져 구도가 불안정하다.",
+      "hydrogen": "장면이 복잡하고 어수선하며 요소를 알아보기 어렵고, 카메라가 벤치 밖으로 벗어나 테이블이 잘리는 등 오류가 보인다."
+     }
+    },
+    {
+     "judge": "sol",
+     "ranking": [
+      "sol",
+      "neon",
+      "hydrogen",
+      "sonnet"
+     ],
+     "reasons": {
+      "sol": "유리와 금속, 나무의 질감이 자연스럽고 시점이 돌아가도 불꽃과 방전관의 색이 뚜렷하다.",
+      "sonnet": "번짐이 강해 유리관의 윤곽이 흐려지고 측면에서는 광원들이 겹쳐 보인다.",
+      "hydrogen": "여러 시점에서 실험 장치의 구성이 잘 드러나지만 줄무늬 상판과 빛나는 배선이 인공적으로 보인다.",
+      "neon": "유리 기구와 버너의 디테일이 풍부하지만 나무결과 반사가 과장돼 사실감이 떨어진다."
+     }
+    }
+   ],
+   "judges_done": 4,
+   "judge_sheet": "judge/labbench/sheet.jpg"
+  }
+ ],
+ "parts": [
+  {
+   "part": 1,
+   "name": "1부 · WebGL2 다섯 과제",
+   "round_ids": [
+    "water",
+    "globe",
+    "store",
+    "city",
+    "blackhole"
+   ],
+   "intro": "11편에서 쓴 WebGL2 프롬프트 5개 그대로입니다. Neon과 Sol은 2026-11-19에 새로 돌렸고, Hydrogen과 Sonnet은 11편 실행(2026-11-13) 결과를 다시 썼습니다.",
+   "run_dates": {
+    "neon": "2026-11-19",
+    "hydrogen": "2026-11-13",
+    "sonnet": "2026-11-13",
+    "sol": "2026-11-19"
+   },
+   "reused": {
+    "neon": false,
+    "hydrogen": true,
+    "sonnet": true,
+    "sol": false
+   },
+   "totals": {
+    "points": {
+     "neon": 37,
+     "hydrogen": 49,
+     "sonnet": 60,
+     "sol": 54
+    },
+    "points_excluding_self": {
+     "neon": 29,
+     "hydrogen": 36,
+     "sonnet": 44,
+     "sol": 40
+    },
+    "ballots": 20,
+    "self_first_votes": 7,
+    "first_votes": {
+     "neon": 1,
+     "hydrogen": 7,
+     "sonnet": 5,
+     "sol": 7
+    },
+    "seconds": {
+     "neon": 2830,
+     "hydrogen": 1860,
+     "sonnet": 3488,
+     "sol": 2914
+    },
+    "bytes": {
+     "neon": 448141,
+     "hydrogen": 395458,
+     "sonnet": 234572,
+     "sol": 200483
+    },
+    "cost_usd": {
+     "neon": 8.38,
+     "hydrogen": 3.68,
+     "sonnet": 7.56,
+     "sol": 2.9
+    },
+    "output_tokens": {
+     "neon": 386104,
+     "hydrogen": 372411,
+     "sonnet": 500737,
+     "sol": 120333
+    }
+   },
+   "judging": {
+    "expected_ballots": 20,
+    "ballots": 20,
+    "complete": true,
+    "missing": []
+   }
+  },
+  {
+   "part": 2,
+   "name": "2부 · 구글이 고른 과제",
+   "round_ids": [
+    "ski",
+    "turing",
+    "labbench"
+   ],
+   "intro": "구글이 Gemini 4 Neon을 발표하며 보여 준 데모 3개(몽블랑 스키, 튜링의 연구실, 원소 실험대)를 같은 조건으로 다시 만들게 했습니다. 구글은 데모 프롬프트를 공개하지 않아서, 블로그의 데모 설명을 바탕으로 프롬프트를 직접 썼습니다. 네 모델 모두 2026-11-20 새벽(한국 시간)에 같은 도구로 새로 돌렸고, 심사 방식도 1부와 같습니다.",
+   "run_dates": {
+    "neon": "2026-11-20",
+    "hydrogen": "2026-11-20",
+    "sonnet": "2026-11-20",
+    "sol": "2026-11-20"
+   },
+   "reused": {
+    "neon": false,
+    "hydrogen": false,
+    "sonnet": false,
+    "sol": false
+   },
+   "totals": {
+    "points": {
+     "neon": 29,
+     "hydrogen": 23,
+     "sonnet": 31,
+     "sol": 37
+    },
+    "points_excluding_self": {
+     "neon": 22,
+     "hydrogen": 16,
+     "sonnet": 23,
+     "sol": 27
+    },
+    "ballots": 12,
+    "self_first_votes": 5,
+    "first_votes": {
+     "neon": 2,
+     "hydrogen": 1,
+     "sonnet": 3,
+     "sol": 6
+    },
+    "seconds": {
+     "neon": 2291,
+     "hydrogen": 2156,
+     "sonnet": 4395,
+     "sol": 1799
+    },
+    "bytes": {
+     "neon": 393746,
+     "hydrogen": 320798,
+     "sonnet": 238696,
+     "sol": 171814
+    },
+    "cost_usd": {
+     "neon": 6.65,
+     "hydrogen": 3.65,
+     "sonnet": 9.75,
+     "sol": 2.61
+    },
+    "output_tokens": {
+     "neon": 308885,
+     "hydrogen": 339108,
+     "sonnet": 603285,
+     "sol": 110741
+    }
+   },
+   "judging": {
+    "expected_ballots": 12,
+    "ballots": 12,
+    "complete": true,
+    "missing": []
+   }
   }
  ],
  "scoring": "AI 심사위원 4명(= 선수 넷)이 이름을 가린 A·B·C·D 캡처 시트(작품마다 6프레임)를 보고 1~4위를 매김. 1위 4점 … 4위 1점. 라운드당 최대 16점.",
  "judging": {
-  "expected_ballots": 20,
-  "ballots": 20,
+  "expected_ballots": 32,
+  "ballots": 32,
   "complete": true,
   "missing": []
  },
  "totals": {
   "points": {
-   "neon": 37,
-   "hydrogen": 49,
-   "sonnet": 60,
-   "sol": 54
+   "neon": 66,
+   "hydrogen": 72,
+   "sonnet": 91,
+   "sol": 91
   },
   "points_excluding_self": {
-   "neon": 29,
-   "hydrogen": 36,
-   "sonnet": 44,
-   "sol": 40
+   "neon": 51,
+   "hydrogen": 52,
+   "sonnet": 67,
+   "sol": 67
   },
-  "ballots": 20,
-  "self_first_votes": 7,
+  "ballots": 32,
+  "self_first_votes": 12,
   "first_votes": {
-   "neon": 1,
-   "hydrogen": 7,
-   "sonnet": 5,
-   "sol": 7
+   "neon": 3,
+   "hydrogen": 8,
+   "sonnet": 8,
+   "sol": 13
   },
   "seconds": {
-   "neon": 2830,
-   "hydrogen": 1860,
-   "sonnet": 3488,
-   "sol": 2914
+   "neon": 5121,
+   "hydrogen": 4016,
+   "sonnet": 7883,
+   "sol": 4713
   },
   "bytes": {
-   "neon": 448141,
-   "hydrogen": 395458,
-   "sonnet": 234572,
-   "sol": 200483
+   "neon": 841887,
+   "hydrogen": 716256,
+   "sonnet": 473268,
+   "sol": 372297
   },
   "cost_usd": {
-   "neon": 8.38,
-   "hydrogen": 3.68,
-   "sonnet": 7.56,
-   "sol": 2.9
+   "neon": 15.04,
+   "hydrogen": 7.32,
+   "sonnet": 17.3,
+   "sol": 5.52
   },
   "output_tokens": {
-   "neon": 386104,
-   "hydrogen": 372411,
-   "sonnet": 500737,
-   "sol": 120333
+   "neon": 694989,
+   "hydrogen": 711519,
+   "sonnet": 1104022,
+   "sol": 231074
   }
  },
  "failed_attempts": {
@@ -918,12 +1520,18 @@
   "usd": 0.32
  },
  "limits": [
-  "Hydrogen과 Sonnet 결과물은 11편 실행(2026-11-13)을 그대로 다시 썼습니다. Neon과 Sol은 2026-11-19에 같은 프롬프트 5개로 새로 돌렸습니다.",
+  "1부: Hydrogen과 Sonnet 결과물은 11편 실행(2026-11-13)을 그대로 다시 썼습니다. Neon과 Sol은 2026-11-19에 같은 프롬프트 5개로 새로 돌렸습니다.",
   "도구 조건이 서로 다릅니다. Sol(Codex CLI)은 명령을 실행하고 자기 결과의 스크린샷을 볼 수 있었습니다(로그에서 과제마다 스크린샷 관련 언급 약 23~27회, 명령 약 26~30회). 또 ~/.codex/AGENTS.md 지침을 읽습니다. Sonnet은 파일 도구(Write/Edit/Read)만 썼고, Neon·Hydrogen은 agy 기본 에이전트 도구를 샌드박스 안에서 썼습니다.",
   "Neon은 두 번 실패한 뒤 다시 돌려서 성공했습니다. 번개 지구본 1차 시도는 1012초 뒤 네트워크 시간 초과로 끊겼고(이 비용은 아래 실패 목록에 따로 셈), 쇼핑몰 1차 시도는 \"model not recognized\" 오류로 시작도 못 했습니다(토큰 0). 재시도는 둘 다 성공했습니다.",
   "심사위원은 선수 넷 자신입니다. 이름을 가린 A~D 시트(작품마다 6프레임)만 보고 순위를 매겼고, 자기 작품에 준 표도 셌습니다. 자기 표를 뺀 합계도 함께 보여 줍니다. Hydrogen 심사는 Gemini API 프로젝트가 월 지출 한도에 걸려서 Neon과 똑같이 agy(Google 계정)로 했습니다.",
   "비용은 토큰 수 × 공식 단가로 계산한 추정값입니다(Sonnet만 Claude Code가 보고한 금액). Neon은 캐시된 입력 단가를 넣어 계산했고, Hydrogen은 11편과 비교할 수 있게 11편 방식 그대로(캐시 단가 없음) 두었습니다.",
   "무거운 페이지 몇 개는 녹화에서 초당 서로 다른 프레임이 적게 잡혔습니다(Neon 블랙홀·쇼핑몰·물과 유리, Hydrogen 물과 유리). 녹화기는 페이지가 실제로 그린 화면만 담습니다.",
+  "2부 프롬프트 3개는 구글의 원문이 아닙니다. 구글은 Neon 발표 데모의 프롬프트를 공개하지 않아서, 구글 블로그의 데모 설명을 바탕으로 직접 썼습니다. 구글 데모와 결과를 그대로 비교할 수는 없습니다.",
+  "Neon은 1부와 2부 모두 high 설정(gemini-4-neon-high)으로 돌렸습니다. 구글이 내세운 Neon 점수는 xhigh 설정 기준이라, 여기 결과는 구글 발표보다 한 단계 낮은 설정입니다.",
+  "구글 발표 데모 가운데 구글 시트 데모는 뺐습니다. 한 번에 만드는 웹 페이지 하나가 아니라서 이 실험 방식으로는 비교할 수 없습니다.",
+  "2부는 네 모델 모두 2026-11-20 새벽(한국 시간) 같은 날 새로 돌렸습니다(재사용한 결과 없음). 도구는 1부와 같습니다(Neon·Hydrogen은 agy high, Sonnet은 Claude Code Write/Edit/Read만, Sol은 Codex reasoning high). 2부에는 실패한 시도가 없습니다.",
+  "2부 원소 실험대의 Neon 심사 투표는 agy가 빈 답을 여러 번 돌려줘서 몇 차례 다시 요청한 끝에 받았습니다. 받은 투표는 다른 표와 똑같이 셌습니다.",
+  "2부에서도 녹화 프레임이 적게 잡힌 페이지가 있습니다(Hydrogen 몽블랑 스키 약 8fps, Sonnet 원소 실험대 약 6fps).",
   "과제마다 한 번씩만 실행했습니다. 다시 하면 결과가 달라질 수 있습니다.",
   "심사는 녹화 캡처(정지 화면)만 보고 했습니다. 소리와 조작감은 심사에 들어가지 않았습니다."
  ],
@@ -933,12 +1541,17 @@
   "retry_neon.sh",
   "rec_new.sh",
   "judge_all_neon.sh",
+  "run_demo_lane.sh",
+  "rec_demo.sh",
+  "judge_demo.sh",
   "act-still.json",
   "act-orbit.json",
   "act-probe.json",
   "act-globe.json",
   "act-store.json",
   "act-city.json",
+  "act-ski.json",
+  "act-turing.json",
   "rec-all.sh",
   "rec-ego.sh",
   "record-ego.tpl.mjs",

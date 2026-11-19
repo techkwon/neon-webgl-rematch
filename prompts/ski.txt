@@ -1,0 +1,3 @@
+Build a first-person WebGL2 freeride ski simulator on alpine terrain modeled after Mont Blanc and Chamonix, written from scratch with custom shaders and zero pre-made assets: snow, rock, sky and distant peaks, real-time ski physics (carving turns, speed, tucking, jumps), carved tracks that stay in the snow, a slab avalanche the skier can trigger, and spatial Web Audio (wind, skis on snow, the avalanche). Steer with the keyboard and look with the mouse. Include a start button for audio.
+
+Save the result as one self-contained file named index.html in the current directory. Use raw WebGL2 only, no external libraries or network requests. Do it in one go, do not ask questions.

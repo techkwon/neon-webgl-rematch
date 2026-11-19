@@ -1,0 +1,2693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Four Elements — Carbon · Hydrogen · Argon · Neon | WebGL2 Lab Bench</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    background: #06070a;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: #e6e9ef;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  #glcanvas {
+    display: block; width: 100%; height: 100%;
+    cursor: grab;
+    touch-action: none;
+  }
+  #glcanvas:active { cursor: grabbing; }
+
+  .hud {
+    position: fixed; inset: 0; pointer-events: none;
+    display: flex; flex-direction: column; justify-content: space-between;
+    padding: 20px 26px;
+  }
+  .top-bar {
+    display: flex; justify-content: space-between; align-items: flex-start; gap: 16px;
+  }
+  .title-block {
+    background: rgba(10, 12, 18, 0.45);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 12px 16px;
+  }
+  .title-block h1 {
+    font-size: 13px; font-weight: 600; letter-spacing: 0.16em;
+    text-transform: uppercase; color: rgba(240, 244, 250, 0.92);
+  }
+  .title-block p {
+    margin-top: 4px; font-size: 11px; letter-spacing: 0.05em;
+    color: rgba(200, 210, 226, 0.62);
+  }
+  .controls {
+    display: flex; gap: 8px; pointer-events: auto;
+  }
+  .btn {
+    background: rgba(10, 12, 18, 0.52);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.11);
+    color: rgba(235, 240, 248, 0.85);
+    font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 8px 13px; border-radius: 9px; cursor: pointer;
+    transition: background 0.2s, border-color 0.2s, color 0.2s;
+  }
+  .btn:hover {
+    background: rgba(28, 34, 48, 0.72);
+    border-color: rgba(255, 255, 255, 0.24);
+    color: #fff;
+  }
+  .btn.active {
+    border-color: rgba(130, 185, 255, 0.45);
+    color: #d8ebff;
+  }
+
+  .bottom-bar {
+    display: flex; justify-content: space-between; align-items: flex-end; gap: 16px;
+    flex-wrap: wrap;
+  }
+  .legend {
+    display: flex; gap: 10px; flex-wrap: wrap;
+  }
+  .chip {
+    display: flex; align-items: center; gap: 8px;
+    background: rgba(10, 12, 18, 0.46);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 9px;
+    padding: 7px 11px;
+    font-size: 11px;
+    pointer-events: auto;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s, transform 0.2s;
+  }
+  .chip:hover {
+    background: rgba(24, 28, 40, 0.68);
+    border-color: rgba(255, 255, 255, 0.22);
+    transform: translateY(-1px);
+  }
+  .dot {
+    width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+  }
+  .sym { font-weight: 700; color: rgba(255,255,255,0.95); letter-spacing: 0.03em; }
+  .name { color: rgba(205, 214, 230, 0.72); }
+  .hint {
+    font-size: 11px; letter-spacing: 0.06em;
+    color: rgba(200, 210, 226, 0.48);
+    background: rgba(10, 12, 18, 0.36);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 8px;
+    padding: 6px 11px;
+  }
+  #errbox {
+    position: fixed; inset: 0; display: none; align-items: center; justify-content: center;
+    background: #0a0c12; color: #ff8e8e; padding: 32px; font-family: monospace;
+    white-space: pre-wrap; z-index: 999;
+  }
+</style>
+</head>
+<body>
+<canvas id="glcanvas"></canvas>
+<div class="hud">
+  <div class="top-bar">
+    <div class="title-block">
+      <h1>Elemental Spectroscopy Bench</h1>
+      <p>Combustion Flames &amp; High-Voltage Gas Discharge</p>
+    </div>
+    <div class="controls">
+      <button class="btn active" id="btnOrbit">Auto-Orbit</button>
+      <button class="btn" id="btnReset">Reset View</button>
+    </div>
+  </div>
+  <div class="bottom-bar">
+    <div class="legend">
+      <div class="chip" data-focus="-2.25"><span class="dot" style="background:#ff9c2a;box-shadow:0 0 8px #ff8a14"></span><span class="sym">6 C</span><span class="name">Carbon Flame</span></div>
+      <div class="chip" data-focus="-0.75"><span class="dot" style="background:#56a8ff;box-shadow:0 0 8px #3a8eff"></span><span class="sym">1 H</span><span class="name">Hydrogen Flame</span></div>
+      <div class="chip" data-focus="0.75"><span class="dot" style="background:#9d6dff;box-shadow:0 0 8px #8048ff"></span><span class="sym">18 Ar</span><span class="name">Argon Discharge</span></div>
+      <div class="chip" data-focus="2.25"><span class="dot" style="background:#ff4214;box-shadow:0 0 8px #ff2e00"></span><span class="sym">10 Ne</span><span class="name">Neon Discharge</span></div>
+    </div>
+    <div class="hint">Drag to orbit · Scroll to zoom · Click element to inspect</div>
+  </div>
+</div>
+<div id="errbox"></div>
+
+<script>
+(() => {
+"use strict";
+
+const canvas = document.getElementById("glcanvas");
+const errBox = document.getElementById("errbox");
+function fatal(msg) {
+  errBox.style.display = "flex";
+  errBox.textContent = "WebGL2 Error:\n" + msg;
+  throw new Error(msg);
+}
+
+const gl = canvas.getContext("webgl2", {
+  antialias: false,
+  alpha: false,
+  depth: true,
+  powerPreference: "high-performance"
+});
+if (!gl) fatal("WebGL2 is not supported by this browser.");
+
+const extFloat = gl.getExtension("EXT_color_buffer_float");
+const extHalfFloat = gl.getExtension("EXT_color_buffer_half_float");
+let USE_HDR = !!(extFloat || extHalfFloat);
+
+// ============================================================================
+// 1. MINIMAL VECTOR & MATRIX MATH (Column-Major Float32Array)
+// ============================================================================
+const V3 = {
+  add: (a, b) => [a[0]+b[0], a[1]+b[1], a[2]+b[2]],
+  sub: (a, b) => [a[0]-b[0], a[1]-b[1], a[2]-b[2]],
+  scale: (a, s) => [a[0]*s, a[1]*s, a[2]*s],
+  dot: (a, b) => a[0]*b[0] + a[1]*b[1] + a[2]*b[2],
+  cross: (a, b) => [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]],
+  len: (a) => Math.hypot(a[0], a[1], a[2]),
+  norm: (a) => {
+    const l = Math.hypot(a[0], a[1], a[2]) || 1;
+    return [a[0]/l, a[1]/l, a[2]/l];
+  },
+  lerp: (a, b, t) => [a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t, a[2]+(b[2]-a[2])*t]
+};
+
+const M4 = {
+  identity() {
+    const m = new Float32Array(16);
+    m[0]=m[5]=m[10]=m[15]=1;
+    return m;
+  },
+  mul(a, b) {
+    const o = new Float32Array(16);
+    for (let c = 0; c < 4; c++) {
+      const b0=b[c*4], b1=b[c*4+1], b2=b[c*4+2], b3=b[c*4+3];
+      o[c*4  ] = a[0]*b0 + a[4]*b1 + a[8]*b2  + a[12]*b3;
+      o[c*4+1] = a[1]*b0 + a[5]*b1 + a[9]*b2  + a[13]*b3;
+      o[c*4+2] = a[2]*b0 + a[6]*b1 + a[10]*b2 + a[14]*b3;
+      o[c*4+3] = a[3]*b0 + a[7]*b1 + a[11]*b2 + a[15]*b3;
+    }
+    return o;
+  },
+  translate(x, y, z) {
+    const m = M4.identity();
+    m[12]=x; m[13]=y; m[14]=z;
+    return m;
+  },
+  scale(x, y, z) {
+    const m = M4.identity();
+    m[0]=x; m[5]=y; m[10]=z;
+    return m;
+  },
+  rotX(r) {
+    const m = M4.identity(), c = Math.cos(r), s = Math.sin(r);
+    m[5]=c; m[6]=s; m[9]=-s; m[10]=c;
+    return m;
+  },
+  rotY(r) {
+    const m = M4.identity(), c = Math.cos(r), s = Math.sin(r);
+    m[0]=c; m[2]=-s; m[8]=s; m[10]=c;
+    return m;
+  },
+  rotZ(r) {
+    const m = M4.identity(), c = Math.cos(r), s = Math.sin(r);
+    m[0]=c; m[1]=s; m[4]=-s; m[5]=c;
+    return m;
+  },
+  trs(pos, rot, scl) {
+    let m = M4.translate(pos[0], pos[1], pos[2]);
+    if (rot) {
+      if (rot[1]) m = M4.mul(m, M4.rotY(rot[1]));
+      if (rot[0]) m = M4.mul(m, M4.rotX(rot[0]));
+      if (rot[2]) m = M4.mul(m, M4.rotZ(rot[2]));
+    }
+    if (scl) m = M4.mul(m, M4.scale(scl[0], scl[1], scl[2]));
+    return m;
+  },
+  perspective(fovRad, aspect, near, far) {
+    const f = 1 / Math.tan(fovRad * 0.5), nf = 1 / (near - far);
+    const m = new Float32Array(16);
+    m[0] = f / aspect;
+    m[5] = f;
+    m[10] = (far + near) * nf;
+    m[11] = -1;
+    m[14] = 2 * far * near * nf;
+    return m;
+  },
+  ortho(l, r, b, t, n, f) {
+    const m = new Float32Array(16);
+    m[0] = 2/(r-l); m[5] = 2/(t-b); m[10] = -2/(f-n);
+    m[12] = -(r+l)/(r-l); m[13] = -(t+b)/(t-b); m[14] = -(f+n)/(f-n); m[15] = 1;
+    return m;
+  },
+  lookAt(eye, target, up) {
+    const z = V3.norm(V3.sub(eye, target));
+    const x = V3.norm(V3.cross(up, z));
+    const y = V3.cross(z, x);
+    const m = new Float32Array(16);
+    m[0]=x[0]; m[4]=x[1]; m[8]=x[2];  m[12]=-V3.dot(x, eye);
+    m[1]=y[0]; m[5]=y[1]; m[9]=y[2];  m[13]=-V3.dot(y, eye);
+    m[2]=z[0]; m[6]=z[1]; m[10]=z[2]; m[14]=-V3.dot(z, eye);
+    m[15]=1;
+    return m;
+  },
+  invert(m) {
+    const out = new Float32Array(16);
+    const a00=m[0],a01=m[1],a02=m[2],a03=m[3],a10=m[4],a11=m[5],a12=m[6],a13=m[7],
+          a20=m[8],a21=m[9],a22=m[10],a23=m[11],a30=m[12],a31=m[13],a32=m[14],a33=m[15];
+    const b00=a00*a11-a01*a10, b01=a00*a12-a02*a10, b02=a00*a13-a03*a10,
+          b03=a01*a12-a02*a11, b04=a01*a13-a03*a11, b05=a02*a13-a03*a12,
+          b06=a20*a31-a21*a30, b07=a20*a32-a22*a30, b08=a20*a33-a23*a30,
+          b09=a21*a32-a22*a31, b10=a21*a33-a23*a31, b11=a22*a33-a23*a32;
+    let det = b00*b11 - b01*b10 + b02*b09 + b03*b08 - b04*b07 + b05*b06;
+    if (!det) return M4.identity();
+    det = 1 / det;
+    out[0]=(a11*b11-a12*b10+a13*b09)*det; out[1]=(a02*b10-a01*b11-a03*b09)*det;
+    out[2]=(a31*b05-a32*b04+a33*b03)*det; out[3]=(a22*b04-a21*b05-a23*b03)*det;
+    out[4]=(a12*b08-a10*b11-a13*b07)*det; out[5]=(a00*b11-a02*b08+a03*b07)*det;
+    out[6]=(a32*b02-a30*b05-a33*b01)*det; out[7]=(a20*b05-a22*b02+a23*b01)*det;
+    out[8]=(a10*b10-a11*b08+a13*b06)*det; out[9]=(a01*b08-a00*b10-a03*b06)*det;
+    out[10]=(a30*b04-a31*b02+a33*b00)*det; out[11]=(a21*b02-a20*b04-a23*b00)*det;
+    out[12]=(a11*b07-a10*b09-a12*b06)*det; out[13]=(a00*b09-a01*b07+a02*b06)*det;
+    out[14]=(a31*b01-a30*b03-a32*b00)*det; out[15]=(a20*b03-a21*b01+a22*b00)*det;
+    return out;
+  }
+};
+
+// ============================================================================
+// 2. SHADER COMPILATION & PROGRAM UTILITIES
+// ============================================================================
+function compileShader(type, src) {
+  const s = gl.createShader(type);
+  gl.shaderSource(s, src);
+  gl.compileShader(s);
+  if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+    const log = gl.getShaderInfoLog(s);
+    const lines = src.split("\n").map((l, i) => `${i+1}: ${l}`).join("\n");
+    fatal(`Shader compile error:\n${log}\n\n${lines}`);
+  }
+  return s;
+}
+
+function createProgram(vsSrc, fsSrc) {
+  const p = gl.createProgram();
+  gl.attachShader(p, compileShader(gl.VERTEX_SHADER, vsSrc));
+  gl.attachShader(p, compileShader(gl.FRAGMENT_SHADER, fsSrc));
+  gl.linkProgram(p);
+  if (!gl.getProgramParameter(p, gl.LINK_STATUS)) {
+    fatal("Program link error:\n" + gl.getProgramInfoLog(p));
+  }
+  const uniforms = {};
+  const count = gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS);
+  for (let i = 0; i < count; i++) {
+    const info = gl.getActiveUniform(p, i);
+    const name = info.name.replace(/\[0\]$/, "");
+    uniforms[name] = gl.getUniformLocation(p, name);
+  }
+  return { prog: p, u: uniforms };
+}
+
+// ============================================================================
+// 3. PROCEDURAL MESH BUILDER (Interleaved: pos3, norm3, uv2)
+// ============================================================================
+function createMesh(verts, indices) {
+  const vao = gl.createVertexArray();
+  gl.bindVertexArray(vao);
+  const vbo = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(verts), gl.STATIC_DRAW);
+
+  const ebo = gl.createBuffer();
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ebo);
+  const use32 = indices.length > 65535;
+  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, use32 ? new Uint32Array(indices) : new Uint16Array(indices), gl.STATIC_DRAW);
+
+  const stride = 32;
+  gl.enableVertexAttribArray(0);
+  gl.vertexAttribPointer(0, 3, gl.FLOAT, false, stride, 0);
+  gl.enableVertexAttribArray(1);
+  gl.vertexAttribPointer(1, 3, gl.FLOAT, false, stride, 12);
+  gl.enableVertexAttribArray(2);
+  gl.vertexAttribPointer(2, 2, gl.FLOAT, false, stride, 24);
+  gl.bindVertexArray(null);
+  return { vao, count: indices.length, type: use32 ? gl.UNSIGNED_INT : gl.UNSIGNED_SHORT };
+}
+
+// Lathe of revolution around Y axis. profile = [[r, y], ...]
+// Duplicate a point to produce a sharp crease normal!
+function buildLathe(profile, segs = 40, vScale = 1.0) {
+  const verts = [], idx = [];
+  const n = profile.length;
+  const normals2D = [];
+  for (let i = 0; i < n; i++) {
+    const p = profile[i];
+    let dr = 0, dy = 0;
+    const prev = i > 0 ? profile[i-1] : null;
+    const next = i < n-1 ? profile[i+1] : null;
+    const samePrev = prev && Math.hypot(p[0]-prev[0], p[1]-prev[1]) < 1e-5;
+    const sameNext = next && Math.hypot(next[0]-p[0], next[1]-p[1]) < 1e-5;
+    if (prev && !samePrev && next && !sameNext) {
+      dr = next[0] - prev[0];
+      dy = next[1] - prev[1];
+    } else if (next && !sameNext) {
+      dr = next[0] - p[0];
+      dy = next[1] - p[1];
+    } else if (prev && !samePrev) {
+      dr = p[0] - prev[0];
+      dy = p[1] - prev[1];
+    } else {
+      dy = 1;
+    }
+    // Outward normal for ascending profile (dy > 0) is (dy, -dr)
+    const l = Math.hypot(dy, dr) || 1;
+    normals2D.push([dy / l, -dr / l]);
+  }
+
+  let vDist = 0;
+  for (let i = 0; i < n; i++) {
+    if (i > 0) vDist += Math.hypot(profile[i][0]-profile[i-1][0], profile[i][1]-profile[i-1][1]);
+    const r = profile[i][0], y = profile[i][1];
+    const [nr, ny] = normals2D[i];
+    for (let s = 0; s <= segs; s++) {
+      const u = s / segs;
+      const a = u * Math.PI * 2;
+      const ca = Math.cos(a), sa = Math.sin(a);
+      verts.push(r*ca, y, r*sa, nr*ca, ny, nr*sa, u, vDist * vScale);
+    }
+  }
+  const stride = segs + 1;
+  for (let i = 0; i < n - 1; i++) {
+    if (Math.hypot(profile[i+1][0]-profile[i][0], profile[i+1][1]-profile[i][1]) < 1e-5) continue;
+    for (let s = 0; s < segs; s++) {
+      const a = i * stride + s;
+      const b = (i + 1) * stride + s;
+      idx.push(a, b, a + 1, a + 1, b, b + 1);
+    }
+  }
+  return createMesh(verts, idx);
+}
+
+function buildBox(w, h, d, uvTile = [1, 1, 1]) {
+  const hw = w/2, hh = h/2, hd = d/2;
+  const faces = [
+    { n:[0,0,1],  t:[1,0,0],  b:[0,1,0],  c:[0,0,hd],  s:[hw,hh], uv:[w*uvTile[0], h*uvTile[1]] },
+    { n:[0,0,-1], t:[-1,0,0], b:[0,1,0],  c:[0,0,-hd], s:[hw,hh], uv:[w*uvTile[0], h*uvTile[1]] },
+    { n:[1,0,0],  t:[0,0,-1], b:[0,1,0],  c:[hw,0,0],  s:[hd,hh], uv:[d*uvTile[2], h*uvTile[1]] },
+    { n:[-1,0,0], t:[0,0,1],  b:[0,1,0],  c:[-hw,0,0], s:[hd,hh], uv:[d*uvTile[2], h*uvTile[1]] },
+    { n:[0,1,0],  t:[1,0,0],  b:[0,0,-1], c:[0,hh,0],  s:[hw,hd], uv:[w*uvTile[0], d*uvTile[2]] },
+    { n:[0,-1,0], t:[1,0,0],  b:[0,0,1],  c:[0,-hh,0], s:[hw,hd], uv:[w*uvTile[0], d*uvTile[2]] }
+  ];
+  const verts = [], idx = [];
+  let base = 0;
+  for (const f of faces) {
+    const corners = [[-1,-1,0,0],[1,-1,1,0],[1,1,1,1],[-1,1,0,1]];
+    for (const [cx, cy, u, v] of corners) {
+      const px = f.c[0] + f.t[0]*cx*f.s[0] + f.b[0]*cy*f.s[1];
+      const py = f.c[1] + f.t[1]*cx*f.s[0] + f.b[1]*cy*f.s[1];
+      const pz = f.c[2] + f.t[2]*cx*f.s[0] + f.b[2]*cy*f.s[1];
+      verts.push(px, py, pz, f.n[0], f.n[1], f.n[2], u*f.uv[0], v*f.uv[1]);
+    }
+    idx.push(base, base+1, base+2, base, base+2, base+3);
+    base += 4;
+  }
+  return createMesh(verts, idx);
+}
+
+// Beveled slab (great for hardwood benchtop and anodized stand bases)
+function buildBeveledBox(w, h, d, bev = 0.02, uvScale = 0.28) {
+  const verts = [], idx = [];
+  const hw = w/2, hh = h/2, hd = d/2;
+  const b = Math.min(bev, hw*0.4, hh*0.4, hd*0.4);
+  function addQuad(p0, p1, p2, p3, n, uvMode) {
+    const start = verts.length / 8;
+    const pts = [p0, p1, p2, p3];
+    for (const p of pts) {
+      let u = 0, v = 0;
+      if (uvMode === 0) { u = (p[0] + hw) * uvScale; v = (p[2] + hd) * uvScale; }
+      else if (uvMode === 1) { u = (p[0] + hw) * uvScale; v = (p[1] + hh) * uvScale; }
+      else { u = (p[2] + hd) * uvScale; v = (p[1] + hh) * uvScale; }
+      verts.push(p[0], p[1], p[2], n[0], n[1], n[2], u, v);
+    }
+    idx.push(start, start+1, start+2, start, start+2, start+3);
+  }
+  function addTri(p0, p1, p2, n) {
+    const start = verts.length / 8;
+    for (const p of [p0, p1, p2]) {
+      verts.push(p[0], p[1], p[2], n[0], n[1], n[2], (p[0]+hw)*uvScale, (p[2]+hd)*uvScale);
+    }
+    idx.push(start, start+1, start+2);
+  }
+  const x0 = hw - b, y0 = hh - b, z0 = hd - b;
+  // Top & Bottom flat faces
+  addQuad([-x0, hh, z0], [x0, hh, z0], [x0, hh, -z0], [-x0, hh, -z0], [0,1,0], 0);
+  addQuad([-x0, -hh, -z0], [x0, -hh, -z0], [x0, -hh, z0], [-x0, -hh, z0], [0,-1,0], 0);
+  // Front & Back flat faces
+  addQuad([-x0, -y0, hd], [x0, -y0, hd], [x0, y0, hd], [-x0, y0, hd], [0,0,1], 1);
+  addQuad([x0, -y0, -hd], [-x0, -y0, -hd], [-x0, y0, -hd], [x0, y0, -hd], [0,0,-1], 1);
+  // Right & Left flat faces
+  addQuad([hw, -y0, z0], [hw, -y0, -z0], [hw, y0, -z0], [hw, y0, z0], [1,0,0], 2);
+  addQuad([-hw, -y0, -z0], [-hw, -y0, z0], [-hw, y0, z0], [-hw, y0, -z0], [-1,0,0], 2);
+
+  const s = Math.SQRT1_2;
+  // Top 4 bevel strips
+  addQuad([-x0, y0, hd], [x0, y0, hd], [x0, hh, z0], [-x0, hh, z0], [0,s,s], 0);
+  addQuad([x0, y0, -hd], [-x0, y0, -hd], [-x0, hh, -z0], [x0, hh, -z0], [0,s,-s], 0);
+  addQuad([hw, y0, z0], [hw, y0, -z0], [x0, hh, -z0], [x0, hh, z0], [s,s,0], 0);
+  addQuad([-hw, y0, -z0], [-hw, y0, z0], [-x0, hh, z0], [-x0, hh, -z0], [-s,s,0], 0);
+  // Bottom 4 bevel strips
+  addQuad([-x0, -hh, z0], [x0, -hh, z0], [x0, -y0, hd], [-x0, -y0, hd], [0,-s,s], 0);
+  addQuad([x0, -hh, -z0], [-x0, -hh, -z0], [-x0, -y0, -hd], [x0, -y0, -hd], [0,-s,-s], 0);
+  addQuad([x0, -hh, z0], [x0, -hh, -z0], [hw, -y0, -z0], [hw, -y0, z0], [s,-s,0], 0);
+  addQuad([-x0, -hh, -z0], [-x0, -hh, z0], [-hw, -y0, z0], [-hw, -y0, -z0], [-s,-s,0], 0);
+  // 4 Vertical corner bevels
+  addQuad([x0, -y0, hd], [hw, -y0, z0], [hw, y0, z0], [x0, y0, hd], [s,0,s], 1);
+  addQuad([hw, -y0, -z0], [x0, -y0, -hd], [x0, y0, -hd], [hw, y0, -z0], [s,0,-s], 1);
+  addQuad([-x0, -y0, -hd], [-hw, -y0, -z0], [-hw, y0, -z0], [-x0, y0, -hd], [-s,0,-s], 1);
+  addQuad([-hw, -y0, z0], [-x0, -y0, hd], [-x0, y0, hd], [-hw, y0, z0], [-s,0,s], 1);
+
+  // 8 Corner triangles
+  const c = 1/Math.sqrt(3);
+  addTri([x0, hh, z0], [x0, y0, hd], [hw, y0, z0], [c,c,c]);
+  addTri([x0, hh, -z0], [hw, y0, -z0], [x0, y0, -hd], [c,c,-c]);
+  addTri([-x0, hh, -z0], [-x0, y0, -hd], [-hw, y0, -z0], [-c,c,-c]);
+  addTri([-x0, hh, z0], [-hw, y0, z0], [-x0, y0, hd], [-c,c,c]);
+  addTri([x0, -hh, z0], [hw, -y0, z0], [x0, -y0, hd], [c,-c,c]);
+  addTri([x0, -hh, -z0], [x0, -y0, -hd], [hw, -y0, -z0], [c,-c,-c]);
+  addTri([-x0, -hh, -z0], [-hw, -y0, -z0], [-x0, -y0, -hd], [-c,-c,-c]);
+  addTri([-x0, -hh, z0], [-x0, -y0, hd], [-hw, -y0, z0], [-c,-c,c]);
+
+  return createMesh(verts, idx);
+}
+
+// Smooth cubic Catmull-Rom tube for gas hoses and HV leads
+function buildTube(ctrlPts, radius = 0.022, segs = 36, radSegs = 12) {
+  function catmull(p0, p1, p2, p3, t) {
+    const t2 = t*t, t3 = t2*t;
+    return [0,1,2].map(i => 0.5 * (
+      (2*p1[i]) + (-p0[i]+p2[i])*t + (2*p0[i]-5*p1[i]+4*p2[i]-p3[i])*t2 + (-p0[i]+3*p1[i]-3*p2[i]+p3[i])*t3
+    ));
+  }
+  const pts = [];
+  const n = ctrlPts.length;
+  for (let i = 0; i <= segs; i++) {
+    const u = (i / segs) * (n - 1);
+    const k = Math.min(Math.floor(u), n - 2);
+    const t = u - k;
+    const p0 = ctrlPts[Math.max(0, k - 1)];
+    const p1 = ctrlPts[k];
+    const p2 = ctrlPts[Math.min(n - 1, k + 1)];
+    const p3 = ctrlPts[Math.min(n - 1, k + 2)];
+    pts.push(catmull(p0, p1, p2, p3, t));
+  }
+  const verts = [], idx = [];
+  let prevN = null;
+  for (let i = 0; i <= segs; i++) {
+    const p = pts[i];
+    const T = V3.norm(V3.sub(pts[Math.min(segs, i+1)], pts[Math.max(0, i-1)]));
+    let N;
+    if (!prevN) {
+      const up = Math.abs(T[1]) < 0.9 ? [0,1,0] : [1,0,0];
+      N = V3.norm(V3.cross(T, up));
+    } else {
+      // Parallel transport frame
+      N = V3.norm(V3.sub(prevN, V3.scale(T, V3.dot(prevN, T))));
+    }
+    prevN = N;
+    const B = V3.cross(T, N);
+    for (let j = 0; j <= radSegs; j++) {
+      const a = (j / radSegs) * Math.PI * 2;
+      const ca = Math.cos(a), sa = Math.sin(a);
+      const nx = N[0]*ca + B[0]*sa;
+      const ny = N[1]*ca + B[1]*sa;
+      const nz = N[2]*ca + B[2]*sa;
+      verts.push(p[0]+nx*radius, p[1]+ny*radius, p[2]+nz*radius, nx, ny, nz, j/radSegs, i/segs * 6);
+    }
+  }
+  const row = radSegs + 1;
+  for (let i = 0; i < segs; i++) {
+    for (let j = 0; j < radSegs; j++) {
+      const a = i*row + j, b = (i+1)*row + j;
+      idx.push(a, a+1, b, a+1, b+1, b);
+    }
+  }
+  return createMesh(verts, idx);
+}
+
+// Angled laboratory specimen plaque (tilted wedge with clean UV mapping on the front face)
+function buildPlaqueFace(w, h, u0, u1, v0, v1) {
+  const hw = w/2, hh = h/2;
+  const verts = [
+    -hw, -hh, 0,  0, 0, 1,  u0, v1,
+     hw, -hh, 0,  0, 0, 1,  u1, v1,
+     hw,  hh, 0,  0, 0, 1,  u1, v0,
+    -hw,  hh, 0,  0, 0, 1,  u0, v0
+  ];
+  return createMesh(verts, [0, 1, 2, 0, 2, 3]);
+}
+
+// Flat-bottomed angled trapezoidal prism stand for each plaque (sits perfectly flush on y = 0)
+function buildPlaqueWedge(w, d, hFront, hBack) {
+  const hw = w/2, hd = d/2;
+  const verts = [], idx = [];
+  function quad(p0, p1, p2, p3, n) {
+    const b = verts.length / 8;
+    const pts = [p0, p1, p2, p3];
+    const uvs = [[0,0],[1,0],[1,1],[0,1]];
+    for (let i = 0; i < 4; i++) {
+      verts.push(pts[i][0], pts[i][1], pts[i][2], n[0], n[1], n[2], uvs[i][0], uvs[i][1]);
+    }
+    idx.push(b, b+1, b+2, b, b+2, b+3);
+  }
+  const dy = hBack - hFront;
+  const sn = V3.norm([0, d, dy]);
+  // Sloped top face
+  quad([-hw, hFront, hd], [hw, hFront, hd], [hw, hBack, -hd], [-hw, hBack, -hd], sn);
+  // Bottom face
+  quad([-hw, 0, -hd], [hw, 0, -hd], [hw, 0, hd], [-hw, 0, hd], [0, -1, 0]);
+  // Front lip
+  quad([-hw, 0, hd], [hw, 0, hd], [hw, hFront, hd], [-hw, hFront, hd], [0, 0, 1]);
+  // Back wall
+  quad([hw, 0, -hd], [-hw, 0, -hd], [-hw, hBack, -hd], [hw, hBack, -hd], [0, 0, -1]);
+  // Right side
+  quad([hw, 0, hd], [hw, 0, -hd], [hw, hBack, -hd], [hw, hFront, hd], [1, 0, 0]);
+  // Left side
+  quad([-hw, 0, -hd], [-hw, 0, hd], [-hw, hFront, hd], [-hw, hBack, -hd], [-1, 0, 0]);
+  return createMesh(verts, idx);
+}
+
+// Closed unit cylinder for raymarched volumetric flames: radius 1, y in [0, 1]
+function buildUnitCylinder(segs = 28) {
+  const profile = [
+    [0.0, 0.0],
+    [1.0, 0.0],
+    [1.0, 0.0],
+    [1.0, 1.0],
+    [1.0, 1.0],
+    [0.0, 1.0]
+  ];
+  return buildLathe(profile, segs, 1.0);
+}
+
+// ============================================================================
+// 4. PROCEDURAL HIGH-RES TEXTURES (Offscreen Canvas, Zero Network)
+// ============================================================================
+function uploadCanvasTex(cnv, srgb = false, repeat = true) {
+  const tex = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+  gl.texImage2D(gl.TEXTURE_2D, 0, srgb ? gl.SRGB8_ALPHA8 : gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, cnv);
+  gl.generateMipmap(gl.TEXTURE_2D);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  const wrap = repeat ? gl.REPEAT : gl.CLAMP_TO_EDGE;
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, wrap);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, wrap);
+  return tex;
+}
+
+// Procedural Dark Walnut Lab Bench Wood (Albedo + Roughness/Height packed)
+function makeWoodTextures() {
+  const W = 1024, H = 1024;
+  const cAlb = document.createElement("canvas"); cAlb.width = W; cAlb.height = H;
+  const ctxA = cAlb.getContext("2d");
+  const imgA = ctxA.createImageData(W, H);
+
+  const cMap = document.createElement("canvas"); cMap.width = W; cMap.height = H;
+  const ctxM = cMap.getContext("2d");
+  const imgM = ctxM.createImageData(W, H);
+
+  // Fast deterministic hash noise
+  function hash(x, y) {
+    let n = Math.sin(x * 127.1 + y * 311.7) * 43758.5453123;
+    return n - Math.floor(n);
+  }
+  function vnoise(x, y) {
+    const ix = Math.floor(x), iy = Math.floor(y);
+    const fx = x - ix, fy = y - iy;
+    const ux = fx*fx*(3 - 2*fx), uy = fy*fy*(3 - 2*fy);
+    const a = hash(ix, iy), b = hash(ix+1, iy), c = hash(ix, iy+1), d = hash(ix+1, iy+1);
+    return a + (b-a)*ux + (c-a)*uy + (a-b-c+d)*ux*uy;
+  }
+  function fbm(x, y) {
+    let v = 0, a = 0.5;
+    for (let i = 0; i < 4; i++) { v += a * vnoise(x, y); x *= 2.02; y *= 2.02; a *= 0.5; }
+    return v;
+  }
+
+  const planks = 6;
+  const dA = imgA.data, dM = imgM.data;
+  for (let y = 0; y < H; y++) {
+    const v = y / H;
+    const plankIdx = Math.floor(v * planks);
+    const plankFrac = (v * planks) - plankIdx;
+    const seamDist = Math.min(plankFrac, 1 - plankFrac);
+    const seam = seamDist < 0.014 ? seamDist / 0.014 : 1.0;
+    const plankTone = 0.84 + 0.30 * hash(plankIdx * 13.7, 4.2);
+    const plankOffX = hash(plankIdx * 3.1, 9.7) * 40.0;
+    const plankOffY = hash(plankIdx * 7.3, 1.9) * 40.0;
+
+    for (let x = 0; x < W; x++) {
+      const u = x / W;
+      const sx = u * 4.5 + plankOffX;
+      const sy = v * 22.0 + plankOffY;
+      const warp = fbm(sx * 0.85, sy * 0.16) * 4.2;
+      const rings = Math.sin((sy * 1.45 + warp * 3.2) * Math.PI);
+      const grain = 0.5 + 0.5 * rings;
+      const sharpGrain = Math.pow(grain, 0.65);
+      const fineFiber = vnoise(u * 140.0 + plankOffX, v * 520.0);
+      const pores = vnoise(u * 65.0 + plankOffX, v * 360.0);
+      const poreDark = pores < 0.16 ? 0.72 : 1.0;
+
+      // Rich satin walnut palette (calibrated for sRGB -> linear PBR)
+      const tone = (0.42 + 0.58 * sharpGrain) * plankTone * (0.90 + 0.14 * fineFiber) * poreDark * (0.35 + 0.65 * seam);
+      const r = Math.min(255, Math.max(0, Math.round(134 * tone + 16)));
+      const g = Math.min(255, Math.max(0, Math.round(84 * tone + 9)));
+      const b = Math.min(255, Math.max(0, Math.round(50 * tone + 5)));
+
+      const idx = (y * W + x) * 4;
+      dA[idx] = r; dA[idx+1] = g; dA[idx+2] = b; dA[idx+3] = 255;
+
+      // Roughness in R (satin lab resin finish: 0.22..0.46), height in G, micro-wear in B
+      const rough = Math.min(1, Math.max(0.14, 0.26 + (1 - sharpGrain)*0.12 + (1 - poreDark)*0.22 + (1 - seam)*0.45 + (fineFiber - 0.5)*0.06));
+      const height = Math.min(1, Math.max(0, (0.55 + 0.28 * sharpGrain + 0.14 * fineFiber - (1 - poreDark)*0.35) * (0.2 + 0.8 * seam)));
+      dM[idx] = Math.round(rough * 255);
+      dM[idx+1] = Math.round(height * 255);
+      dM[idx+2] = Math.round(seam * 255);
+      dM[idx+3] = 255;
+    }
+  }
+  ctxA.putImageData(imgA, 0, 0);
+  ctxM.putImageData(imgM, 0, 0);
+  return {
+    albedo: uploadCanvasTex(cAlb, true, true),
+    map: uploadCanvasTex(cMap, false, true)
+  };
+}
+
+// Procedural Engraved Periodic Table Plaques (2x2 atlas: C, H, Ar, Ne)
+function makePlaqueAtlas() {
+  const W = 1024, H = 512;
+  const c = document.createElement("canvas"); c.width = W; c.height = H;
+  const ctx = c.getContext("2d");
+
+  const items = [
+    { x:0,   y:0,   num:"6",  sym:"C",  name:"CARBON",   mass:"12.011", accent:"#ff9a2e", sub:"LUMINOUS FLAME" },
+    { x:512, y:0,   num:"1",  sym:"H",  name:"HYDROGEN", mass:"1.008",  accent:"#5cb0ff", sub:"LAMINAR FLAME" },
+    { x:0,   y:256, num:"18", sym:"Ar", name:"ARGON",    mass:"39.948", accent:"#9c6bff", sub:"HV DISCHARGE · 420 nm" },
+    { x:512, y:256, num:"10", sym:"Ne", name:"NEON",     mass:"20.180", accent:"#ff4418", sub:"HV DISCHARGE · 640 nm" }
+  ];
+
+  for (const it of items) {
+    // Dark brushed slate-brass plate background
+    const grad = ctx.createLinearGradient(it.x, it.y, it.x + 512, it.y + 256);
+    grad.addColorStop(0, "#1c1f26");
+    grad.addColorStop(0.5, "#252932");
+    grad.addColorStop(1, "#181b21");
+    ctx.fillStyle = grad;
+    ctx.fillRect(it.x, it.y, 512, 256);
+
+    // Subtle horizontal brushed lines
+    ctx.fillStyle = "rgba(255,255,255,0.025)";
+    for (let l = 0; l < 256; l += 2) {
+      if ((l * 17) % 5 < 2) ctx.fillRect(it.x, it.y + l, 512, 1);
+    }
+
+    // Brass border & corner rivets
+    ctx.strokeStyle = "#b8965c";
+    ctx.lineWidth = 4;
+    ctx.strokeRect(it.x + 14, it.y + 14, 484, 228);
+
+    // Colored spectral accent bar on left
+    ctx.fillStyle = it.accent;
+    ctx.fillRect(it.x + 26, it.y + 28, 10, 200);
+
+    // Corner brass screws
+    for (const [rx, ry] of [[30,30],[482,30],[30,226],[482,226]]) {
+      ctx.beginPath();
+      ctx.arc(it.x + rx, it.y + ry, 5, 0, Math.PI * 2);
+      ctx.fillStyle = "#c9a566";
+      ctx.fill();
+    }
+
+    // Atomic number
+    ctx.fillStyle = "#d8c49a";
+    ctx.font = "600 34px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText(it.num, it.x + 54, it.y + 72);
+
+    // Atomic mass (top right)
+    ctx.fillStyle = "rgba(218, 204, 174, 0.72)";
+    ctx.font = "500 24px monospace";
+    ctx.textAlign = "right";
+    ctx.fillText(it.mass, it.x + 462, it.y + 66);
+
+    // Element Symbol
+    ctx.fillStyle = "#f4ebd6";
+    ctx.font = "700 108px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText(it.sym, it.x + 52, it.y + 186);
+
+    // Element Name + Apparatus Subtitle
+    ctx.fillStyle = "#ede2c8";
+    ctx.font = "700 38px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+    ctx.textAlign = "right";
+    ctx.fillText(it.name, it.x + 462, it.y + 144);
+
+    ctx.fillStyle = it.accent;
+    ctx.font = "600 18px monospace";
+    ctx.fillText(it.sub, it.x + 462, it.y + 184);
+  }
+  return uploadCanvasTex(c, true, false);
+}
+
+// High-Voltage 5kV Power Supply Front Faceplate Texture
+function makePowerSupplyTex() {
+  const W = 512, H = 256;
+  const c = document.createElement("canvas"); c.width = W; c.height = H;
+  const ctx = c.getContext("2d");
+
+  // Brushed gunmetal faceplate
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, "#2b2f38");
+  g.addColorStop(0.5, "#232730");
+  g.addColorStop(1, "#1c2028");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = "rgba(255,255,255,0.025)";
+  for (let y = 0; y < H; y += 2) ctx.fillRect(0, y, W, 1);
+
+  ctx.strokeStyle = "#4d5566";
+  ctx.lineWidth = 4;
+  ctx.strokeRect(10, 10, W - 20, H - 20);
+
+  // Analog Kilovoltmeter Window (left side)
+  ctx.fillStyle = "#12151b";
+  ctx.fillRect(36, 36, 210, 146);
+  const mg = ctx.createRadialGradient(141, 155, 10, 141, 130, 120);
+  mg.addColorStop(0, "#fff4d6");
+  mg.addColorStop(0.75, "#e6d2a4");
+  mg.addColorStop(1, "#b49c6e");
+  ctx.fillStyle = mg;
+  ctx.fillRect(44, 44, 194, 130);
+
+  // Meter Arc & Ticks
+  ctx.save();
+  ctx.translate(141, 162);
+  ctx.strokeStyle = "#222";
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.arc(0, 0, 88, Math.PI * 1.18, Math.PI * 1.82);
+  ctx.stroke();
+
+  ctx.strokeStyle = "#c02618";
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.arc(0, 0, 88, Math.PI * 1.66, Math.PI * 1.82);
+  ctx.stroke();
+
+  for (let i = 0; i <= 10; i++) {
+    const a = Math.PI * (1.18 + (i / 10) * 0.64);
+    const r0 = i % 2 === 0 ? 74 : 80;
+    ctx.strokeStyle = "#1c1c1c";
+    ctx.lineWidth = i % 2 === 0 ? 2.5 : 1.5;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(a)*r0, Math.sin(a)*r0);
+    ctx.lineTo(Math.cos(a)*90, Math.sin(a)*90);
+    ctx.stroke();
+  }
+  // Needle at ~4.2 kV
+  const na = Math.PI * (1.18 + 0.82 * 0.64);
+  ctx.strokeStyle = "#b81d13";
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.lineTo(Math.cos(na)*84, Math.sin(na)*84);
+  ctx.stroke();
+  ctx.fillStyle = "#222";
+  ctx.beginPath(); ctx.arc(0, 0, 9, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
+
+  ctx.fillStyle = "#1d1d1d";
+  ctx.font = "700 18px monospace";
+  ctx.textAlign = "center";
+  ctx.fillText("kV DC", 141, 128);
+
+  // Silkscreen Typography (right side)
+  ctx.fillStyle = "#d9e0ea";
+  ctx.font = "700 20px -apple-system, sans-serif";
+  ctx.textAlign = "left";
+  ctx.fillText("HV SPECTRUM SUPPLY", 272, 62);
+  ctx.fillStyle = "#8a96ab";
+  ctx.font = "600 14px monospace";
+  ctx.fillText("OUTPUT: 5.0 kV · 12 mA", 272, 86);
+  ctx.fillStyle = "#e08e36";
+  ctx.fillText("● HV ACTIVE", 272, 114);
+
+  // Dial scale marks around knob area
+  ctx.strokeStyle = "#8d98ad";
+  ctx.lineWidth = 2;
+  for (let i = 0; i <= 8; i++) {
+    const a = Math.PI * (0.75 + (i / 8) * 1.5);
+    ctx.beginPath();
+    ctx.moveTo(392 + Math.cos(a)*34, 178 + Math.sin(a)*34);
+    ctx.lineTo(392 + Math.cos(a)*42, 178 + Math.sin(a)*42);
+    ctx.stroke();
+  }
+  ctx.fillStyle = "#a2aec2";
+  ctx.font = "600 13px monospace";
+  ctx.textAlign = "center";
+  ctx.fillText("POTENTIAL", 392, 232);
+  ctx.fillText("Ar / Ne DUAL OUTPUT", 141, 214);
+
+  return uploadCanvasTex(c, true, false);
+}
+
+// ============================================================================
+// 5. GLSL 300 ES SHADERS
+// ============================================================================
+
+// --- 5A. Shadow Depth Pass ---
+const SHADOW_VS = `#version 300 es
+layout(location=0) in vec3 aPos;
+uniform mat4 uModel;
+uniform mat4 uLightVP;
+void main() {
+  gl_Position = uLightVP * uModel * vec4(aPos, 1.0);
+}`;
+const SHADOW_FS = `#version 300 es
+precision highp float;
+void main() {}`;
+
+// --- 5B. Main PBR Opaque Geometry Pass ---
+const PBR_VS = `#version 300 es
+layout(location=0) in vec3 aPos;
+layout(location=1) in vec3 aNorm;
+layout(location=2) in vec2 aUV;
+
+uniform mat4 uModel;
+uniform mat4 uViewProj;
+uniform mat4 uLightVP;
+
+out vec3 vWorldPos;
+out vec3 vWorldNorm;
+out vec2 vUV;
+out vec4 vLightSpacePos;
+
+void main() {
+  vec4 wp = uModel * vec4(aPos, 1.0);
+  vWorldPos = wp.xyz;
+  vWorldNorm = normalize(mat3(uModel) * aNorm);
+  vUV = aUV;
+  vLightSpacePos = uLightVP * wp;
+  gl_Position = uViewProj * wp;
+}`;
+
+const PBR_FS = `#version 300 es
+precision highp float;
+
+in vec3 vWorldPos;
+in vec3 vWorldNorm;
+in vec2 vUV;
+in vec4 vLightSpacePos;
+
+out vec4 fragColor;
+
+uniform vec3 uCamPos;
+uniform float uTime;
+
+// Material parameters
+uniform vec3 uAlbedo;
+uniform float uMetallic;
+uniform float uRoughness;
+uniform vec3 uEmissive;
+uniform int uMatType; // 0:std, 1:wood, 2:brushedMetal, 3:heatSteel, 4:plaque, 5:hvFace, 6:floor
+
+// Textures
+uniform sampler2D uShadowMap;
+uniform sampler2D uWoodAlbedo;
+uniform sampler2D uWoodMap;
+uniform sampler2D uPlaqueTex;
+uniform sampler2D uHVFaceTex;
+
+// Dynamic element lights
+uniform vec3 uCarbonPos;
+uniform vec3 uCarbonCol;
+uniform vec3 uHydrogenPos;
+uniform vec3 uHydrogenCol;
+uniform vec3 uArgonA;
+uniform vec3 uArgonB;
+uniform vec3 uArgonCol;
+uniform vec3 uNeonA;
+uniform vec3 uNeonB;
+uniform vec3 uNeonCol;
+
+const float PI = 3.14159265359;
+
+// Interleaved gradient noise for smooth rotated PCF shadows
+float ign(vec2 p) {
+  return fract(52.9829189 * fract(dot(p, vec2(0.06711056, 0.00583715))));
+}
+
+// 16-tap Poisson Disk
+const vec2 POISSON[16] = vec2[16](
+  vec2(-0.94201624, -0.39906216), vec2( 0.94558609, -0.76890725),
+  vec2(-0.09418410, -0.92938870), vec2( 0.34495938,  0.29387760),
+  vec2(-0.91588581,  0.45771432), vec2(-0.81544232, -0.87912464),
+  vec2(-0.38277543,  0.27676845), vec2( 0.97484398,  0.75648379),
+  vec2( 0.44323325, -0.97511554), vec2( 0.53742981, -0.47373420),
+  vec2(-0.26496911, -0.41893023), vec2( 0.79197514,  0.19090188),
+  vec2(-0.24188840,  0.99706507), vec2(-0.81409955,  0.91437590),
+  vec2( 0.19984126,  0.78641367), vec2( 0.14383161, -0.14100790)
+);
+
+float calcShadow(vec4 lsPos, vec3 N, vec3 L) {
+  vec3 proj = lsPos.xyz / lsPos.w;
+  proj = proj * 0.5 + 0.5;
+  if (proj.z > 1.0 || proj.x < 0.0 || proj.x > 1.0 || proj.y < 0.0 || proj.y > 1.0) return 1.0;
+  float ndl = max(dot(N, L), 0.0);
+  float bias = max(0.0016 * (1.0 - ndl), 0.00045);
+  float ang = ign(gl_FragCoord.xy) * 6.2831853;
+  float ca = cos(ang), sa = sin(ang);
+  mat2 rot = mat2(ca, -sa, sa, ca);
+  float texel = 2.6 / 2048.0;
+  float sum = 0.0;
+  for (int i = 0; i < 16; i++) {
+    vec2 off = (rot * POISSON[i]) * texel;
+    float d = texture(uShadowMap, proj.xy + off).r;
+    sum += (proj.z - bias > d) ? 0.0 : 1.0;
+  }
+  return sum / 16.0;
+}
+
+// Analytical soft contact AO on benchtop so every prop sits with physical weight
+float benchContactAO(vec3 p) {
+  if (p.y > 0.25 || p.y < -0.05) return 1.0;
+  float hFade = smoothstep(0.24, 0.0, max(p.y, 0.0));
+  float ao = 1.0;
+  // Burners
+  ao *= mix(1.0, 0.28, exp(-dot(p.xz - vec2(-2.25, 0.05), p.xz - vec2(-2.25, 0.05)) * 7.5));
+  ao *= mix(1.0, 0.28, exp(-dot(p.xz - vec2(-0.75, 0.05), p.xz - vec2(-0.75, 0.05)) * 7.5));
+  // Tube stands (rectangular soft footprints)
+  vec2 dAr = max(abs(p.xz - vec2(0.75, 0.05)) - vec2(0.32, 0.26), 0.0);
+  ao *= mix(1.0, 0.26, exp(-dot(dAr, dAr) * 24.0));
+  vec2 dNe = max(abs(p.xz - vec2(2.25, 0.05)) - vec2(0.32, 0.26), 0.0);
+  ao *= mix(1.0, 0.26, exp(-dot(dNe, dNe) * 24.0));
+  // Plaques
+  for (int i = 0; i < 4; i++) {
+    float px = -2.25 + float(i) * 1.5;
+    vec2 dp = max(abs(p.xz - vec2(px, 0.78)) - vec2(0.31, 0.13), 0.0);
+    ao *= mix(1.0, 0.42, exp(-dot(dp, dp) * 45.0));
+  }
+  // Gas turret & HV Supply
+  ao *= mix(1.0, 0.35, exp(-dot(p.xz - vec2(-1.5, -1.02), p.xz - vec2(-1.5, -1.02)) * 14.0));
+  vec2 dHV = max(abs(p.xz - vec2(1.5, -1.02)) - vec2(0.62, 0.29), 0.0);
+  ao *= mix(1.0, 0.25, exp(-dot(dHV, dHV) * 18.0));
+  // Flask & Beaker
+  ao *= mix(1.0, 0.45, exp(-dot(p.xz - vec2(-3.18, -0.30), p.xz - vec2(-3.18, -0.30)) * 9.0));
+  ao *= mix(1.0, 0.48, exp(-dot(p.xz - vec2(3.22, -0.32), p.xz - vec2(3.22, -0.32)) * 12.0));
+  return mix(1.0, ao, hFade);
+}
+
+// Cook-Torrance GGX helpers
+float D_GGX(float ndh, float r) {
+  float a = r * r;
+  float a2 = a * a;
+  float d = (ndh * ndh) * (a2 - 1.0) + 1.0;
+  return a2 / max(PI * d * d, 1e-6);
+}
+float G_Smith(float ndv, float ndl, float r) {
+  float k = (r + 1.0);
+  k = (k * k) * 0.125;
+  float gv = ndv / (ndv * (1.0 - k) + k);
+  float gl = ndl / (ndl * (1.0 - k) + k);
+  return gv * gl;
+}
+vec3 F_Schlick(float cosT, vec3 F0) {
+  return F0 + (1.0 - F0) * pow(clamp(1.0 - cosT, 0.0, 1.0), 5.0);
+}
+
+vec3 evalBRDF(vec3 N, vec3 V, vec3 L, vec3 albedo, float metallic, float rough, vec3 F0) {
+  vec3 H = normalize(V + L);
+  float ndl = max(dot(N, L), 0.0);
+  float ndv = max(dot(N, V), 1e-4);
+  float ndh = max(dot(N, H), 0.0);
+  float hdv = max(dot(H, V), 0.0);
+  if (ndl <= 0.0) return vec3(0.0);
+  float D = D_GGX(ndh, rough);
+  float G = G_Smith(ndv, ndl, rough);
+  vec3 F = F_Schlick(hdv, F0);
+  vec3 spec = (D * G * F) / max(4.0 * ndv * ndl, 1e-4);
+  vec3 kD = (1.0 - F) * (1.0 - metallic);
+  return (kD * albedo / PI + spec) * ndl;
+}
+
+// Closest point on line segment A..B to ray (P, R) — Karis Representative Point for Tube Lights!
+vec3 closestPointOnSegmentToRay(vec3 P, vec3 R, vec3 A, vec3 B) {
+  vec3 L0 = A - P;
+  vec3 L1 = B - P;
+  vec3 Ld = B - A;
+  float rDotLd = dot(R, Ld);
+  float rDotL0 = dot(R, L0);
+  float ldDotL0 = dot(Ld, L0);
+  float ldLen2 = dot(Ld, Ld);
+  float denom = ldLen2 - rDotLd * rDotLd;
+  float t = 0.5;
+  if (abs(denom) > 1e-5) {
+    t = (rDotL0 * rDotLd - ldDotL0) / denom;
+  }
+  t = clamp(t, 0.0, 1.0);
+  return A + Ld * t;
+}
+
+vec3 evalCapsuleLight(vec3 P, vec3 N, vec3 V, vec3 A, vec3 B, vec3 lightCol,
+                      vec3 albedo, float metallic, float rough, vec3 F0) {
+  // 3-sample weighted diffuse along tube (brightest in middle capillary!)
+  vec3 diffSum = vec3(0.0);
+  vec3 mid = 0.5 * (A + B);
+  vec3 pts[3] = vec3[3](mix(A, B, 0.18), mid, mix(A, B, 0.82));
+  float wts[3] = float[3](0.22, 0.56, 0.22);
+  vec3 kD = (1.0 - F_Schlick(max(dot(N, V), 0.0), F0)) * (1.0 - metallic);
+  for (int i = 0; i < 3; i++) {
+    vec3 toL = pts[i] - P;
+    float d2 = dot(toL, toL) + 0.08;
+    vec3 L = normalize(toL);
+    float ndl = max(dot(N, L), 0.0);
+    diffSum += (kD * albedo / PI) * ndl * (wts[i] / d2);
+  }
+
+  // Representative point specular along the glowing vertical tube
+  vec3 R = reflect(-V, N);
+  vec3 closest = closestPointOnSegmentToRay(P, R, A, B);
+  vec3 toS = closest - P;
+  float dist = length(toS);
+  vec3 Ls = toS / max(dist, 1e-4);
+  float ndl = max(dot(N, Ls), 0.0);
+  float ndv = max(dot(N, V), 1e-4);
+  vec3 H = normalize(V + Ls);
+  float ndh = max(dot(N, H), 0.0);
+  float hdv = max(dot(H, V), 0.0);
+  // Subtle area roughness widening for realistic glossy tube reflection
+  float tubeRough = clamp(rough + 0.045 / max(dist, 0.25), 0.06, 1.0);
+  float D = D_GGX(ndh, tubeRough);
+  float G = G_Smith(ndv, ndl, tubeRough);
+  vec3 F = F_Schlick(hdv, F0);
+  float specAtten = 1.0 / (dist * dist + 0.12);
+  vec3 spec = (D * G * F) / max(4.0 * ndv * ndl, 1e-4) * ndl * specAtten * 1.35;
+
+  return (diffSum + spec) * lightCol;
+}
+
+vec3 evalPointLight(vec3 P, vec3 N, vec3 V, vec3 lPos, vec3 lCol,
+                    vec3 albedo, float metallic, float rough, vec3 F0) {
+  vec3 toL = lPos - P;
+  float d2 = dot(toL, toL) + 0.06;
+  vec3 L = normalize(toL);
+  return evalBRDF(N, V, L, albedo, metallic, rough, F0) * lCol / d2;
+}
+
+// Procedural Dark Laboratory IBL Reflection (ceiling softboxes + slate walls + wood bounce)
+vec3 evalLabEnv(vec3 R, float rough) {
+  float y = R.y;
+  vec3 darkLab = mix(vec3(0.020, 0.024, 0.032), vec3(0.055, 0.068, 0.088), smoothstep(-0.2, 0.85, y));
+  // Overhead twin laboratory linear fluorescent ceiling lights
+  float strip1 = exp(-pow((R.z - 0.18) * 5.0, 2.0)) * smoothstep(0.45, 0.92, y);
+  float strip2 = exp(-pow((R.z + 0.55) * 4.5, 2.0)) * smoothstep(0.38, 0.88, y);
+  float sharp = mix(1.0, 0.25, rough);
+  vec3 ceiling = (strip1 * 0.42 + strip2 * 0.24) * vec3(0.82, 0.90, 1.0) * sharp;
+  // Subtle cool side window reflection far left
+  float win = smoothstep(0.65, 0.96, -R.x) * smoothstep(-0.05, 0.45, y) * smoothstep(0.75, 0.3, y);
+  vec3 winCol = win * vec3(0.14, 0.19, 0.28) * sharp;
+  // Subtle warm wooden bench bounce from below horizon
+  vec3 bounce = smoothstep(0.05, -0.55, y) * vec3(0.038, 0.026, 0.018);
+  return darkLab + ceiling + winCol + bounce;
+}
+
+// Screen-space derivative bump perturbation (no tangents required!)
+vec3 perturbNormal(vec3 N, vec3 pos, float height, float strength) {
+  vec3 dpdx = dFdx(pos);
+  vec3 dpdy = dFdy(pos);
+  float dhdx = dFdx(height);
+  float dhdy = dFdy(height);
+  vec3 r1 = cross(dpdy, N);
+  vec3 r2 = cross(N, dpdx);
+  float det = dot(dpdx, r1);
+  if (abs(det) < 1e-8) return N;
+  vec3 surfGrad = sign(det) * (dhdx * r1 + dhdy * r2);
+  return normalize(abs(det) * N - strength * surfGrad);
+}
+
+void main() {
+  vec3 N = normalize(vWorldNorm);
+  vec3 V = normalize(uCamPos - vWorldPos);
+
+  vec3 albedo = uAlbedo;
+  float metallic = uMetallic;
+  float rough = uRoughness;
+  vec3 emissive = uEmissive;
+
+  if (uMatType == 1) {
+    // Rich dark walnut wood benchtop
+    vec3 texA = texture(uWoodAlbedo, vUV).rgb;
+    vec3 texM = texture(uWoodMap, vUV).rgb;
+    albedo = texA * uAlbedo;
+    rough = clamp(texM.r * 0.92, 0.16, 0.65);
+    N = perturbNormal(N, vWorldPos, texM.g, 0.055);
+  } else if (uMatType == 2) {
+    // Brushed metal micro-grain
+    float grain = sin(vUV.y * 260.0 + sin(vUV.x * 40.0) * 1.5) * 0.5 + 0.5;
+    rough = clamp(rough + (grain - 0.5) * 0.08, 0.10, 0.75);
+    N = perturbNormal(N, vWorldPos, grain, 0.012);
+  } else if (uMatType == 3) {
+    // Heat-tempered Bunsen barrel steel (iridescent bluing near top + warm nozzle lip glow)
+    float h = clamp((vWorldPos.y - 0.74) / 0.30, 0.0, 1.0);
+    vec3 straw = vec3(0.84, 0.68, 0.42);
+    vec3 violet = vec3(0.45, 0.38, 0.68);
+    vec3 blueSteel = vec3(0.32, 0.46, 0.68);
+    vec3 temper = mix(uAlbedo, straw, smoothstep(0.0, 0.45, h));
+    temper = mix(temper, violet, smoothstep(0.40, 0.72, h));
+    temper = mix(temper, blueSteel, smoothstep(0.68, 1.0, h));
+    albedo = temper;
+    float brush = sin(vWorldPos.y * 340.0) * 0.5 + 0.5;
+    rough = clamp(rough + h * 0.14 + (brush - 0.5) * 0.04, 0.14, 0.55);
+    // Subtle cherry-red thermal glow right at the top rim of the nozzle
+    float tipGlow = smoothstep(0.995, 1.042, vWorldPos.y);
+    emissive += vec3(0.85, 0.18, 0.03) * tipGlow * 0.55;
+  } else if (uMatType == 4) {
+    // Engraved periodic table plaque
+    vec3 texP = texture(uPlaqueTex, vUV).rgb;
+    albedo = texP;
+    float lum = dot(texP, vec3(0.3, 0.59, 0.11));
+    metallic = mix(0.28, 0.82, smoothstep(0.35, 0.75, lum));
+    rough = mix(0.42, 0.24, smoothstep(0.35, 0.75, lum));
+  } else if (uMatType == 5) {
+    // HV Power Supply faceplate with warm backlit kilovoltmeter
+    vec3 texF = texture(uHVFaceTex, vUV).rgb;
+    albedo = texF;
+    // Detect meter window area (left side UV)
+    float inMeter = step(0.085, vUV.x) * step(vUV.x, 0.465) * step(0.17, vUV.y) * step(vUV.y, 0.68);
+    emissive += texF * inMeter * vec3(1.0, 0.84, 0.55) * 0.52;
+    rough = mix(0.36, 0.12, inMeter);
+    metallic = mix(0.55, 0.05, inMeter);
+  } else if (uMatType == 6) {
+    // Dark slate laboratory tiled floor
+    vec2 tile = fract(vWorldPos.xz * 0.85);
+    float grout = smoothstep(0.0, 0.025, min(min(tile.x, 1.0-tile.x), min(tile.y, 1.0-tile.y)));
+    albedo = uAlbedo * (0.45 + 0.55 * grout);
+    rough = mix(0.85, 0.42, grout);
+  }
+
+  vec3 F0 = mix(vec3(0.04), albedo, metallic);
+  float ao = benchContactAO(vWorldPos);
+
+  vec3 color = vec3(0.0);
+
+  // 1. Overhead Soft-Shadowed Key Light (cool-neutral laboratory hood lamp)
+  vec3 keyDir = normalize(vec3(-1.1, 6.8, 2.7));
+  float shadow = calcShadow(vLightSpacePos, N, keyDir);
+  vec3 keyCol = vec3(0.72, 0.78, 0.88) * 1.15;
+  color += evalBRDF(N, V, keyDir, albedo, metallic, rough, F0) * keyCol * shadow;
+
+  // Subtle cool rear rim light to outline dark apparatus silhouettes cleanly
+  vec3 rimDir = normalize(vec3(0.8, 3.2, -4.5));
+  color += evalBRDF(N, V, rimDir, albedo, metallic, rough, F0) * vec3(0.24, 0.30, 0.42) * 0.55;
+
+  // 2. Carbon Flame Light (warm flickering golden-amber + subtle blue base cone bounce)
+  color += evalPointLight(vWorldPos, N, V, uCarbonPos, uCarbonCol, albedo, metallic, rough, F0) * mix(0.65, 1.0, ao);
+  color += evalPointLight(vWorldPos, N, V, vec3(-2.25, 1.10, 0.05), vec3(0.08, 0.26, 0.65) * 0.25, albedo, metallic, rough, F0);
+
+  // 3. Hydrogen Flame Light (cool laminar electric blue-violet)
+  color += evalPointLight(vWorldPos, N, V, uHydrogenPos, uHydrogenCol, albedo, metallic, rough, F0) * mix(0.65, 1.0, ao);
+
+  // 4. Argon Discharge Tube Light (Capsule Area Light — electric lavender-violet!)
+  color += evalCapsuleLight(vWorldPos, N, V, uArgonA, uArgonB, uArgonCol, albedo, metallic, rough, F0) * mix(0.68, 1.0, ao);
+
+  // 5. Neon Discharge Tube Light (Capsule Area Light — vivid fiery red-orange!)
+  color += evalCapsuleLight(vWorldPos, N, V, uNeonA, uNeonB, uNeonCol, albedo, metallic, rough, F0) * mix(0.68, 1.0, ao);
+
+  // 6. Subtle warm pilot light near HV Power Supply front
+  color += evalPointLight(vWorldPos, N, V, vec3(1.66, 0.32, -0.70), vec3(1.0, 0.48, 0.12) * 0.14, albedo, metallic, rough, F0);
+
+  // 7. Procedural Lab IBL (Diffuse ambient + Specular Fresnel environment reflection)
+  vec3 R = reflect(-V, N);
+  float ndv = max(dot(N, V), 0.0);
+  vec3 Fenv = F0 + (max(vec3(1.0 - rough), F0) - F0) * pow(1.0 - ndv, 5.0);
+  vec3 kD = (1.0 - Fenv) * (1.0 - metallic);
+  vec3 envDiff = mix(vec3(0.022, 0.025, 0.032), vec3(0.055, 0.064, 0.080), N.y * 0.5 + 0.5);
+  vec3 envSpec = evalLabEnv(R, rough) * mix(1.0, 0.32, rough * rough);
+  color += (kD * albedo * envDiff + Fenv * envSpec) * ao;
+
+  // Emissive
+  color += emissive;
+
+  // Distance fog fade into dark lab room (floor & far backdrop)
+  float camDist = length(vWorldPos - uCamPos);
+  float fog = smoothstep(10.0, 26.0, camDist);
+  color = mix(color, vec3(0.012, 0.015, 0.022), fog);
+
+  fragColor = vec4(color, 1.0);
+}`;
+
+// --- 5C. Volumetric Gas Discharge Plasma Shader (Argon & Neon) ---
+const PLASMA_VS = `#version 300 es
+layout(location=0) in vec3 aPos;
+layout(location=1) in vec3 aNorm;
+layout(location=2) in vec2 aUV;
+
+uniform mat4 uModel;
+uniform mat4 uViewProj;
+
+out vec3 vWorldPos;
+out vec3 vLocalPos;
+out vec3 vWorldNorm;
+
+void main() {
+  vec4 wp = uModel * vec4(aPos, 1.0);
+  vWorldPos = wp.xyz;
+  vLocalPos = aPos;
+  vWorldNorm = normalize(mat3(uModel) * aNorm);
+  gl_Position = uViewProj * wp;
+}`;
+
+const PLASMA_FS = `#version 300 es
+precision highp float;
+
+in vec3 vWorldPos;
+in vec3 vLocalPos;
+in vec3 vWorldNorm;
+
+out vec4 fragColor;
+
+uniform vec3 uCamPos;
+uniform float uTime;
+uniform int uGasType; // 0 = Argon (electric violet-blue), 1 = Neon (fiery red-orange)
+
+void main() {
+  vec3 N = normalize(vWorldNorm);
+  vec3 V = normalize(uCamPos - vWorldPos);
+  float ndv = abs(dot(N, V));
+
+  // Local Y spans roughly 0.46 .. 1.82
+  float y = vLocalPos.y;
+  float r = length(vLocalPos.xz);
+
+  // Physical Plücker spectrum tube current-density boost in the narrow central capillary!
+  // Narrower bore (r ~ 0.03) concentrates the plasma discharge into an intensely glowing core.
+  float inCapillary = smoothstep(0.072, 0.034, r);
+  float radialThick = pow(ndv, mix(1.45, 0.85, inCapillary));
+  float hotCore = pow(ndv, mix(4.2, 2.2, inCapillary));
+
+  // Electrode sheath / cathode glow near top & bottom metal cups (y ~ 0.52 and 1.76)
+  float botCathode = exp(-pow((y - 0.53) * 14.0, 2.0));
+  float topCathode = exp(-pow((y - 1.75) * 14.0, 2.0));
+  float cathodeGlow = (botCathode + topCathode) * 0.48;
+
+  // Fade cleanly right at the electrode caps
+  float endMask = smoothstep(0.45, 0.51, y) * smoothstep(1.83, 1.77, y);
+
+  // Subtle animated high-voltage ionization striations & micro-hum
+  float stria = 0.94 + 0.06 * sin(y * 58.0 - uTime * (uGasType == 0 ? 11.0 : 14.5))
+                     * sin(y * 19.0 + uTime * 3.7);
+  float hum = 0.965 + 0.035 * sin(uTime * 37.0 + float(uGasType) * 2.1);
+
+  float intensity = (mix(0.48, 1.55, inCapillary) * radialThick + cathodeGlow) * endMask * stria * hum;
+
+  vec3 outerCol, midCol, coreCol;
+  if (uGasType == 0) {
+    // ARGON: Real emission spectrum — luminous electric violet / lavender-blue
+    outerCol = vec3(0.28, 0.16, 1.35);
+    midCol   = vec3(0.62, 0.38, 2.35);
+    coreCol  = vec3(2.35, 2.05, 3.80);
+  } else {
+    // NEON: Real emission spectrum — vivid fiery red-orange
+    outerCol = vec3(1.55, 0.11, 0.015);
+    midCol   = vec3(2.85, 0.34, 0.035);
+    coreCol  = vec3(3.95, 1.50, 0.45);
+  }
+
+  vec3 col = mix(outerCol, midCol, clamp(radialThick * 1.15, 0.0, 1.0));
+  col = mix(col, coreCol, clamp(hotCore * (0.45 + 0.65 * inCapillary), 0.0, 1.0));
+  col *= intensity;
+
+  fragColor = vec4(col, 1.0);
+}`;
+
+// --- 5D. Borosilicate Glass & Clear Liquid Shader ---
+const GLASS_VS = `#version 300 es
+layout(location=0) in vec3 aPos;
+layout(location=1) in vec3 aNorm;
+layout(location=2) in vec2 aUV;
+
+uniform mat4 uModel;
+uniform mat4 uViewProj;
+
+out vec3 vWorldPos;
+out vec3 vWorldNorm;
+
+void main() {
+  vec4 wp = uModel * vec4(aPos, 1.0);
+  vWorldPos = wp.xyz;
+  vWorldNorm = normalize(mat3(uModel) * aNorm);
+  gl_Position = uViewProj * wp;
+}`;
+
+const GLASS_FS = `#version 300 es
+precision highp float;
+
+in vec3 vWorldPos;
+in vec3 vWorldNorm;
+
+out vec4 fragColor;
+
+uniform vec3 uCamPos;
+uniform vec3 uGlassTint;      // Borosilicate subtle tint
+uniform vec3 uInnerGlowTint;  // Subtle scatter from enclosed plasma (Argon/Neon) or zero for flask
+uniform float uInnerGlowAmt;
+uniform float uOpacityBoost;
+
+uniform vec3 uCarbonPos;
+uniform vec3 uCarbonCol;
+uniform vec3 uHydrogenPos;
+uniform vec3 uHydrogenCol;
+uniform vec3 uArgonA;
+uniform vec3 uArgonB;
+uniform vec3 uArgonCol;
+uniform vec3 uNeonA;
+uniform vec3 uNeonB;
+uniform vec3 uNeonCol;
+
+vec3 closestPointOnSegmentToRay(vec3 P, vec3 R, vec3 A, vec3 B) {
+  vec3 L0 = A - P;
+  vec3 Ld = B - A;
+  float rDotLd = dot(R, Ld);
+  float denom = dot(Ld, Ld) - rDotLd * rDotLd;
+  float t = abs(denom) > 1e-5 ? (dot(R, L0) * rDotLd - dot(Ld, L0)) / denom : 0.5;
+  return A + Ld * clamp(t, 0.0, 1.0);
+}
+
+float specGGX(vec3 N, vec3 V, vec3 L, float rough) {
+  vec3 H = normalize(V + L);
+  float ndh = max(dot(N, H), 0.0);
+  float a = rough * rough;
+  float a2 = a * a;
+  float d = (ndh * ndh) * (a2 - 1.0) + 1.0;
+  return a2 / max(3.14159265 * d * d, 1e-5);
+}
+
+vec3 evalLabEnv(vec3 R) {
+  float y = R.y;
+  vec3 base = mix(vec3(0.03, 0.035, 0.045), vec3(0.11, 0.13, 0.17), smoothstep(-0.1, 0.9, y));
+  float s1 = exp(-pow((R.z - 0.18) * 6.5, 2.0)) * smoothstep(0.48, 0.94, y);
+  float s2 = exp(-pow((R.z + 0.52) * 5.5, 2.0)) * smoothstep(0.42, 0.90, y);
+  float win = smoothstep(0.68, 0.96, -R.x) * smoothstep(0.0, 0.45, y) * smoothstep(0.8, 0.35, y);
+  return base + (s1 * 0.95 + s2 * 0.55) * vec3(0.86, 0.93, 1.0) + win * vec3(0.26, 0.34, 0.48);
+}
+
+void main() {
+  vec3 N = normalize(vWorldNorm);
+  if (!gl_FrontFacing) N = -N;
+  vec3 V = normalize(uCamPos - vWorldPos);
+  float ndv = max(dot(N, V), 0.0);
+
+  // Borosilicate glass Fresnel (n = 1.47 -> F0 = 0.036)
+  float fresnel = 0.038 + 0.962 * pow(1.0 - ndv, 4.2);
+  vec3 R = reflect(-V, N);
+
+  vec3 refl = evalLabEnv(R) * fresnel;
+
+  // Crisp specular highlights from overhead key + all 4 elements!
+  vec3 keyDir = normalize(vec3(-1.1, 6.8, 2.7));
+  vec3 spec = vec3(0.85, 0.91, 1.0) * specGGX(N, V, keyDir, 0.065) * 0.22;
+
+  // Point lights (Carbon & Hydrogen)
+  vec3 toC = uCarbonPos - vWorldPos;
+  spec += uCarbonCol * specGGX(N, V, normalize(toC), 0.08) * (0.10 / (dot(toC, toC) + 0.25));
+  vec3 toH = uHydrogenPos - vWorldPos;
+  spec += uHydrogenCol * specGGX(N, V, normalize(toH), 0.08) * (0.10 / (dot(toH, toH) + 0.25));
+
+  // Capsule lights (Argon & Neon)
+  vec3 cAr = closestPointOnSegmentToRay(vWorldPos, R, uArgonA, uArgonB) - vWorldPos;
+  spec += uArgonCol * specGGX(N, V, normalize(cAr), 0.085) * (0.14 / (dot(cAr, cAr) + 0.20));
+  vec3 cNe = closestPointOnSegmentToRay(vWorldPos, R, uNeonA, uNeonB) - vWorldPos;
+  spec += uNeonCol * specGGX(N, V, normalize(cNe), 0.085) * (0.14 / (dot(cNe, cNe) + 0.20));
+
+  // Subtle internal glass edge scattering (borosilicate rim + enclosed gas scattering)
+  float rim = pow(1.0 - ndv, 2.4);
+  vec3 glassBody = uGlassTint * (0.08 + 0.55 * rim);
+  vec3 innerScatter = uInnerGlowTint * uInnerGlowAmt * (0.16 + 0.84 * rim);
+
+  vec3 col = refl + spec * (0.28 + 0.72 * fresnel) + glassBody + innerScatter;
+  float alpha = clamp(fresnel * 0.78 + 0.055 + uOpacityBoost + rim * 0.22, 0.04, 0.92);
+
+  fragColor = vec4(col, alpha);
+}`;
+
+// --- 5E. True 3D Raymarched Volumetric Flame Shader (Carbon & Hydrogen) ---
+const FLAME_VS = `#version 300 es
+layout(location=0) in vec3 aPos;
+
+uniform mat4 uModel;
+uniform mat4 uViewProj;
+
+out vec3 vLocalPos;
+out vec3 vWorldPos;
+
+void main() {
+  vLocalPos = aPos;
+  vec4 wp = uModel * vec4(aPos, 1.0);
+  vWorldPos = wp.xyz;
+  gl_Position = uViewProj * wp;
+}`;
+
+const FLAME_FS = `#version 300 es
+precision highp float;
+
+in vec3 vLocalPos;
+in vec3 vWorldPos;
+
+out vec4 fragColor;
+
+uniform mat4 uInvModel;
+uniform vec3 uCamPos;
+uniform float uTime;
+uniform int uFlameType; // 0 = Carbon (luminous amber-gold + cyan base), 1 = Hydrogen (sleek electric blue-violet)
+
+float ign(vec2 p) {
+  return fract(52.9829189 * fract(dot(p, vec2(0.06711056, 0.00583715))));
+}
+
+// Smooth 3D value noise for fluid flame turbulence
+float hash3(vec3 p) {
+  p = fract(p * vec3(0.1031, 0.1030, 0.0973));
+  p += dot(p, p.yxz + 33.33);
+  return fract((p.x + p.y) * p.z);
+}
+
+float noise3(vec3 p) {
+  vec3 i = floor(p);
+  vec3 f = fract(p);
+  f = f * f * (3.0 - 2.0 * f);
+  float n000 = hash3(i + vec3(0,0,0));
+  float n100 = hash3(i + vec3(1,0,0));
+  float n010 = hash3(i + vec3(0,1,0));
+  float n110 = hash3(i + vec3(1,1,0));
+  float n001 = hash3(i + vec3(0,0,1));
+  float n101 = hash3(i + vec3(1,0,1));
+  float n011 = hash3(i + vec3(0,1,1));
+  float n111 = hash3(i + vec3(1,1,1));
+  float nx00 = mix(n000, n100, f.x);
+  float nx10 = mix(n010, n110, f.x);
+  float nx01 = mix(n001, n101, f.x);
+  float nx11 = mix(n011, n111, f.x);
+  return mix(mix(nx00, nx10, f.y), mix(nx01, nx11, f.y), f.z);
+}
+
+float fbm3(vec3 p) {
+  float v = 0.0;
+  float a = 0.52;
+  for (int i = 0; i < 4; i++) {
+    v += a * noise3(p);
+    p = p * 2.05 + vec3(13.1, -7.4, 5.7);
+    a *= 0.48;
+  }
+  return v;
+}
+
+// Ray vs unit cylinder (r = 1, y in [0, 1])
+vec2 intersectUnitCylinder(vec3 ro, vec3 rd) {
+  float a = dot(rd.xz, rd.xz);
+  float b = dot(ro.xz, rd.xz);
+  float c = dot(ro.xz, ro.xz) - 1.0;
+  float tMin = -1e9, tMax = 1e9;
+  if (a > 1e-7) {
+    float disc = b*b - a*c;
+    if (disc < 0.0) return vec2(1.0, -1.0);
+    float s = sqrt(disc);
+    tMin = (-b - s) / a;
+    tMax = (-b + s) / a;
+  } else if (c > 0.0) {
+    return vec2(1.0, -1.0);
+  }
+  if (abs(rd.y) > 1e-7) {
+    float ty0 = (0.0 - ro.y) / rd.y;
+    float ty1 = (1.0 - ro.y) / rd.y;
+    tMin = max(tMin, min(ty0, ty1));
+    tMax = min(tMax, max(ty0, ty1));
+  } else if (ro.y < 0.0 || ro.y > 1.0) {
+    return vec2(1.0, -1.0);
+  }
+  return vec2(max(tMin, 0.0), tMax);
+}
+
+// Evaluate volumetric emission at local flame coordinate p (xz in [-1,1], y in [0,1])
+vec3 sampleFlame(vec3 p, float t) {
+  float y = p.y;
+  if (y <= 0.002 || y >= 0.998) return vec3(0.0);
+
+  if (uFlameType == 0) {
+    // === CARBON FLAME (luminous soot-rich golden-amber plume + C2 cyan-blue base cone) ===
+    // Gentle buoyant horizontal sway increasing with height
+    float swayAmt = pow(y, 1.55) * 0.24;
+    vec2 sway = vec2(
+      sin(t * 2.8 - y * 4.5) * 0.7 + sin(t * 5.1 - y * 7.2) * 0.3,
+      cos(t * 2.3 - y * 4.1) * 0.65 + sin(t * 4.4 - y * 6.5) * 0.35
+    ) * swayAmt;
+    vec3 q = vec3(p.x - sway.x, y, p.z - sway.y);
+
+    // Rising turbulent advection
+    vec3 np = vec3(q.x * 2.6, y * 3.0 - t * 2.9, q.z * 2.6);
+    float n1 = fbm3(np);
+    float n2 = fbm3(np * 1.9 + vec3(0.0, -t * 1.8, 3.7));
+    float turb = (n1 - 0.48) * 0.52 + (n2 - 0.5) * 0.24;
+
+    // Teardrop burner plume profile: widens slightly above nozzle, then tapers smoothly to flickering tips
+    float baseWidth = mix(0.22, 0.46, smoothstep(0.0, 0.20, y));
+    float tipTaper  = pow(max(1.0 - smoothstep(0.16, 0.95, y), 0.0), 0.72);
+    float radius = baseWidth * tipTaper + turb * (0.28 * smoothstep(0.06, 0.65, y));
+
+    float r = length(q.xz);
+    float density = smoothstep(max(radius, 0.01), max(radius * 0.14, 0.002), r);
+    // Wispy breakup near the tip
+    density *= smoothstep(0.0, 0.055, y);
+    density *= smoothstep(0.98, 0.55, y - (n1 - 0.45) * 0.32);
+
+    // 1. Base primary C2 Swan-band blue-cyan reaction sheath near nozzle
+    float blueZone = smoothstep(0.26, 0.05, y) * smoothstep(0.0, 0.03, y);
+    float blueShell = exp(-pow((r - mix(0.18, 0.04, y / 0.24)) * 13.0, 2.0));
+    vec3 blueCol = vec3(0.10, 0.52, 1.55) * blueZone * (blueShell * 1.35 + density * 0.35);
+
+    // 2. Luminous incandescent carbon-particle blackbody mantle
+    float lumZone = smoothstep(0.05, 0.22, y);
+    float coreHeat = clamp(density * (1.28 - y * 0.72) + (n2 - 0.48) * 0.35, 0.0, 1.25);
+
+    vec3 colTip   = vec3(1.25, 0.16, 0.015);
+    vec3 colAmber = vec3(2.55, 0.88, 0.09);
+    vec3 colGold  = vec3(3.35, 2.15, 0.68);
+    vec3 colWhite = vec3(4.10, 3.55, 2.25);
+
+    vec3 sootCol = mix(colTip, colAmber, smoothstep(0.08, 0.42, coreHeat));
+    sootCol = mix(sootCol, colGold, smoothstep(0.38, 0.76, coreHeat));
+    sootCol = mix(sootCol, colWhite, smoothstep(0.74, 1.12, coreHeat));
+
+    // Slightly hollow dark core right above nozzle mouth (unburned gas cone)
+    float darkGasCone = 1.0 - smoothstep(0.15, 0.01, y) * smoothstep(0.14, 0.03, r) * 0.85;
+    vec3 finalCol = (sootCol * density * lumZone * 1.15 + blueCol) * darkGasCone;
+    return max(finalCol, vec3(0.0));
+  } else {
+    // === HYDROGEN FLAME (high-velocity laminar electric-blue cone + ethereal pale violet-rose outer mantle) ===
+    float swayAmt = pow(y, 1.8) * 0.085;
+    vec2 sway = vec2(
+      sin(t * 5.8 - y * 6.8) * 0.65 + sin(t * 9.3 - y * 11.0) * 0.35,
+      cos(t * 5.1 - y * 6.2) * 0.65 + cos(t * 8.4 - y * 10.2) * 0.35
+    ) * swayAmt;
+    vec3 q = vec3(p.x - sway.x, y, p.z - sway.y);
+
+    // Faster, finer aerodynamic turbulence
+    vec3 np = vec3(q.x * 3.6, y * 4.2 - t * 5.6, q.z * 3.6);
+    float n1 = fbm3(np);
+    float n2 = fbm3(np * 2.2 + vec3(4.1, -t * 3.4, 1.9));
+    float turb = (n1 - 0.5) * 0.24 + (n2 - 0.5) * 0.14;
+
+    float r = length(q.xz);
+
+    // 1. Razor-crisp laminar inner reaction cone (classic high-oxygen/hydrogen Bunsen inner cone!)
+    float innerH = 0.38;
+    float innerR = mix(0.22, 0.0, clamp(y / innerH, 0.0, 1.0));
+    float innerZone = step(y, innerH + 0.04) * smoothstep(innerH + 0.03, innerH - 0.06, y);
+    float innerShell = exp(-pow((r - innerR) * 18.0, 2.0)) * innerZone * smoothstep(0.0, 0.025, y);
+    float innerFill  = smoothstep(innerR + 0.02, innerR * 0.25, r) * innerZone * smoothstep(0.0, 0.05, y);
+    vec3 innerCol = vec3(0.42, 0.88, 1.95) * innerFill * 0.45 + vec3(1.15, 2.35, 4.10) * innerShell * 1.45;
+
+    // 2. Slender aerodynamic outer blue-to-pale-violet mantle
+    float outerWidth = mix(0.25, 0.36, smoothstep(0.0, 0.16, y));
+    float outerTaper = pow(max(1.0 - smoothstep(0.14, 0.94, y), 0.0), 0.82);
+    float outerR = outerWidth * outerTaper + turb * (0.20 * smoothstep(0.12, 0.75, y));
+    float outerDens = smoothstep(max(outerR, 0.01), max(outerR * 0.15, 0.002), r);
+    outerDens *= smoothstep(0.0, 0.04, y) * smoothstep(0.96, 0.52, y - (n1 - 0.48) * 0.22);
+
+    // Color ramp: sapphire-cyan core -> clean pale ice-blue -> faint Balmer-alpha lilac/rose edge wisps
+    float radialFrac = clamp(r / max(outerR, 0.01), 0.0, 1.0);
+    vec3 colCore  = vec3(0.55, 1.25, 2.95);
+    vec3 colMid   = vec3(0.22, 0.68, 2.15);
+    vec3 colEdge  = mix(vec3(0.52, 0.36, 1.45), vec3(0.98, 0.34, 0.62), smoothstep(0.45, 0.85, n2));
+
+    vec3 outerCol = mix(colCore, colMid, smoothstep(0.15, 0.60, radialFrac));
+    outerCol = mix(outerCol, colEdge, smoothstep(0.50, 0.95, radialFrac) * smoothstep(0.25, 0.80, y));
+
+    float darkBase = 1.0 - smoothstep(0.18, 0.01, y) * smoothstep(innerR * 0.78, 0.0, r) * 0.82;
+    vec3 finalCol = (outerCol * outerDens * 0.82 + innerCol) * darkBase;
+    return max(finalCol, vec3(0.0));
+  }
+}
+
+void main() {
+  // Ray in local cylinder space (cylinder has r=1, y in [0,1])
+  vec3 ro = (uInvModel * vec4(uCamPos, 1.0)).xyz;
+  vec3 target = vLocalPos;
+  vec3 rd = normalize(target - ro);
+
+  vec2 hit = intersectUnitCylinder(ro, rd);
+  if (hit.x >= hit.y) discard;
+
+  float tStart = hit.x;
+  float tEnd = min(hit.y, length(target - ro));
+  if (tEnd <= tStart) discard;
+
+  const int STEPS = 32;
+  float dt = (tEnd - tStart) / float(STEPS);
+  float jitter = ign(gl_FragCoord.xy + fract(uTime * 17.3) * 100.0);
+
+  vec3 accum = vec3(0.0);
+  for (int i = 0; i < STEPS; i++) {
+    float t = tStart + (float(i) + jitter) * dt;
+    vec3 p = ro + rd * t;
+    accum += sampleFlame(p, uTime) * dt;
+  }
+
+  fragColor = vec4(accum * 1.45, 1.0);
+}`;
+
+// --- 5F. Atmospheric Volumetric Glow Halo & Rising Carbon Embers ---
+const HALO_VS = `#version 300 es
+layout(location=0) in vec2 aQuad;
+uniform vec3 uCenter;
+uniform vec2 uSize;
+uniform vec3 uCamRight;
+uniform vec3 uCamUp;
+uniform mat4 uViewProj;
+out vec2 vUV;
+void main() {
+  vUV = aQuad;
+  vec3 wp = uCenter + uCamRight * (aQuad.x * uSize.x) + uCamUp * (aQuad.y * uSize.y);
+  gl_Position = uViewProj * vec4(wp, 1.0);
+}`;
+
+const HALO_FS = `#version 300 es
+precision highp float;
+in vec2 vUV;
+out vec4 fragColor;
+uniform vec3 uColor;
+uniform float uPower;
+void main() {
+  float d = length(vUV);
+  if (d >= 1.0) discard;
+  float g = pow(max(1.0 - d, 0.0), uPower);
+  fragColor = vec4(uColor * g, 1.0);
+}`;
+
+// --- 5G. Fullscreen Post-Processing (Bloom Extract, Separable Blur, ACES Tone Map) ---
+const FSQ_VS = `#version 300 es
+out vec2 vUV;
+void main() {
+  vec2 p = vec2((gl_VertexID == 1) ? 3.0 : -1.0, (gl_VertexID == 2) ? 3.0 : -1.0);
+  vUV = p * 0.5 + 0.5;
+  gl_Position = vec4(p, 0.0, 1.0);
+}`;
+
+const BRIGHT_FS = `#version 300 es
+precision highp float;
+in vec2 vUV;
+out vec4 fragColor;
+uniform sampler2D uTex;
+void main() {
+  vec3 c = texture(uTex, vUV).rgb;
+  float br = max(c.r, max(c.g, c.b));
+  float thresh = 0.72;
+  float knee = 0.45;
+  float soft = clamp(br - thresh + knee, 0.0, 2.0 * knee);
+  soft = (soft * soft) / (4.0 * knee + 1e-5);
+  float contrib = max(soft, br - thresh) / max(br, 1e-5);
+  fragColor = vec4(c * contrib, 1.0);
+}`;
+
+const BLUR_FS = `#version 300 es
+precision highp float;
+in vec2 vUV;
+out vec4 fragColor;
+uniform sampler2D uTex;
+uniform vec2 uDir; // texelSize * (1,0) or (0,1)
+void main() {
+  // 9-tap smooth Gaussian kernel
+  const float w[5] = float[5](0.22702703, 0.19459459, 0.12162162, 0.05405405, 0.01621622);
+  vec3 sum = texture(uTex, vUV).rgb * w[0];
+  for (int i = 1; i < 5; i++) {
+    vec2 off = uDir * float(i) * 1.35;
+    sum += (texture(uTex, vUV + off).rgb + texture(uTex, vUV - off).rgb) * w[i];
+  }
+  fragColor = vec4(sum, 1.0);
+}`;
+
+const COMPOSITE_FS = `#version 300 es
+precision highp float;
+in vec2 vUV;
+out vec4 fragColor;
+uniform sampler2D uScene;
+uniform sampler2D uBloom1;
+uniform sampler2D uBloom2;
+uniform sampler2D uBloom3;
+uniform float uExposure;
+
+// ACES Filmic Tone Mapping (Narkowicz)
+vec3 acesFilm(vec3 x) {
+  const float a = 2.51, b = 0.03, c = 2.43, d = 0.59, e = 0.14;
+  return clamp((x * (a * x + b)) / (x * (c * x + d) + e), 0.0, 1.0);
+}
+
+float hash2(vec2 p) {
+  return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+}
+
+void main() {
+  vec3 hdr = texture(uScene, vUV).rgb;
+  vec3 b1 = texture(uBloom1, vUV).rgb;
+  vec3 b2 = texture(uBloom2, vUV).rgb;
+  vec3 b3 = texture(uBloom3, vUV).rgb;
+
+  // Multi-scale photographic bloom & soft halation
+  vec3 bloom = b1 * 0.24 + b2 * 0.34 + b3 * 0.42;
+  vec3 col = (hdr + bloom * 0.72) * uExposure;
+
+  // Tone map
+  col = acesFilm(col);
+
+  // Subtle photographic vignette
+  vec2 q = vUV * 2.0 - 1.0;
+  float vig = 1.0 - dot(q * vec2(0.75, 0.95), q * vec2(0.75, 0.95)) * 0.22;
+  col *= clamp(vig, 0.62, 1.0);
+
+  // Gamma encode sRGB
+  col = pow(max(col, 0.0), vec3(1.0 / 2.2));
+
+  // Micro-dither to eliminate 8-bit dark wood banding
+  col += (hash2(gl_FragCoord.xy) - 0.5) / 255.0;
+
+  fragColor = vec4(col, 1.0);
+}`;
+
+// Compile all programs
+const progShadow    = createProgram(SHADOW_VS, SHADOW_FS);
+const progPBR       = createProgram(PBR_VS, PBR_FS);
+const progPlasma    = createProgram(PLASMA_VS, PLASMA_FS);
+const progGlass     = createProgram(GLASS_VS, GLASS_FS);
+const progFlame     = createProgram(FLAME_VS, FLAME_FS);
+const progHalo      = createProgram(HALO_VS, HALO_FS);
+const progBright    = createProgram(FSQ_VS, BRIGHT_FS);
+const progBlur      = createProgram(FSQ_VS, BLUR_FS);
+const progComposite = createProgram(FSQ_VS, COMPOSITE_FS);
+
+// Empty VAO for fullscreen triangle & quad VAO for glow halos
+const fsqVAO = gl.createVertexArray();
+const haloVAO = gl.createVertexArray();
+gl.bindVertexArray(haloVAO);
+const haloVBO = gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER, haloVBO);
+gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, 1,1, -1,-1, 1,1, -1,1]), gl.STATIC_DRAW);
+gl.enableVertexAttribArray(0);
+gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+gl.bindVertexArray(null);
+
+// ============================================================================
+// 6. FRAMEBUFFERS (Shadow Map + HDR Scene FBO + 3-Mip Bloom Ping-Pong)
+// ============================================================================
+const SHADOW_SIZE = 2048;
+const shadowTex = gl.createTexture();
+gl.bindTexture(gl.TEXTURE_2D, shadowTex);
+gl.texImage2D(gl.TEXTURE_2D, 0, gl.DEPTH_COMPONENT24, SHADOW_SIZE, SHADOW_SIZE, 0, gl.DEPTH_COMPONENT, gl.UNSIGNED_INT, null);
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+const shadowFBO = gl.createFramebuffer();
+gl.bindFramebuffer(gl.FRAMEBUFFER, shadowFBO);
+gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, shadowTex, 0);
+gl.drawBuffers([gl.NONE]);
+gl.readBuffer(gl.NONE);
+gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+function makeColorFBO(w, h, withDepth = false) {
+  const fbo = gl.createFramebuffer();
+  gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+  const tex = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, tex);
+  const intFmt = USE_HDR ? gl.RGBA16F : gl.RGBA8;
+  const typ = USE_HDR ? gl.HALF_FLOAT : gl.UNSIGNED_BYTE;
+  gl.texImage2D(gl.TEXTURE_2D, 0, intFmt, w, h, 0, gl.RGBA, typ, null);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+
+  let rbo = null;
+  if (withDepth) {
+    rbo = gl.createRenderbuffer();
+    gl.bindRenderbuffer(gl.RENDERBUFFER, rbo);
+    gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT24, w, h);
+    gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, rbo);
+  }
+  if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE && USE_HDR) {
+    USE_HDR = false;
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+  }
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  return { fbo, tex, rbo, w, h };
+}
+
+function destroyFBO(o) {
+  if (!o) return;
+  gl.deleteFramebuffer(o.fbo);
+  gl.deleteTexture(o.tex);
+  if (o.rbo) gl.deleteRenderbuffer(o.rbo);
+}
+
+let sceneFBO = null, bloomA = [null,null,null], bloomB = [null,null,null];
+let viewW = 1, viewH = 1;
+
+function resizeBuffers() {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const w = Math.max(2, Math.floor(window.innerWidth * dpr));
+  const h = Math.max(2, Math.floor(window.innerHeight * dpr));
+  if (w === viewW && h === viewH && sceneFBO) return;
+  viewW = w; viewH = h;
+  canvas.width = w; canvas.height = h;
+
+  destroyFBO(sceneFBO);
+  for (let i = 0; i < 3; i++) { destroyFBO(bloomA[i]); destroyFBO(bloomB[i]); }
+
+  sceneFBO = makeColorFBO(w, h, true);
+  let bw = Math.max(2, w >> 1), bh = Math.max(2, h >> 1);
+  for (let i = 0; i < 3; i++) {
+    bloomA[i] = makeColorFBO(bw, bh, false);
+    bloomB[i] = makeColorFBO(bw, bh, false);
+    bw = Math.max(2, bw >> 1);
+    bh = Math.max(2, bh >> 1);
+  }
+}
+
+// ============================================================================
+// 7. BUILD PROCEDURAL TEXTURES & ALL 3D LAB BENCH ASSETS
+// ============================================================================
+const woodTex = makeWoodTextures();
+const plaqueTex = makePlaqueAtlas();
+const hvFaceTex = makePowerSupplyTex();
+
+// Material presets
+const MAT = {
+  woodBench:   { albedo:[1.0, 0.96, 0.92], metal:0.0,  rough:0.32, emissive:[0,0,0], type:1 },
+  darkSteel:   { albedo:[0.13, 0.14, 0.16], metal:0.72, rough:0.38, emissive:[0,0,0], type:2 },
+  castIron:    { albedo:[0.11, 0.12, 0.14], metal:0.55, rough:0.52, emissive:[0,0,0], type:0 },
+  anodized:    { albedo:[0.09, 0.10, 0.12], metal:0.65, rough:0.32, emissive:[0,0,0], type:2 },
+  chrome:      { albedo:[0.86, 0.88, 0.92], metal:0.96, rough:0.15, emissive:[0,0,0], type:2 },
+  heatSteel:   { albedo:[0.80, 0.82, 0.86], metal:0.92, rough:0.20, emissive:[0,0,0], type:3 },
+  brass:       { albedo:[0.88, 0.68, 0.30], metal:0.94, rough:0.22, emissive:[0,0,0], type:2 },
+  agedBrass:   { albedo:[0.72, 0.54, 0.24], metal:0.88, rough:0.34, emissive:[0,0,0], type:2 },
+  porcelain:   { albedo:[0.90, 0.89, 0.86], metal:0.0,  rough:0.12, emissive:[0,0,0], type:0 },
+  rubber:      { albedo:[0.055, 0.058, 0.064], metal:0.0, rough:0.78, emissive:[0,0,0], type:0 },
+  hvCableRed:  { albedo:[0.48, 0.07, 0.05], metal:0.0,  rough:0.46, emissive:[0,0,0], type:0 },
+  hvCableBlk:  { albedo:[0.07, 0.075, 0.085], metal:0.0, rough:0.48, emissive:[0,0,0], type:0 },
+  valveRed:    { albedo:[0.62, 0.11, 0.08], metal:0.15, rough:0.34, emissive:[0,0,0], type:0 },
+  valveBlue:   { albedo:[0.09, 0.28, 0.62], metal:0.15, rough:0.34, emissive:[0,0,0], type:0 },
+  plaqueBody:  { albedo:[0.10, 0.11, 0.13], metal:0.45, rough:0.36, emissive:[0,0,0], type:0 },
+  plaqueFace:  { albedo:[1,1,1],            metal:0.5,  rough:0.30, emissive:[0,0,0], type:4 },
+  hvFace:      { albedo:[1,1,1],            metal:0.5,  rough:0.32, emissive:[0,0,0], type:5 },
+  pilotAmber:  { albedo:[1.0, 0.6, 0.15],   metal:0.0,  rough:0.15, emissive:[2.6, 1.15, 0.18], type:0 },
+  darkBore:    { albedo:[0.015, 0.015, 0.018], metal:0.0, rough:0.95, emissive:[0,0,0], type:0 },
+  ceramicDish: { albedo:[0.82, 0.80, 0.76], metal:0.0,  rough:0.22, emissive:[0,0,0], type:0 },
+  floorSlate:  { albedo:[0.045, 0.050, 0.060], metal:0.0, rough:0.45, emissive:[0,0,0], type:6 }
+};
+
+const opaqueItems = [];
+const glassItems = [];
+const plasmaItems = [];
+
+function addOpaque(mesh, model, mat, castShadow = true) {
+  opaqueItems.push({ mesh, model, mat, castShadow });
+}
+function addGlass(mesh, model, tint, innerTint = [0,0,0], innerAmt = 0, opacityBoost = 0) {
+  glassItems.push({ mesh, model, tint, innerTint, innerAmt, opacityBoost });
+}
+function addPlasma(mesh, model, gasType) {
+  plasmaItems.push({ mesh, model, gasType });
+}
+
+// --- 7A. Hardwood Lab Bench & Room Floor ---
+const benchMesh = buildBeveledBox(7.8, 0.26, 3.25, 0.028, 0.24);
+addOpaque(benchMesh, M4.translate(0, -0.13, -0.22), MAT.woodBench, true);
+
+// Structural steel apron & legs beneath bench
+const apronMesh = buildBox(7.2, 0.24, 2.75);
+addOpaque(apronMesh, M4.translate(0, -0.38, -0.22), MAT.darkSteel, false);
+const legMesh = buildBox(0.16, 2.1, 0.16);
+for (const [lx, lz] of [[-3.45, 1.05],[3.45, 1.05],[-3.45, -1.48],[3.45, -1.48]]) {
+  addOpaque(legMesh, M4.translate(lx, -1.35, lz), MAT.darkSteel, false);
+}
+// Horizontal lower steel crossbar stretchers
+addOpaque(buildBox(6.8, 0.08, 0.08), M4.translate(0, -1.95, -1.48), MAT.darkSteel, false);
+addOpaque(buildBox(6.8, 0.08, 0.08), M4.translate(0, -1.95,  1.05), MAT.darkSteel, false);
+addOpaque(buildBox(0.08, 0.08, 2.5), M4.translate(-3.45, -1.95, -0.22), MAT.darkSteel, false);
+addOpaque(buildBox(0.08, 0.08, 2.5), M4.translate( 3.45, -1.95, -0.22), MAT.darkSteel, false);
+
+// Lab Floor
+const floorMesh = buildBox(36, 0.1, 36);
+addOpaque(floorMesh, M4.translate(0, -2.45, 0), MAT.floorSlate, false);
+
+// --- 7B. Bunsen Burners (Carbon at x = -2.25, Hydrogen at x = -0.75) ---
+const burnerBaseMesh = buildLathe([
+  [0.0, 0.0], [0.36, 0.0], [0.36, 0.025], [0.34, 0.042], [0.31, 0.045],
+  [0.27, 0.095], [0.22, 0.115], [0.16, 0.125], [0.135, 0.145], [0.115, 0.145]
+], 44);
+
+const burnerHubMesh = buildLathe([
+  [0.115, 0.142], [0.115, 0.255], [0.105, 0.268], [0.096, 0.268]
+], 28);
+
+// Air-intake collar (knurled brass sleeve)
+const burnerCollarMesh = buildLathe([
+  [0.096, 0.265], [0.096, 0.29], [0.103, 0.298], [0.103, 0.32], [0.096, 0.326],
+  [0.096, 0.395], [0.103, 0.402], [0.103, 0.422], [0.094, 0.432], [0.072, 0.432]
+], 36);
+
+// Dark recessed air intake hole rings (visible through collar)
+const airPortMesh = buildLathe([
+  [0.098, 0.335], [0.098, 0.385]
+], 24);
+
+// Tall chimney barrel with flared machined nozzle
+const burnerBarrelMesh = buildLathe([
+  [0.068, 0.27], [0.068, 0.985], [0.076, 1.005], [0.076, 1.038],
+  [0.060, 1.042], [0.056, 1.035], [0.056, 0.99]
+], 36);
+
+const burnerBoreMesh = buildLathe([
+  [0.056, 1.015], [0.0, 1.015]
+], 20);
+
+// Horizontal ribbed brass hose barb (oriented along +Y in local space, rotated to -Z)
+const hoseBarbMesh = buildLathe([
+  [0.042, 0.0], [0.042, 0.05], [0.028, 0.06], [0.036, 0.085],
+  [0.024, 0.105], [0.034, 0.13], [0.024, 0.15], [0.032, 0.175], [0.020, 0.20]
+], 20);
+
+function buildBunsenBurner(x, z, isHydrogen) {
+  const T = M4.translate(x, 0, z);
+  addOpaque(burnerBaseMesh, T, MAT.castIron, true);
+  addOpaque(burnerHubMesh, T, isHydrogen ? MAT.chrome : MAT.brass, true);
+  addOpaque(burnerCollarMesh, T, isHydrogen ? MAT.agedBrass : MAT.brass, true);
+  // Dark air port indicator (Hydrogen has wide-open air port!)
+  if (isHydrogen) {
+    addOpaque(buildBox(0.202, 0.045, 0.045), M4.translate(x, 0.36, z), MAT.darkBore, false);
+    addOpaque(buildBox(0.045, 0.045, 0.202), M4.translate(x, 0.36, z), MAT.darkBore, false);
+  } else {
+    addOpaque(buildBox(0.200, 0.020, 0.018), M4.translate(x, 0.36, z), MAT.darkBore, false);
+  }
+  addOpaque(burnerBarrelMesh, T, MAT.heatSteel, true);
+  addOpaque(burnerBoreMesh, T, MAT.darkBore, false);
+  // Rear hose barb pointing -Z
+  addOpaque(hoseBarbMesh, M4.trs([x, 0.195, z - 0.105], [-Math.PI/2, 0, 0]), MAT.brass, true);
+}
+
+buildBunsenBurner(-2.25, 0.05, false); // Carbon
+buildBunsenBurner(-0.75, 0.05, true);  // Hydrogen
+
+// --- 7C. Dual Lab Gas Manifold Turret & Curved Rubber Hoses ---
+const gasTurretBase = buildLathe([
+  [0.0, 0.0], [0.22, 0.0], [0.22, 0.035], [0.18, 0.06], [0.11, 0.075],
+  [0.095, 0.34], [0.115, 0.37], [0.085, 0.40], [0.0, 0.40]
+], 32);
+addOpaque(gasTurretBase, M4.translate(-1.50, 0, -1.02), MAT.agedBrass, true);
+
+const valveHandleMesh = buildLathe([
+  [0.0, 0.0], [0.035, 0.0], [0.035, 0.06], [0.085, 0.07], [0.085, 0.105], [0.0, 0.115]
+], 20);
+// Left spigot & valve (Carbon)
+addOpaque(hoseBarbMesh, M4.trs([-1.56, 0.24, -0.96], [Math.PI/2, -0.52, 0]), MAT.brass, true);
+addOpaque(valveHandleMesh, M4.trs([-1.57, 0.28, -0.97], [0.22, 0, 0.42]), MAT.valveRed, true);
+// Right spigot & valve (Hydrogen)
+addOpaque(hoseBarbMesh, M4.trs([-1.44, 0.24, -0.96], [Math.PI/2,  0.52, 0]), MAT.brass, true);
+addOpaque(valveHandleMesh, M4.trs([-1.43, 0.28, -0.97], [0.22, 0, -0.42]), MAT.valveBlue, true);
+
+// Curved dark rubber hoses from gas turret to burners
+const hoseCarbon = buildTube([
+  [-1.65, 0.24, -0.82],
+  [-1.88, 0.09, -0.68],
+  [-2.32, 0.030, -0.62],
+  [-2.36, 0.032, -0.38],
+  [-2.25, 0.195, -0.26]
+], 0.024, 40, 12);
+addOpaque(hoseCarbon, M4.identity(), MAT.rubber, true);
+
+const hoseHydrogen = buildTube([
+  [-1.35, 0.24, -0.82],
+  [-1.12, 0.09, -0.68],
+  [-0.68, 0.030, -0.62],
+  [-0.66, 0.032, -0.38],
+  [-0.75, 0.195, -0.26]
+], 0.024, 40, 12);
+addOpaque(hoseHydrogen, M4.identity(), MAT.rubber, true);
+
+// --- 7D. High-Voltage Gas Discharge Tubes (Argon at x = +0.75, Neon at x = +2.25) ---
+const standBaseMesh = buildBeveledBox(0.68, 0.11, 0.56, 0.018, 1.0);
+const standColumnMesh = buildLathe([
+  [0.055, 0.11], [0.055, 0.15], [0.034, 0.165], [0.034, 1.98], [0.044, 2.00], [0.0, 2.02]
+], 28);
+
+// Ribbed white glazed porcelain HV insulator (oriented along +Y, rotated horizontal along +Z)
+const insulatorMesh = buildLathe([
+  [0.030, 0.00], [0.030, 0.015],
+  [0.056, 0.025], [0.056, 0.036], [0.030, 0.046],
+  [0.058, 0.058], [0.058, 0.069], [0.030, 0.079],
+  [0.058, 0.091], [0.058, 0.102], [0.030, 0.112],
+  [0.056, 0.124], [0.056, 0.135], [0.030, 0.145],
+  [0.030, 0.165]
+], 32);
+
+// Brass electrode cup socket + thumbscrew
+const socketRingMesh = buildLathe([
+  [0.088, 0.0], [0.088, 0.09], [0.076, 0.098], [0.076, 0.0]
+], 32);
+const thumbScrewMesh = buildLathe([
+  [0.018, 0.0], [0.018, 0.055], [0.042, 0.06], [0.042, 0.085], [0.0, 0.09]
+], 20);
+const clampCollarMesh = buildLathe([
+  [0.052, -0.04], [0.052, 0.04], [0.034, 0.045], [0.034, -0.045]
+], 24);
+const footMesh = buildLathe([
+  [0.0, 0.0], [0.042, 0.0], [0.042, 0.022], [0.036, 0.026]
+], 16);
+
+// Classic Plücker Spectrum Glass Tube: End-Caps, Internal Electrodes, Inner Plasma Bore, Outer Glass Wall
+const tubeCapBotMesh = buildLathe([
+  [0.0, 0.33], [0.074, 0.33], [0.074, 0.465], [0.062, 0.475], [0.0, 0.475]
+], 32);
+const tubeCapTopMesh = buildLathe([
+  [0.0, 1.805], [0.062, 1.805], [0.074, 1.815], [0.074, 1.95], [0.0, 1.95]
+], 32);
+const electrodeCupBotMesh = buildLathe([
+  [0.014, 0.46], [0.014, 0.50], [0.048, 0.505], [0.048, 0.545], [0.040, 0.545], [0.040, 0.512], [0.0, 0.512]
+], 24);
+const electrodeCupTopMesh = buildLathe([
+  [0.0, 1.768], [0.040, 1.768], [0.040, 1.735], [0.048, 1.735], [0.048, 1.775], [0.014, 1.78], [0.014, 1.82]
+], 24);
+
+// Smooth hourglass-capillary glass envelope
+function makeSpectrumTubeProfile(scaleR) {
+  const pts = [
+    [0.068, 0.455],
+    [0.092, 0.475],
+    [0.104, 0.515],
+    [0.106, 0.675],
+    [0.098, 0.720],
+    [0.076, 0.760],
+    [0.056, 0.805],
+    [0.050, 0.845],
+    [0.050, 1.435],
+    [0.056, 1.475],
+    [0.076, 1.520],
+    [0.098, 1.560],
+    [0.106, 1.605],
+    [0.104, 1.765],
+    [0.092, 1.805],
+    [0.068, 1.825]
+  ];
+  return pts.map(([r, y]) => [r * scaleR, y]);
+}
+const tubeGlassOuterMesh = buildLathe(makeSpectrumTubeProfile(1.0), 44);
+const tubePlasmaInnerMesh = buildLathe([
+  [0.030, 0.48],
+  [0.078, 0.51],
+  [0.086, 0.66],
+  [0.074, 0.72],
+  [0.046, 0.78],
+  [0.030, 0.835],
+  [0.030, 1.445],
+  [0.046, 1.50],
+  [0.074, 1.56],
+  [0.086, 1.62],
+  [0.078, 1.77],
+  [0.030, 1.80]
+], 36);
+
+function buildDischargeApparatus(x, z, gasType) {
+  // Base + 4 small brass corner feet
+  addOpaque(standBaseMesh, M4.translate(x, 0.07, z - 0.03), MAT.anodized, true);
+  for (const [fx, fz] of [[-0.27, 0.19],[0.27, 0.19],[-0.27, -0.25],[0.27, -0.25]]) {
+    addOpaque(footMesh, M4.translate(x + fx, 0.0, z + fz), MAT.agedBrass, false);
+  }
+  // Rear vertical insulated support column
+  const colZ = z - 0.21;
+  addOpaque(standColumnMesh, M4.translate(x, 0.01, colZ), MAT.darkSteel, true);
+
+  // Lower & Upper horizontal porcelain-insulated electrode arms
+  for (const ay of [0.37, 1.91]) {
+    addOpaque(clampCollarMesh, M4.translate(x, ay, colZ), MAT.anodized, true);
+    // Porcelain ribbed insulator bridging column to brass electrode socket
+    addOpaque(insulatorMesh, M4.trs([x, ay, colZ + 0.035], [Math.PI/2, 0, 0]), MAT.porcelain, true);
+    // Brass socket ring around tube end-cap
+    addOpaque(socketRingMesh, M4.translate(x, ay - 0.045, z), MAT.brass, true);
+    // Side knurled brass thumbscrew
+    addOpaque(thumbScrewMesh, M4.trs([x + 0.082, ay, z], [0, 0, -Math.PI/2]), MAT.brass, true);
+  }
+
+  // Rear brass HV binding post on stand base
+  addOpaque(thumbScrewMesh, M4.trs([x, 0.14, z - 0.27], [-Math.PI/2, 0, 0]), MAT.brass, true);
+
+  // Glass discharge tube metal end-caps & inner electrodes
+  const T = M4.translate(x, 0, z);
+  addOpaque(tubeCapBotMesh, T, MAT.brass, true);
+  addOpaque(tubeCapTopMesh, T, MAT.brass, true);
+  addOpaque(electrodeCupBotMesh, T, MAT.chrome, false);
+  addOpaque(electrodeCupTopMesh, T, MAT.chrome, false);
+
+  // Inner Volumetric Gas Plasma
+  addPlasma(tubePlasmaInnerMesh, T, gasType);
+
+  // Outer Borosilicate Glass Envelope
+  const glowTint = gasType === 0 ? [0.58, 0.36, 1.65] : [1.85, 0.26, 0.04];
+  addGlass(tubeGlassOuterMesh, T, [0.78, 0.90, 0.92], glowTint, 0.38, 0.04);
+}
+
+buildDischargeApparatus(0.75, 0.05, 0); // Argon
+buildDischargeApparatus(2.25, 0.05, 1); // Neon
+
+// --- 7E. High-Voltage 5kV Power Supply & Curved HV Cables ---
+addOpaque(buildBeveledBox(1.28, 0.56, 0.58, 0.02, 1.0), M4.translate(1.50, 0.30, -1.04), MAT.darkSteel, true);
+for (const [fx, fz] of [[-0.54, 0.21],[0.54, 0.21],[-0.54, -0.21],[0.54, -0.21]]) {
+  addOpaque(footMesh, M4.translate(1.50 + fx, 0.0, -1.04 + fz), MAT.rubber, false);
+}
+// Front faceplate (analog kV meter + silkscreen)
+const hvFaceMesh = buildPlaqueFace(1.16, 0.46, 0, 1, 0, 1);
+addOpaque(hvFaceMesh, M4.translate(1.50, 0.31, -0.746), MAT.hvFace, false);
+// Knurled aluminum voltage control knob
+const knobMesh = buildLathe([
+  [0.0, 0.0], [0.068, 0.0], [0.068, 0.045], [0.058, 0.058], [0.0, 0.058]
+], 28);
+addOpaque(knobMesh, M4.trs([1.81, 0.21, -0.746], [Math.PI/2, 0, 0]), MAT.chrome, true);
+// Glowing amber pilot indicator jewel
+const pilotMesh = buildLathe([
+  [0.028, 0.0], [0.028, 0.015], [0.022, 0.028], [0.0, 0.032]
+], 20);
+addOpaque(pilotMesh, M4.trs([1.66, 0.32, -0.746], [Math.PI/2, 0, 0]), MAT.pilotAmber, false);
+
+// Curved HV Insulated Leads (Red = High Voltage positive to upper electrode, Black = return to base)
+addOpaque(buildTube([
+  [1.06, 0.16, -0.76],
+  [0.82, 0.03, -0.62],
+  [0.64, 0.03, -0.44],
+  [0.75, 0.14, -0.29]
+], 0.018, 34, 10), M4.identity(), MAT.hvCableBlk, true);
+
+addOpaque(buildTube([
+  [1.14, 0.42, -0.76],
+  [0.88, 0.65, -0.62],
+  [0.64, 1.32, -0.44],
+  [0.72, 1.91, -0.22]
+], 0.016, 40, 10), M4.identity(), MAT.hvCableRed, true);
+
+addOpaque(buildTube([
+  [1.94, 0.16, -0.76],
+  [2.16, 0.03, -0.62],
+  [2.36, 0.03, -0.44],
+  [2.25, 0.14, -0.29]
+], 0.018, 34, 10), M4.identity(), MAT.hvCableBlk, true);
+
+addOpaque(buildTube([
+  [1.86, 0.42, -0.76],
+  [2.12, 0.65, -0.62],
+  [2.36, 1.32, -0.44],
+  [2.28, 1.91, -0.22]
+], 0.016, 40, 10), M4.identity(), MAT.hvCableRed, true);
+
+// --- 7F. Four Engraved Element Specimen Plaques ---
+const plaqueW = 0.68, plaqueD = 0.25, plaqueHFront = 0.024, plaqueHBack = 0.174;
+const plaqueWedgeMesh = buildPlaqueWedge(plaqueW, plaqueD, plaqueHFront, plaqueHBack);
+const plaqueTheta = Math.atan2(plaqueHBack - plaqueHFront, plaqueD);
+const plaqueMidY = 0.5 * (plaqueHFront + plaqueHBack);
+const plaqueData = [
+  { x: -2.25, uv:[0.0, 0.5, 0.0, 0.5] }, // Carbon
+  { x: -0.75, uv:[0.5, 1.0, 0.0, 0.5] }, // Hydrogen
+  { x:  0.75, uv:[0.0, 0.5, 0.5, 1.0] }, // Argon
+  { x:  2.25, uv:[0.5, 1.0, 0.5, 1.0] }  // Neon
+];
+for (const pd of plaqueData) {
+  addOpaque(plaqueWedgeMesh, M4.translate(pd.x, 0.0, 0.78), MAT.plaqueBody, true);
+  const faceMesh = buildPlaqueFace(0.63, 0.262, pd.uv[0], pd.uv[1], pd.uv[2], pd.uv[3]);
+  const faceM = M4.mul(M4.trs([pd.x, plaqueMidY, 0.78], [plaqueTheta - Math.PI/2, 0, 0]), M4.translate(0, 0, 0.0025));
+  addOpaque(faceMesh, faceM, MAT.plaqueFace, false);
+}
+
+// --- 7G. Supporting Laboratory Glassware & Metal Props (Grounds Scale & Reflections!) ---
+// Borosilicate Erlenmeyer Flask on far left (-3.18, 0, -0.30)
+const flaskGlassMesh = buildLathe([
+  [0.0, 0.008], [0.28, 0.008], [0.31, 0.038], [0.305, 0.075],
+  [0.105, 0.56], [0.092, 0.62], [0.092, 0.80], [0.114, 0.825], [0.105, 0.835]
+], 44);
+const flaskLiquidMesh = buildLathe([
+  [0.0, 0.015], [0.275, 0.015], [0.295, 0.045], [0.215, 0.275], [0.200, 0.285], [0.0, 0.278]
+], 36);
+addGlass(flaskLiquidMesh, M4.translate(-3.18, 0, -0.30), [0.58, 0.82, 0.94], [0,0,0], 0, 0.06);
+addGlass(flaskGlassMesh,  M4.translate(-3.18, 0, -0.30), [0.76, 0.92, 0.94], [0,0,0], 0, 0.03);
+
+// Borosilicate Glass Beaker on far right (+3.22, 0, -0.32)
+const beakerGlassMesh = buildLathe([
+  [0.0, 0.008], [0.22, 0.008], [0.24, 0.028], [0.24, 0.54], [0.262, 0.565], [0.252, 0.574]
+], 40);
+const beakerLiquidMesh = buildLathe([
+  [0.0, 0.015], [0.225, 0.015], [0.228, 0.30], [0.218, 0.312], [0.0, 0.304]
+], 32);
+addGlass(beakerLiquidMesh, M4.translate(3.22, 0, -0.32), [0.70, 0.86, 0.94], [0,0,0], 0, 0.06);
+addGlass(beakerGlassMesh,  M4.translate(3.22, 0, -0.32), [0.78, 0.92, 0.94], [0,0,0], 0, 0.03);
+
+// Precision Brass Calibration Weight (front-left)
+const weightMesh = buildLathe([
+  [0.0, 0.0], [0.11, 0.0], [0.11, 0.20], [0.095, 0.215], [0.045, 0.225],
+  [0.045, 0.26], [0.072, 0.285], [0.072, 0.315], [0.052, 0.33], [0.0, 0.33]
+], 32);
+addOpaque(weightMesh, M4.translate(-3.12, 0, 0.54), MAT.brass, true);
+
+// Porcelain Evaporating Crucible (front-right)
+const crucibleMesh = buildLathe([
+  [0.0, 0.0], [0.10, 0.0], [0.155, 0.14], [0.165, 0.17], [0.150, 0.175], [0.09, 0.02], [0.0, 0.02]
+], 32);
+addOpaque(crucibleMesh, M4.translate(3.06, 0, 0.56), MAT.ceramicDish, true);
+
+// --- 7H. Volumetric Raymarched Flame Bounding Cylinders ---
+const unitCylMesh = buildUnitCylinder(28);
+const carbonFlameModel   = M4.trs([-2.25, 1.035, 0.05], null, [0.40, 1.56, 0.40]);
+const carbonFlameInv     = M4.invert(carbonFlameModel);
+const hydrogenFlameModel = M4.trs([-0.75, 1.035, 0.05], null, [0.32, 1.34, 0.32]);
+const hydrogenFlameInv   = M4.invert(hydrogenFlameModel);
+
+// Carbon micro-spark ember particles (deterministic orbiting/rising seeds)
+const SPARK_COUNT = 26;
+const sparks = [];
+for (let i = 0; i < SPARK_COUNT; i++) {
+  sparks.push({
+    phase: i / SPARK_COUNT,
+    speed: 0.42 + (Math.sin(i * 19.3) * 0.5 + 0.5) * 0.38,
+    ang: i * 2.39996,
+    rad: 0.02 + (Math.cos(i * 7.7) * 0.5 + 0.5) * 0.085,
+    size: 0.011 + (Math.sin(i * 11.1) * 0.5 + 0.5) * 0.012
+  });
+}
+
+// ============================================================================
+// 8. ORBIT CAMERA & INTERACTION (Slow Auto-Orbit + Smooth Drag / Zoom / Focus)
+// ============================================================================
+const cam = {
+  yaw: 0.0,
+  pitch: 0.24,
+  dist: 7.4,
+  target: [0.0, 0.86, -0.05],
+  goalYaw: 0.0,
+  goalPitch: 0.24,
+  goalDist: 7.4,
+  goalTarget: [0.0, 0.86, -0.05],
+  autoOrbit: true,
+  dragging: false,
+  lastX: 0,
+  lastY: 0,
+  idleTimer: 0
+};
+
+const btnOrbit = document.getElementById("btnOrbit");
+const btnReset = document.getElementById("btnReset");
+
+btnOrbit.addEventListener("click", () => {
+  cam.autoOrbit = !cam.autoOrbit;
+  btnOrbit.classList.toggle("active", cam.autoOrbit);
+});
+btnReset.addEventListener("click", () => {
+  cam.goalYaw = 0.0;
+  cam.goalPitch = 0.24;
+  cam.goalDist = 7.4;
+  cam.goalTarget = [0.0, 0.86, -0.05];
+});
+
+document.querySelectorAll(".chip").forEach(el => {
+  el.addEventListener("click", () => {
+    const fx = parseFloat(el.dataset.focus);
+    cam.goalTarget = [fx, 1.02, 0.05];
+    cam.goalDist = 3.65;
+    cam.goalPitch = 0.18;
+    cam.idleTimer = 6.0;
+  });
+});
+
+canvas.addEventListener("pointerdown", e => {
+  cam.dragging = true;
+  cam.lastX = e.clientX;
+  cam.lastY = e.clientY;
+  canvas.setPointerCapture(e.pointerId);
+});
+canvas.addEventListener("pointermove", e => {
+  if (!cam.dragging) return;
+  const dx = e.clientX - cam.lastX;
+  const dy = e.clientY - cam.lastY;
+  cam.lastX = e.clientX;
+  cam.lastY = e.clientY;
+  cam.goalYaw -= dx * 0.0062;
+  cam.goalPitch = Math.max(-0.04, Math.min(1.18, cam.goalPitch + dy * 0.0052));
+  cam.idleTimer = 3.5;
+});
+function endDrag(e) {
+  if (cam.dragging) {
+    cam.dragging = false;
+    try { canvas.releasePointerCapture(e.pointerId); } catch (_) {}
+  }
+}
+canvas.addEventListener("pointerup", endDrag);
+canvas.addEventListener("pointercancel", endDrag);
+
+canvas.addEventListener("wheel", e => {
+  e.preventDefault();
+  cam.goalDist = Math.max(2.4, Math.min(13.5, cam.goalDist * Math.exp(e.deltaY * 0.00085)));
+  cam.idleTimer = 2.5;
+}, { passive: false });
+
+// ============================================================================
+// 9. RENDER PIPELINE
+// ============================================================================
+// Overhead key light view-projection matrix for soft shadows
+const lightEye = [-1.4, 6.8, 2.7];
+const lightVP = M4.mul(
+  M4.ortho(-4.8, 4.8, -3.2, 3.2, 1.2, 14.5),
+  M4.lookAt(lightEye, [0.0, 0.4, -0.15], [0, 1, 0])
+);
+
+function renderShadowMap() {
+  gl.bindFramebuffer(gl.FRAMEBUFFER, shadowFBO);
+  gl.viewport(0, 0, SHADOW_SIZE, SHADOW_SIZE);
+  gl.clear(gl.DEPTH_BUFFER_BIT);
+  gl.enable(gl.DEPTH_TEST);
+  gl.depthMask(true);
+  gl.disable(gl.BLEND);
+  gl.enable(gl.CULL_FACE);
+  gl.cullFace(gl.FRONT); // Reduces shadow acne
+
+  gl.useProgram(progShadow.prog);
+  gl.uniformMatrix4fv(progShadow.u.uLightVP, false, lightVP);
+
+  for (const item of opaqueItems) {
+    if (!item.castShadow) continue;
+    gl.uniformMatrix4fv(progShadow.u.uModel, false, item.model);
+    gl.bindVertexArray(item.mesh.vao);
+    gl.drawElements(gl.TRIANGLES, item.mesh.count, item.mesh.type, 0);
+  }
+  gl.cullFace(gl.BACK);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+}
+
+// Static shadow map needs only 1 initial render since all shadow casters are rigid!
+renderShadowMap();
+
+let lastTime = performance.now();
+
+function frame(now) {
+  const dt = Math.min((now - lastTime) * 0.001, 0.05);
+  lastTime = now;
+  const t = now * 0.001;
+
+  resizeBuffers();
+
+  // Camera smooth orbit & damping
+  if (!cam.dragging) {
+    if (cam.idleTimer > 0) {
+      cam.idleTimer = Math.max(0, cam.idleTimer - dt);
+    } else if (cam.autoOrbit) {
+      cam.goalYaw += dt * 0.145; // Graceful slow continuous orbit
+    }
+  }
+  const damp = 1 - Math.exp(-dt * 7.5);
+  cam.yaw   += (cam.goalYaw - cam.yaw) * damp;
+  cam.pitch += (cam.goalPitch - cam.pitch) * damp;
+  cam.dist  += (cam.goalDist - cam.dist) * damp;
+  cam.target[0] += (cam.goalTarget[0] - cam.target[0]) * damp;
+  cam.target[1] += (cam.goalTarget[1] - cam.target[1]) * damp;
+  cam.target[2] += (cam.goalTarget[2] - cam.target[2]) * damp;
+
+  const cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch);
+  const sy = Math.sin(cam.yaw),   cy = Math.cos(cam.yaw);
+  const camPos = [
+    cam.target[0] + cam.dist * cp * sy,
+    cam.target[1] + cam.dist * sp,
+    cam.target[2] + cam.dist * cp * cy
+  ];
+
+  const proj = M4.perspective(38 * Math.PI / 180, viewW / viewH, 0.1, 60.0);
+  const view = M4.lookAt(camPos, cam.target, [0, 1, 0]);
+  const viewProj = M4.mul(proj, view);
+
+  // Camera right & up vectors for billboarded atmospheric halos & embers
+  const camRight = [view[0], view[4], view[8]];
+  const camUp    = [view[1], view[5], view[9]];
+
+  // Dynamic realistic flickering element light values
+  const cFlick = 1.0 + 0.11 * Math.sin(t * 7.3) + 0.06 * Math.sin(t * 16.9) + 0.04 * Math.cos(t * 27.1);
+  const cSwayX = Math.sin(t * 3.1) * 0.045;
+  const cSwayZ = Math.cos(t * 2.6) * 0.045;
+  const carbonPos = [-2.25 + cSwayX, 1.56 + Math.sin(t * 5.2) * 0.04, 0.05 + cSwayZ];
+  const carbonCol = [3.6 * cFlick, 1.72 * cFlick, 0.36 * cFlick];
+
+  const hFlick = 1.0 + 0.055 * Math.sin(t * 13.7) + 0.035 * Math.cos(t * 29.4);
+  const hydrogenPos = [-0.75 + Math.sin(t * 6.4)*0.015, 1.44, 0.05 + Math.cos(t * 5.8)*0.015];
+  const hydrogenCol = [0.78 * hFlick, 1.65 * hFlick, 3.65 * hFlick];
+
+  const arHum = 0.97 + 0.03 * Math.sin(t * 37.0);
+  const argonA = [0.75, 0.58, 0.05];
+  const argonB = [0.75, 1.72, 0.05];
+  const argonCol = [1.85 * arHum, 1.08 * arHum, 4.45 * arHum];
+
+  const neHum = 0.97 + 0.03 * Math.sin(t * 37.0 + 1.8);
+  const neonA = [2.25, 0.58, 0.05];
+  const neonB = [2.25, 1.72, 0.05];
+  const neonCol = [4.95 * neHum, 0.88 * neHum, 0.14 * neHum];
+
+  // ==========================================================================
+  // PASS 1: Main Opaque PBR Scene into HDR FBO
+  // ==========================================================================
+  gl.bindFramebuffer(gl.FRAMEBUFFER, sceneFBO.fbo);
+  gl.viewport(0, 0, viewW, viewH);
+  gl.clearColor(0.012, 0.015, 0.022, 1.0);
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  gl.enable(gl.DEPTH_TEST);
+  gl.depthMask(true);
+  gl.disable(gl.BLEND);
+  gl.enable(gl.CULL_FACE);
+  gl.cullFace(gl.BACK);
+
+  gl.useProgram(progPBR.prog);
+  const up = progPBR.u;
+  gl.uniformMatrix4fv(up.uViewProj, false, viewProj);
+  gl.uniformMatrix4fv(up.uLightVP, false, lightVP);
+  gl.uniform3fv(up.uCamPos, camPos);
+  gl.uniform1f(up.uTime, t);
+
+  gl.uniform3fv(up.uCarbonPos, carbonPos);
+  gl.uniform3fv(up.uCarbonCol, carbonCol);
+  gl.uniform3fv(up.uHydrogenPos, hydrogenPos);
+  gl.uniform3fv(up.uHydrogenCol, hydrogenCol);
+  gl.uniform3fv(up.uArgonA, argonA);
+  gl.uniform3fv(up.uArgonB, argonB);
+  gl.uniform3fv(up.uArgonCol, argonCol);
+  gl.uniform3fv(up.uNeonA, neonA);
+  gl.uniform3fv(up.uNeonB, neonB);
+  gl.uniform3fv(up.uNeonCol, neonCol);
+
+  // Bind textures
+  gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, shadowTex);      gl.uniform1i(up.uShadowMap, 0);
+  gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, woodTex.albedo); gl.uniform1i(up.uWoodAlbedo, 1);
+  gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, woodTex.map);    gl.uniform1i(up.uWoodMap, 2);
+  gl.activeTexture(gl.TEXTURE3); gl.bindTexture(gl.TEXTURE_2D, plaqueTex);      gl.uniform1i(up.uPlaqueTex, 3);
+  gl.activeTexture(gl.TEXTURE4); gl.bindTexture(gl.TEXTURE_2D, hvFaceTex);      gl.uniform1i(up.uHVFaceTex, 4);
+
+  for (const item of opaqueItems) {
+    gl.uniformMatrix4fv(up.uModel, false, item.model);
+    gl.uniform3fv(up.uAlbedo, item.mat.albedo);
+    gl.uniform1f(up.uMetallic, item.mat.metal);
+    gl.uniform1f(up.uRoughness, item.mat.rough);
+    gl.uniform3fv(up.uEmissive, item.mat.emissive);
+    gl.uniform1i(up.uMatType, item.mat.type);
+    gl.bindVertexArray(item.mesh.vao);
+    gl.drawElements(gl.TRIANGLES, item.mesh.count, item.mesh.type, 0);
+  }
+
+  // ==========================================================================
+  // PASS 2: Volumetric Gas Discharge Plasma (Argon & Neon, Additive HDR)
+  // ==========================================================================
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.ONE, gl.ONE);
+  gl.depthMask(false);
+  gl.enable(gl.CULL_FACE);
+  gl.cullFace(gl.BACK);
+
+  gl.useProgram(progPlasma.prog);
+  gl.uniformMatrix4fv(progPlasma.u.uViewProj, false, viewProj);
+  gl.uniform3fv(progPlasma.u.uCamPos, camPos);
+  gl.uniform1f(progPlasma.u.uTime, t);
+
+  for (const pl of plasmaItems) {
+    gl.uniformMatrix4fv(progPlasma.u.uModel, false, pl.model);
+    gl.uniform1i(progPlasma.u.uGasType, pl.gasType);
+    gl.bindVertexArray(pl.mesh.vao);
+    gl.drawElements(gl.TRIANGLES, pl.mesh.count, pl.mesh.type, 0);
+  }
+
+  // ==========================================================================
+  // PASS 3: Borosilicate Glass Shells & Clear Liquids (Back then Front faces)
+  // ==========================================================================
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+  gl.useProgram(progGlass.prog);
+  const ug = progGlass.u;
+  gl.uniformMatrix4fv(ug.uViewProj, false, viewProj);
+  gl.uniform3fv(ug.uCamPos, camPos);
+  gl.uniform3fv(ug.uCarbonPos, carbonPos);
+  gl.uniform3fv(ug.uCarbonCol, carbonCol);
+  gl.uniform3fv(ug.uHydrogenPos, hydrogenPos);
+  gl.uniform3fv(ug.uHydrogenCol, hydrogenCol);
+  gl.uniform3fv(ug.uArgonA, argonA);
+  gl.uniform3fv(ug.uArgonB, argonB);
+  gl.uniform3fv(ug.uArgonCol, argonCol);
+  gl.uniform3fv(ug.uNeonA, neonA);
+  gl.uniform3fv(ug.uNeonB, neonB);
+  gl.uniform3fv(ug.uNeonCol, neonCol);
+
+  for (const passCull of [gl.FRONT, gl.BACK]) {
+    gl.cullFace(passCull);
+    for (const g of glassItems) {
+      gl.uniformMatrix4fv(ug.uModel, false, g.model);
+      gl.uniform3fv(ug.uGlassTint, g.tint);
+      gl.uniform3fv(ug.uInnerGlowTint, g.innerTint);
+      gl.uniform1f(ug.uInnerGlowAmt, g.innerAmt);
+      gl.uniform1f(ug.uOpacityBoost, g.opacityBoost);
+      gl.bindVertexArray(g.mesh.vao);
+      gl.drawElements(gl.TRIANGLES, g.mesh.count, g.mesh.type, 0);
+    }
+  }
+
+  // ==========================================================================
+  // PASS 4: True 3D Raymarched Volumetric Flames (Carbon & Hydrogen)
+  // ==========================================================================
+  gl.blendFunc(gl.ONE, gl.ONE);
+  gl.cullFace(gl.FRONT); // Render back faces of bounding volume so camera never clips inside!
+  gl.useProgram(progFlame.prog);
+  const uf = progFlame.u;
+  gl.uniformMatrix4fv(uf.uViewProj, false, viewProj);
+  gl.uniform3fv(uf.uCamPos, camPos);
+  gl.uniform1f(uf.uTime, t);
+  gl.bindVertexArray(unitCylMesh.vao);
+
+  // Carbon Flame
+  gl.uniformMatrix4fv(uf.uModel, false, carbonFlameModel);
+  gl.uniformMatrix4fv(uf.uInvModel, false, carbonFlameInv);
+  gl.uniform1i(uf.uFlameType, 0);
+  gl.drawElements(gl.TRIANGLES, unitCylMesh.count, unitCylMesh.type, 0);
+
+  // Hydrogen Flame
+  gl.uniformMatrix4fv(uf.uModel, false, hydrogenFlameModel);
+  gl.uniformMatrix4fv(uf.uInvModel, false, hydrogenFlameInv);
+  gl.uniform1i(uf.uFlameType, 1);
+  gl.drawElements(gl.TRIANGLES, unitCylMesh.count, unitCylMesh.type, 0);
+
+  // ==========================================================================
+  // PASS 5: Soft Atmospheric Glow Halos & Rising Carbon Sparks
+  // ==========================================================================
+  gl.disable(gl.CULL_FACE);
+  gl.useProgram(progHalo.prog);
+  const uh = progHalo.u;
+  gl.uniformMatrix4fv(uh.uViewProj, false, viewProj);
+  gl.uniform3fv(uh.uCamRight, camRight);
+  gl.uniform3fv(uh.uCamUp, camUp);
+  gl.bindVertexArray(haloVAO);
+
+  function drawHalo(center, sx, sy, col, power) {
+    gl.uniform3fv(uh.uCenter, center);
+    gl.uniform2f(uh.uSize, sx, sy);
+    gl.uniform3fv(uh.uColor, col);
+    gl.uniform1f(uh.uPower, power);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+  }
+
+  // Soft air-scattering glow around each luminous element
+  drawHalo(carbonPos, 0.78, 1.05, [0.24 * cFlick, 0.11 * cFlick, 0.015], 3.2);
+  drawHalo(hydrogenPos, 0.62, 0.88, [0.055 * hFlick, 0.125 * hFlick, 0.28 * hFlick], 3.4);
+  drawHalo([0.75, 1.14, 0.05], 0.76, 1.25, [0.16 * arHum, 0.095 * arHum, 0.42 * arHum], 3.0);
+  drawHalo([2.25, 1.14, 0.05], 0.80, 1.28, [0.46 * neHum, 0.075 * neHum, 0.010], 3.0);
+
+  // Rising incandescent carbon micro-sparks above Carbon flame
+  for (const sp of sparks) {
+    const life = (t * sp.speed + sp.phase) % 1.0;
+    const y = 1.45 + life * 1.38;
+    const spiral = sp.ang + life * 3.8 + Math.sin(t * 2.5 + sp.ang) * 0.6;
+    const rad = sp.rad * (0.4 + life * 2.1);
+    const px = -2.25 + Math.cos(spiral) * rad + Math.sin(t * 2.8 - life * 3.0) * 0.05;
+    const pz =  0.05 + Math.sin(spiral) * rad + Math.cos(t * 2.3 - life * 3.0) * 0.05;
+    const fade = Math.sin(life * Math.PI) * (1.0 - life * 0.45);
+    const sz = sp.size * (1.0 - life * 0.45);
+    drawHalo([px, y, pz], sz, sz, [2.6 * fade, 1.1 * fade, 0.18 * fade], 2.2);
+  }
+
+  // ==========================================================================
+  // PASS 6: Multi-Scale HDR Bloom (Extract + 3-Mip Separable Gaussian Blur)
+  // ==========================================================================
+  gl.disable(gl.DEPTH_TEST);
+  gl.disable(gl.BLEND);
+  gl.bindVertexArray(fsqVAO);
+
+  // Bright extraction into bloomA[0]
+  gl.bindFramebuffer(gl.FRAMEBUFFER, bloomA[0].fbo);
+  gl.viewport(0, 0, bloomA[0].w, bloomA[0].h);
+  gl.useProgram(progBright.prog);
+  gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(gl.TEXTURE_2D, sceneFBO.tex);
+  gl.uniform1i(progBright.u.uTex, 0);
+  gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+  // Separable Gaussian Blur across 3 progressive mip levels
+  gl.useProgram(progBlur.prog);
+  gl.uniform1i(progBlur.u.uTex, 0);
+  for (let i = 0; i < 3; i++) {
+    const srcTex = i === 0 ? bloomA[0].tex : bloomA[i - 1].tex;
+    const w = bloomA[i].w, h = bloomA[i].h;
+    // Horizontal pass -> bloomB[i]
+    gl.bindFramebuffer(gl.FRAMEBUFFER, bloomB[i].fbo);
+    gl.viewport(0, 0, w, h);
+    gl.bindTexture(gl.TEXTURE_2D, srcTex);
+    gl.uniform2f(progBlur.u.uDir, 1.0 / w, 0.0);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    // Vertical pass -> bloomA[i]
+    gl.bindFramebuffer(gl.FRAMEBUFFER, bloomA[i].fbo);
+    gl.bindTexture(gl.TEXTURE_2D, bloomB[i].tex);
+    gl.uniform2f(progBlur.u.uDir, 0.0, 1.0 / h);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+  }
+
+  // ==========================================================================
+  // PASS 7: ACES Filmic Tone Mapping & Final Screen Output
+  // ==========================================================================
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  gl.viewport(0, 0, viewW, viewH);
+  gl.useProgram(progComposite.prog);
+  gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, sceneFBO.tex);  gl.uniform1i(progComposite.u.uScene, 0);
+  gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, bloomA[0].tex); gl.uniform1i(progComposite.u.uBloom1, 1);
+  gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, bloomA[1].tex); gl.uniform1i(progComposite.u.uBloom2, 2);
+  gl.activeTexture(gl.TEXTURE3); gl.bindTexture(gl.TEXTURE_2D, bloomA[2].tex); gl.uniform1i(progComposite.u.uBloom3, 3);
+  gl.uniform1f(progComposite.u.uExposure, 1.12);
+  gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+  gl.depthMask(true);
+  requestAnimationFrame(frame);
+}
+
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

@@ -2,7 +2,8 @@
 """Borda 4/3/2/1 tally for the Neon round -> judge-neon/scores.json (same shape as judge4/scores.json)."""
 import json, os
 B = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-T = ['water', 'globe', 'store', 'city', 'blackhole']; M = ['neon', 'hydrogen', 'sonnet', 'sol']
+DEMO = os.environ.get('DEMO') == '1'
+T = ['ski', 'turing', 'labbench'] if DEMO else ['water', 'globe', 'store', 'city', 'blackhole']; M = ['neon', 'hydrogen', 'sonnet', 'sol']
 rounds = {}; tot = {m: 0 for m in M}; nos = {m: 0 for m in M}; ballots = 0; selffirst = 0
 first = {m: 0 for m in M}; missing = []
 for t in T:
@@ -17,5 +18,5 @@ for t in T:
         first[v['models'][0]] += 1
         if v['models'][0] == j: selffirst += 1
 out = {'rounds': rounds, 'total': tot, 'total_excluding_self': nos, 'ballots': ballots, 'self_first_votes': selffirst, 'first_votes': first, 'missing': missing}
-json.dump(out, open(f'{B}/judge-neon/scores.json', 'w'), indent=1)
+json.dump(out, open(f'{B}/judge-neon/' + ('scores-demo.json' if DEMO else 'scores.json'), 'w'), indent=1)
 print(json.dumps(out, ensure_ascii=False))

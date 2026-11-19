@@ -1,0 +1,3 @@
+Build a photorealistic 3D lab bench scene in WebGL2 that represents four AI model names as elements: two Bunsen burner flames stand for Carbon and Hydrogen, and two high-voltage gas discharge tubes glowing in their real emission colors stand for Argon and Neon. Use realistic glass, metal and wood materials, soft shadows, flame and glow effects, and a slowly orbiting camera the user can drag to orbit.
+
+Save the result as one self-contained file named index.html in the current directory. Use raw WebGL2 only, no external libraries or network requests. Do it in one go, do not ask questions.

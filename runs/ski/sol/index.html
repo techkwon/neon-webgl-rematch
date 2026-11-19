@@ -1,0 +1,1292 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>White Line — Chamonix Freeride</title>
+<link rel="icon" href="data:,">
+<style>
+  :root {
+    --snow: #f6f9fa;
+    --ink: #101a1a;
+    --accent: #e5ff75;
+    --line: #eff8ff42;
+    --mono: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #233c53; color: var(--snow); }
+  body { font-family: "Helvetica Neue", Arial, sans-serif; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 5px; }
+  [hidden] { display: none !important; }
+  #view, .shade, .intro, .hud { position: absolute; inset: 0; width: 100%; height: 100%; }
+  #view { display: block; }
+  .shade { pointer-events: none; background: linear-gradient(180deg,#0b203549,transparent 20%,transparent 79%,#0b1b32a9); }
+  body[data-mode="menu"] .shade, body[data-mode="loading"] .shade {
+    background: linear-gradient(90deg,#071727da 0%,#0a1d31a0 32%,#0a1d3132 57%, transparent 82%),
+                linear-gradient(0deg,#061624cb 0%,transparent 29%,transparent 87%,#0b1f3d36 100%);
+  }
+  .intro { padding: clamp(19px, 4vw, 65px); display: grid; grid-template-rows: auto 1fr auto; }
+  .mast { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+  .mark { display: flex; align-items: center; gap: 12px; font-weight: 800; letter-spacing: .12em; font-size: 13px; }
+  .mark i { display: block; width: 27px; height: 24px; background: var(--accent); clip-path: polygon(0 92%,44% 5%,64% 45%,76% 22%,100% 92%,80% 92%,72% 66%,61% 82%,45% 48%,22% 92%); }
+  .mast small, .eyebrow, .key-caption, .measure span, .location, .signal { font: 650 11px/1.3 var(--mono); letter-spacing: .12em; text-transform: uppercase; }
+  .mast small { border-top: 1px solid var(--line); padding-top: 8px; text-shadow: 0 1px 8px #132d4e; }
+  .hero { align-self: center; margin-top: -1.5vh; width: max-content; max-width: 100%; }
+  .eyebrow { color: var(--accent); display: flex; align-items: center; gap: 10px; }
+  .eyebrow::before { content: ""; width: 22px; height: 1px; background: currentColor; }
+  h1 { margin: .15em 0 .13em -.063em; font-size: clamp(75px, 12.7vw, 179px); line-height: .77; letter-spacing: -.045em; font-weight: 900; font-stretch: condensed; }
+  h1 span { display: block; }
+  h1 span + span { color: var(--accent); }
+  .desc { margin: 25px 0 26px; font-size: clamp(14px, 1.4vw, 19px); color: #f1f6fa; font-weight: 500; }
+  .launch { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  #start-btn { display: inline-flex; align-items: center; justify-content: space-between; width: 207px; gap: 16px; border: 0; padding: 15px 18px; background: var(--accent); color: var(--ink); font-weight: 850; transition: background .16s, transform .16s; }
+  #start-btn:hover { background: #f4ffbf; transform: translateY(-2px); }
+  #start-btn:disabled { cursor: wait; opacity: .65; }
+  #start-btn b { font-size: 19px; line-height: 1; }
+  .sound-note { color: #d4e1ec; font-size: 12px; }
+  .controls { display: flex; gap: clamp(13px, 3vw, 42px); align-items: center; flex-wrap: wrap; padding: 15px 0 0; border-top: 1px solid var(--line); width: max-content; max-width: 100%; }
+  .control { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+  kbd { display: inline-block; min-width: 24px; padding: 4px 5px; text-align: center; border: 1px solid #d5e8f68c; color: #fff; font: 650 11px/1.15 var(--mono); }
+  .key-caption { font-size: 10px; color: #e1e9ef; letter-spacing: .06em; }
+  .hud { pointer-events: none; padding: clamp(16px,3vw,44px); display: flex; flex-direction: column; justify-content: space-between; text-shadow: 0 1px 6px #13283a, 0 1px 15px #112336; }
+  .hud button { pointer-events: auto; }
+  .hud-top, .hud-base { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  .location { padding: 4px 0 4px 11px; border-left: 2px solid var(--accent); }
+  .location strong { display: block; margin-bottom: 4px; font: 850 17px/1 "Helvetica Neue", Arial, sans-serif; letter-spacing: -.02em; text-transform: none; }
+  .hud-tools { display: flex; gap: 6px; }
+  .tool { border: 1px solid var(--line); background: #10283f57; padding: 9px 12px; font: 650 10px/1 var(--mono); letter-spacing: .05em; }
+  .tool:hover { background: #10283fb0; }
+  .heading { position: absolute; left: 50%; top: clamp(18px,3vw,43px); transform: translateX(-50%); width: 124px; text-align: center; font: 750 11px/1 var(--mono); letter-spacing: .12em; }
+  .heading i { display: block; background: repeating-linear-gradient(90deg,#e7f3ff82 0 1px,transparent 1px 12px); -webkit-mask-image: linear-gradient(90deg,transparent,#000 26% 74%,transparent); mask-image: linear-gradient(90deg,transparent,#000 26% 74%,transparent); margin-bottom: 8px; height: 6px; }
+  .heading i::after { content: ""; display: block; background: var(--accent); margin: auto; width: 2px; height: 100%; }
+  .hud-base { align-items: flex-end; }
+  .measure { display: flex; flex-direction: column; gap: 5px; }
+  .measure strong { font-size: clamp(32px,5vw,68px); line-height: .85; letter-spacing: -.08em; font-weight: 820; font-variant-numeric: tabular-nums; }
+  .measure strong small { font-size: .28em; letter-spacing: 0; margin-left: 5px; }
+  .measure span { color: #edf6fc; }
+  .measure:last-child { align-items: end; }
+  .signal { position: absolute; left: 50%; top: clamp(50px,6vw,92px); transform: translateX(-50%); padding: 8px 13px; background: #142b41c9; border-top: 2px solid var(--accent); text-align: center; max-width: min(48vw,410px); font-size: 10px; letter-spacing: .06em; line-height: 1.45; }
+  .signal.danger { border-color: #ff905e; color: #fff2e7; }
+  .signal b { color: var(--accent); }
+  .pause { position: absolute; inset: 0; display: grid; place-items: center; background: #0817289c; }
+  .pause-content { display: grid; gap: 14px; width: min(350px,86vw); }
+  .pause h2 { margin: 0 0 6px; font-size: 48px; line-height: .9; letter-spacing: -.075em; }
+  .pause p { margin: 0 0 6px; color: #dbe9f4; line-height: 1.5; font-size: 14px; }
+  .pause button { border: 1px solid var(--line); padding: 13px 15px; text-align: left; background: #0c233db0; font-weight: 750; }
+  .pause button:first-of-type { color: var(--ink); background: var(--accent); border-color: var(--accent); }
+  .error { position: absolute; bottom: 16px; left: 16px; right: 16px; padding: 12px; background: #402528; color: #fff; font-size: 14px; }
+  @media (max-width: 620px) {
+    .mast small { font-size: 8px; }
+    .intro { padding: 20px; }
+    .controls { gap: 9px 13px; }
+    .control { gap: 5px; }
+    .key-caption { font-size: 9px; }
+    .location strong { font-size: 13px; }
+    .location { font-size: 9px; }
+    .heading { display: none; }
+    .signal { top: 60px; max-width: 79vw; }
+    .hud-tools { gap: 4px; }
+    .tool { padding: 7px 8px; }
+  }
+  @media (max-height: 530px) {
+    h1 { font-size: clamp(55px,17vh,91px); }
+    .desc { margin: 14px 0; }
+    .intro { padding-top: 12px; padding-bottom: 12px; }
+    .controls { padding-top: 8px; }
+    #start-btn { padding-block: 9px; }
+  }
+</style>
+</head>
+<body data-mode="loading">
+<canvas id="view" aria-label="First-person alpine ski terrain"></canvas>
+<div class="shade"></div>
+<main class="intro" id="intro" aria-label="White Line start screen">
+  <div class="mast">
+    <div class="mark"><i aria-hidden="true"></i> WHITE LINE</div>
+    <small>CHAMONIX VALLEY · FRENCH ALPS</small>
+  </div>
+  <div class="hero">
+    <div class="eyebrow">Mont Blanc massif</div>
+    <h1><span>WHITE</span><span>LINE.</span></h1>
+    <p class="desc">First-person freeride ski simulator</p>
+    <div class="launch">
+      <button id="start-btn" disabled><span>Start descent</span><b aria-hidden="true">↗</b></button>
+      <span class="sound-note" id="sound-note">Starts spatial audio · Headphones recommended</span>
+    </div>
+  </div>
+  <div class="controls" aria-label="Game controls">
+    <div class="control"><kbd>A</kbd><kbd>D</kbd><span class="key-caption">Carve</span></div>
+    <div class="control"><kbd>W</kbd><span class="key-caption">Tuck</span></div>
+    <div class="control"><kbd>S</kbd><span class="key-caption">Brake</span></div>
+    <div class="control"><kbd>SPACE</kbd><span class="key-caption">Jump</span></div>
+    <div class="control"><kbd>MOUSE</kbd><span class="key-caption">Look / drag</span></div>
+    <div class="control"><kbd>C</kbd><span class="key-caption">Load slab</span></div>
+    <div class="control"><kbd>R</kbd><span class="key-caption">Restart</span></div>
+  </div>
+</main>
+<div class="hud" id="hud" hidden>
+  <div class="hud-top">
+    <div class="location"><strong>White Line</strong>Chamonix · Mont Blanc</div>
+    <div class="heading"><i></i><span id="heading">135° SE</span></div>
+    <div class="hud-tools">
+      <button id="mute-btn" class="tool" aria-pressed="false">SOUND ON</button>
+      <button id="pause-btn" class="tool" aria-label="Pause">II</button>
+    </div>
+  </div>
+  <div class="hud-base">
+    <div class="measure"><span>Altitude</span><strong><b id="alt">3480</b><small>m</small></strong></div>
+    <div class="measure"><span id="stance">Speed</span><strong><b id="speed">00</b><small>km/h</small></strong></div>
+  </div>
+  <div class="signal" id="signal"></div>
+</div>
+<div class="pause" id="pause" hidden>
+  <div class="pause-content">
+    <h2 id="pause-title">Paused</h2>
+    <p id="pause-copy">Resume to capture the mouse. Press Escape to pause and M to toggle audio.</p>
+    <button id="resume-btn">Resume descent ↗</button>
+    <button id="restart-btn">Restart from the ridge</button>
+  </div>
+</div>
+<div class="error" id="error" role="alert" hidden></div>
+<script>
+"use strict";
+(() => {
+  const byId = id => document.getElementById(id);
+  const canvas = byId("view");
+  const gl = canvas.getContext("webgl2", { alpha: false, antialias: false, powerPreference: "high-performance" });
+  const status = byId("error");
+  function fail(message) {
+    status.hidden = false;
+    status.textContent = message;
+    byId("start-btn").disabled = true;
+  }
+  if (!gl) {
+    fail("WebGL2 is unavailable. Open this file in a browser with hardware acceleration enabled.");
+    return;
+  }
+
+  const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
+  const mix = (a, b, t) => a + (b - a) * t;
+  const smooth = (a, b, n) => { const t = clamp((n - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+  const TAU = Math.PI * 2;
+  const randomHash = (x, z) => {
+    let n = Math.imul(x | 0, 374761393) + Math.imul(z | 0, 668265263) | 0;
+    n = Math.imul(n ^ (n >>> 13), 1274126177);
+    return ((n ^ (n >>> 16)) >>> 0) / 4294967296;
+  };
+  function noise(x, z) {
+    const ix = Math.floor(x), iz = Math.floor(z);
+    const a = smooth(0, 1, x - ix), b = smooth(0, 1, z - iz);
+    return mix(mix(randomHash(ix, iz), randomHash(ix + 1, iz), a),
+               mix(randomHash(ix, iz + 1), randomHash(ix + 1, iz + 1), a), b);
+  }
+
+  // Sculpted massifs and cirques, with a narrow Chamonix-style glacial valley.
+  const peaks = [
+    [-575, 345, 1020, 750, 1090, 1.22], [-939, 920, 1480, 950, 1550, 1.16],
+    [-1570, 1580, 1710, 1220, 1560, 1.22], [-2050, 2720, 1920, 1510, 1720, 1.19],
+    [550, 1050, 1050, 655, 1050, 1.35], [885, 1565, 1440, 850, 1220, 1.11],
+    [1390, 2050, 2040, 1150, 1460, 1.12], [2190, 2630, 2440, 1470, 1770, 1.19],
+    [1430, 5490, 3725, 1940, 2080, 1.20, true], [1890, 3860, 2770, 1430, 1670, 1.09],
+    [480, 4210, 2420, 1250, 1600, 1.15], [-670, 4330, 2120, 1250, 1840, 1.13],
+    [-2350, 4840, 2400, 1730, 1770, 1.08], [3300, 4780, 2630, 1810, 1910, 1.20],
+    [1700, 6420, 2520, 2210, 2320, 1.26], [-320, 7090, 2440, 1530, 1820, 1.18],
+    [-3020, 7060, 2280, 1840, 2380, 1.21], [4170, 6880, 2410, 2160, 2360, 1.17],
+    [-1310, -2760, 1950, 1750, 1880, 1.21], [940, -2130, 1780, 1510, 1480, 1.16],
+    [-3820, -1730, 2260, 2170, 2020, 1.13], [3570, -230, 2170, 2150, 2350, 1.18]
+  ];
+  for (let i = 0; i < 24; i++) {
+    const a = TAU * (i + .44) / 24;
+    const r = 8050 + 2250 * randomHash(i, 312);
+    peaks.push([Math.cos(a) * r, Math.sin(a) * r, 1600 + 1800 * randomHash(i, 88),
+                1900 + 1000 * randomHash(i, 81), 2000 + 1400 * randomHash(i, 19), 1.13]);
+  }
+  function fallLine(z) { return 34 * Math.sin(z * .0031) + .041 * z; }
+  function sculpt(x, z) {
+    const west = (noise(x / 640 + 31, z / 640) - .5) * 162;
+    const north = (noise(x / 750, z / 750 + 27) - .5) * 162;
+    let mountain = 0;
+    for (const [px, pz, tall, rx, rz, tip, dome] of peaks) {
+      const dx = (x - px + west) / rx, dz = (z - pz + north) / rz;
+      if (Math.abs(dx) >= 1 || Math.abs(dz) >= 1) continue;
+      const r = Math.sqrt(dx * dx + dz * dz);
+      if (r >= 1) continue;
+      const profile = dome ? (Math.sqrt(r*r+.026)-.161245)/.85167 : r;
+      const crown = Math.pow(Math.max(0, 1 - profile), tip) * tall;
+      const spur = 1 + .19 * Math.cos(5 * Math.atan2(dz, dx) + 2.1 * r) * smooth(0, .36, r);
+      mountain = Math.max(mountain, crown * spur);
+    }
+    const stone = smooth(50, 760, mountain);
+    const folds = (noise(x / 230, z / 230) - .5) * 197 + (noise(x / 106 + 40, z / 106) - .5) * 87;
+    const fractures = (noise(x / 44 + z / 125, z / 52) - .5) * 37 + (noise(x / 19, z / 23) - .5) * 11;
+    const valley = 1025 + mountain + stone * (folds + fractures) + 26 * noise(x / 470, z / 615);
+    const offset = x - fallLine(z), wide = 315 + 130 * smooth(740, 1510, z);
+    const apron = Math.exp(-Math.pow(Math.abs(offset) / wide, 2.5));
+    const descent = 3508 - .55 * z - 7.5 * Math.sin(z / 34) - 12 * Math.sin(z / 97)
+                  - 435 * smooth(206, 1690, z) - 560 * smooth(1290, 2240, z);
+    const rolls = 6.2 * (noise(x / 55, z / 75) - .5)
+                + 2.1 * Math.sin(x * .054 + z * .043)
+                + 1.1 * Math.sin(z * .18 + x * .099) + .82 * Math.sin(z * .097 - x * .12);
+    const slabFace = 14 * Math.exp(-((offset - 44) ** 2) / 4200 - ((z - 128) ** 2) / 5700);
+    const gully = (descent + rolls + slabFace + Math.min(152, offset * offset * .00155) - valley) * apron;
+    return valley + Math.max(0, gully) * (1 - smooth(2150, 2480, z))
+         + 1950 * Math.exp(-((z + 580) ** 2) / 425000 - ((x + 145) ** 2) / 870000) * (1 - apron);
+  }
+
+  const DETAIL = 4, COARSE = 20, EDGE_X = 800, LOW_Z = -600, HIGH_Z = 2400, OUTER = 12000;
+  const surfaceWidth = EDGE_X * 2 / DETAIL + 1;
+  const surface = new Float32Array(surfaceWidth * ((HIGH_Z - LOW_Z) / DETAIL + 1));
+  function worldHeight(x, z) {
+    if (Math.abs(x) === EDGE_X && z >= LOW_Z && z <= HIGH_Z) {
+      const edge = Math.floor(z / COARSE) * COARSE;
+      return mix(sculpt(x, edge), sculpt(x, edge + COARSE), (z - edge) / COARSE);
+    }
+    if ((z === LOW_Z || z === HIGH_Z) && Math.abs(x) <= EDGE_X) {
+      const edge = Math.floor(x / COARSE) * COARSE;
+      return mix(sculpt(edge, z), sculpt(edge + COARSE, z), (x - edge) / COARSE);
+    }
+    return sculpt(x, z);
+  }
+  function ground(x, z) {
+    const u = (x + EDGE_X) / DETAIL, v = (z - LOW_Z) / DETAIL;
+    if (u < 0 || u >= surfaceWidth - 1 || v < 0 || z >= HIGH_Z) return sculpt(x, z);
+    const ix = Math.floor(u), iz = Math.floor(v), a = u - ix, b = v - iz;
+    const i = iz * surfaceWidth + ix;
+    const A = surface[i], B = surface[i + 1], C = surface[i + surfaceWidth], D = surface[i + surfaceWidth + 1];
+    return a + b <= 1 ? A + (B - A) * a + (C - A) * b : D + (C - D) * (1 - a) + (B - D) * (1 - b);
+  }
+
+  const shaders = {};
+  const glsl = `#version 300 es
+  precision highp float;
+  `;
+  function program(name, vertex, fragment) {
+    function compile(type, code) {
+      const shader = gl.createShader(type);
+      gl.shaderSource(shader, glsl + code);
+      gl.compileShader(shader);
+      if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) throw Error(name + ": " + gl.getShaderInfoLog(shader));
+      return shader;
+    }
+    const p = gl.createProgram();
+    const vs = compile(gl.VERTEX_SHADER, vertex), fs = compile(gl.FRAGMENT_SHADER, fragment);
+    gl.attachShader(p, vs); gl.attachShader(p, fs); gl.linkProgram(p);
+    gl.deleteShader(vs); gl.deleteShader(fs);
+    if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw Error(name + ": " + gl.getProgramInfoLog(p));
+    const uniforms = {};
+    for (let i = 0; i < gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS); i++) {
+      const label = gl.getActiveUniform(p, i).name;
+      uniforms[label] = gl.getUniformLocation(p, label);
+    }
+    shaders[name] = { p, uniforms };
+  }
+  const projection = `
+    uniform vec3 uEye, uRight, uUp, uForward;
+    uniform vec2 uLens;
+    vec4 project(vec3 p) {
+      vec3 d = p-uEye;
+      float z = dot(d,uForward);
+      return vec4(dot(d,uRight)*uLens.x,dot(d,uUp)*uLens.y,z*1.000029-.560008,z);
+    }
+  `;
+  const sun = `
+    const vec3 SUN = vec3(-.613,.602,.512);
+    const vec3 HAZE = vec3(.64,.77,.89);
+    float hash(vec2 p) {
+      vec3 q = fract(vec3(p.xyx)*.1031);
+      q += dot(q,q.yzx+33.33);
+      return fract((q.x+q.y)*q.z);
+    }
+    float noise(vec2 p) {
+      vec2 i=floor(p), f=fract(p);
+      f=f*f*(3.-2.*f);
+      return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),
+                 mix(hash(i+vec2(0,1)),hash(i+1.),f.x),f.y);
+    }
+    vec3 air(vec3 color, float dist, vec3 ray) {
+      float mist=1.-exp(-dist*.000133);
+      vec3 haze=HAZE+vec3(.099,.055,.016)*pow(max(dot(ray,SUN),0.),9.);
+      return mix(color,haze,mist*.93);
+    }
+  `;
+  const fullScreen = `
+    out vec2 vClip;
+    void main() {
+      vec2 p=vec2(float((gl_VertexID<<1)&2),float(gl_VertexID&2))*2.-1.;
+      vClip=p;
+      gl_Position=vec4(p,0.,1.);
+    }
+  `;
+
+  function makeShaders() {
+    program("sky", fullScreen, projection + sun + `
+      in vec2 vClip;
+      uniform float uTime;
+      out vec4 frag;
+      void main() {
+        vec3 rd=normalize(uForward+vClip.x*uRight/uLens.x+vClip.y*uUp/uLens.y);
+        float y=max(0.,rd.y);
+        vec3 color=mix(vec3(.74,.84,.93),vec3(.14,.35,.58),pow(smoothstep(-.04,.86,y),.55));
+        float sunAngle=max(0.,dot(rd,SUN));
+        color+=vec3(.32,.22,.11)*pow(sunAngle,17.);
+        color+=vec3(1.,.86,.61)*smoothstep(.99942,.99974,sunAngle);
+        vec2 p=rd.xz/max(.055,y+.075)*vec2(1.25,2.12)+vec2(5.42+uTime*.006,7.5);
+        float n=noise(p)*.53+noise(p*2.2)*.26+noise(p*4.9)*.14+noise(p*11.)*.07;
+        float cloud=smoothstep(.46,.72,n)*smoothstep(.025,.22,y);
+        color=mix(color,mix(vec3(.84,.89,.94),vec3(1.,.97,.91),smoothstep(.48,.76,n)),cloud*.85);
+        color+=(hash(gl_FragCoord.xy)-.5)*.006;
+        frag=vec4(color,1.);
+      }
+    `);
+
+    program("terrain", projection + `
+      layout(location=0) in vec3 aPos;
+      layout(location=1) in vec3 aNormal;
+      out vec3 world, normal;
+      void main() {
+        world=aPos; normal=aNormal;
+        gl_Position=project(aPos);
+      }
+    `, sun + `
+      uniform vec3 uEye;
+      uniform vec2 uSlab;
+      in vec3 world, normal;
+      out vec4 frag;
+      void main() {
+        vec3 ray=world-uEye;
+        float dist=length(ray);
+        vec2 p=world.xz;
+        float layer=noise(p*.018)+.44*noise(p*.044);
+        float fine=noise(p*.28);
+        float tooth=noise(vec2(p.x*.058+world.y*.064,p.y*.085-world.y*.015));
+        vec3 n=normalize(normal+vec3(tooth-.5,0.,fine-.5)*.18);
+        float snow=smoothstep(.37,.78,n.y+(layer-.66)*.25+(tooth-.5)*.25);
+        snow*=smoothstep(1125.,1590.,world.y+layer*120.);
+        float glacier=(1.-smoothstep(.21,1.02,length((p-vec2(1430.,5490.))/vec2(980.,1310.))))
+                      *smoothstep(3230.,4230.,world.y);
+        snow=max(snow,glacier*.96);
+        float drift=sin(p.x*.575+p.y*.81+6.*noise(p*.12));
+        float weave=sin(p.x*4.7-p.y*3.5+7.*fine);
+        float granular= (fine-.5)*.038 + (drift*.016+weave*.008)*(1.-smoothstep(48.,174.,dist));
+        float light=max(0.,dot(n,SUN));
+        vec3 snowColor=mix(vec3(.48,.63,.80),vec3(1.,.985,.931),smoothstep(-.12,.93,dot(n,SUN)));
+        snowColor+=granular+(layer-.68)*.045;
+        float sparkle=step(.997,hash(floor(p*29.)))*pow(light,.5)*(1.-smoothstep(10.,31.,dist));
+        snowColor+=vec3(.17,.16,.12)*sparkle;
+        float strata=noise(vec2(world.y*.15+p.x*.019,p.y*.049));
+        vec3 rock=mix(vec3(.23,.29,.36),vec3(.49,.44,.40), clamp(light*.8+tooth*.36,0.,1.));
+        rock*=.8+layer*.20+strata*.18;
+        vec3 earth=mix(vec3(.14,.22,.23),vec3(.36,.44,.39),light*.73+layer*.15);
+        rock=mix(earth,rock,smoothstep(1150.,1600.,world.y));
+        vec3 color=mix(rock,snowColor,snow);
+        // A shallow basin retains a visible, stable bed surface after release.
+        float t=clamp((world.z-48.)/450.,0.,1.);
+        float center=46.+world.z*.08;
+        float width=mix(26.,82.,t);
+        float crown=60.+pow((p.x-center)/29.,2.)*23.+sin(p.x*.21)*2.;
+        float scar=step(crown,p.y)*(1.-smoothstep(uSlab.y-7.,uSlab.y+15.,p.y))
+                   *(1.-smoothstep(width*.78,width,abs(p.x-center)))*uSlab.x;
+        color=mix(color,vec3(.55,.69,.79)+layer*.085,scar*.48);
+        float rim=(1.-smoothstep(.3,1.8,abs(p.y-crown)))*(1.-smoothstep(26.,31.,abs(p.x-center)));
+        color=mix(color,vec3(.38,.54,.67),rim*uSlab.x*.72);
+        frag=vec4(air(color,dist,ray/max(dist,1.)),1.);
+      }
+    `);
+
+    program("ink", projection + `
+      layout(location=0) in vec3 aPos;
+      layout(location=1) in vec4 aColor;
+      out vec3 world;
+      out vec4 color;
+      void main() { world=aPos; color=aColor; gl_Position=project(aPos); }
+    `, sun + `
+      in vec3 world;
+      in vec4 color;
+      uniform vec3 uEye;
+      out vec4 frag;
+      void main() {
+        vec3 d=world-uEye;
+        float dist=max(1.,length(d));
+        frag=vec4(air(color.rgb,dist,d/dist),color.a);
+      }
+    `);
+
+    program("powder", projection + `
+      layout(location=0) in vec3 aPos;
+      layout(location=1) in vec4 aCloud;
+      uniform float uPixels, uMaxPoint;
+      out vec4 cloud;
+      out vec3 world;
+      void main() {
+        world=aPos; cloud=aCloud;
+        gl_Position=project(aPos);
+        gl_PointSize=clamp(aCloud.x*uPixels/max(1.,gl_Position.w),1.,uMaxPoint);
+      }
+    `, sun + `
+      in vec3 world;
+      in vec4 cloud;
+      uniform vec3 uEye;
+      out vec4 frag;
+      void main() {
+        vec2 p=gl_PointCoord*2.-1.;
+        float r=dot(p,p);
+        float lobes=noise(p*3.+cloud.z)*.58+noise(p*7.-cloud.z)*.24;
+        float soft=(1.-smoothstep(.04,1.,r+lobes*.36))*cloud.y;
+        if(soft<.008) discard;
+        vec3 d=world-uEye;
+        float dist=max(1.,length(d));
+        vec3 color=mix(vec3(.62,.74,.85),vec3(.98,.99,1.),smoothstep(-.6,.9,-p.y-p.x*.25+lobes+cloud.w-.4));
+        frag=vec4(air(color,dist,d/dist),soft);
+      }
+    `);
+
+    program("skis", fullScreen, `
+      in vec2 vClip;
+      uniform float uAspect, uEdge, uTuck, uHop, uLook, uPitch, uTime;
+      out vec4 frag;
+      float ski(vec2 p, float side, float lean) {
+        float center=side*mix(.153,.111,clamp(p.y*4.,0.,1.));
+        float x=p.x-center-lean*p.y*1.3+side*.013*p.y;
+        float cap=.207-36.*x*x;
+        float width=mix(.039,.024,smoothstep(.00,.21,p.y));
+        return min(width-abs(x),min(cap-p.y,p.y+.055));
+      }
+      void main() {
+        vec2 p=vec2(vClip.x*uAspect*.39,vClip.y*.5+.5);
+        p.x+=uLook*.34;
+        p.y+=abs(uLook)*.22+uPitch*.28;
+        p.y+=uTuck*.027-uHop*.03+.004*sin(uTime*13.)+p.x*uEdge*.14;
+        float a=ski(p,-1.,uEdge), b=ski(p,1.,uEdge);
+        float shape=max(a,b);
+        float alpha=smoothstep(-.0015,.0015,shape)*(.94-smoothstep(.85,1.3,abs(uLook))*.94);
+        if(alpha<.01) discard;
+        vec3 c=mix(vec3(.093,.136,.151),vec3(.78,.94,.30),smoothstep(.058,.18,p.y));
+        c=mix(c,vec3(.76,.89,.91),1.-smoothstep(.002,.006,shape));
+        c=mix(c,vec3(.13,.22,.24),smoothstep(.004,.009,shape)*smoothstep(.0,.012,abs(mod(p.y+p.x*.6,.056)-.021))*.4);
+        frag=vec4(c,alpha);
+      }
+    `);
+  }
+
+  const tiles = [];
+  const trees = [];
+  const markers = [];
+  function makeTile(x, z, width, length, step) {
+    const nx = width / step, nz = length / step, row = nx + 1;
+    const padded = nx + 3;
+    const heights = new Float32Array(padded * (nz + 3));
+    function sample(X, Z) {
+      if (step === COARSE && Math.abs(X) <= 4000 && Z >= -4000 && Z <= 4000
+          && (Math.abs(X) === 4000 || Math.abs(Z) === 4000)) {
+        const edge = Math.floor((Math.abs(X) === 4000 ? Z : X) / 80) * 80;
+        return Math.abs(X) === 4000
+          ? mix(sculpt(X, edge), sculpt(X, edge + 80), (Z - edge) / 80)
+          : mix(sculpt(edge, Z), sculpt(edge + 80, Z), (X - edge) / 80);
+      }
+      return worldHeight(X, Z);
+    }
+    for (let j = -1; j <= nz + 1; j++) {
+      for (let i = -1; i <= nx + 1; i++) {
+        heights[(j + 1) * padded + i + 1] = sample(x + step * i, z + step * j);
+      }
+    }
+    const vertices = new Float32Array(row * (nz + 1) * 6);
+    const indices = new Uint16Array(nx * nz * 6);
+    let n = 0, e = 0;
+    for (let j = 0; j <= nz; j++) {
+      for (let i = 0; i <= nx; i++) {
+        const X = x + step * i, Z = z + step * j;
+        const h = (j + 1) * padded + i + 1, Y = heights[h];
+        const dx = (heights[h - 1] - heights[h + 1]) / (step * 2);
+        const dz = (heights[h - padded] - heights[h + padded]) / (step * 2);
+        const q = 1 / Math.hypot(dx, 1, dz);
+        vertices[n++] = X; vertices[n++] = Y; vertices[n++] = Z;
+        vertices[n++] = dx * q; vertices[n++] = q; vertices[n++] = dz * q;
+        if (step === DETAIL) surface[(Z - LOW_Z) / DETAIL * surfaceWidth + (X + EDGE_X) / DETAIL] = Y;
+        if (i === nx || j === nz) continue;
+        const a = j * row + i, b = a + 1, c = a + row, d = c + 1;
+        indices[e++] = a; indices[e++] = c; indices[e++] = b;
+        indices[e++] = b; indices[e++] = c; indices[e++] = d;
+      }
+    }
+    const vao = gl.createVertexArray();
+    gl.bindVertexArray(vao);
+    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+    gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+    attribute(0, 3, 6, 0);
+    attribute(1, 3, 6, 3);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, gl.createBuffer());
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STATIC_DRAW);
+    tiles.push({ vao, count: indices.length, x: x + width / 2, z: z + length / 2, radius: Math.hypot(width, length) / 2 });
+  }
+  function attribute(index, size, stride, offset) {
+    gl.enableVertexAttribArray(index);
+    gl.vertexAttribPointer(index, size, gl.FLOAT, false, stride * 4, offset * 4);
+  }
+  function tileArea(x0, x1, z0, z1, step, size) {
+    for (let z = z0; z < z1; z += size) {
+      for (let x = x0; x < x1; x += size) {
+        makeTile(x, z, Math.min(size, x1 - x), Math.min(size, z1 - z), step);
+      }
+    }
+  }
+  function makeTerrain() {
+    tileArea(-EDGE_X, EDGE_X, LOW_Z, HIGH_Z, DETAIL, 200);
+    tileArea(-4000, -EDGE_X, -4000, 4000, COARSE, 800);
+    tileArea(EDGE_X, 4000, -4000, 4000, COARSE, 800);
+    tileArea(-EDGE_X, EDGE_X, -4000, LOW_Z, COARSE, 800);
+    tileArea(-EDGE_X, EDGE_X, HIGH_Z, 4000, COARSE, 800);
+    tileArea(-OUTER, -4000, -OUTER, OUTER, 80, 1600);
+    tileArea(4000, OUTER, -OUTER, OUTER, 80, 1600);
+    tileArea(-4000, 4000, -OUTER, -4000, 80, 1600);
+    tileArea(-4000, 4000, 4000, OUTER, 80, 1600);
+  }
+  function triangle(target, a, b, c, color) {
+    target.push(a[0], a[1], a[2], ...color, b[0], b[1], b[2], ...color, c[0], c[1], c[2], ...color);
+  }
+  function makeInk(data) {
+    const vao = gl.createVertexArray(), buffer = gl.createBuffer();
+    gl.bindVertexArray(vao);
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data), gl.STATIC_DRAW);
+    attribute(0, 3, 7, 0);
+    attribute(1, 4, 7, 3);
+    return { vao, count: data.length / 7 };
+  }
+  function makeForest() {
+    for (let iz = 35; iz < 185; iz++) {
+      for (let ix = -102; ix < 103; ix++) {
+        const r = randomHash(ix, iz);
+        if (r < .79) continue;
+        const x = (ix + randomHash(ix - 91, iz)) * 37;
+        const z = (iz + randomHash(ix, iz - 173)) * 37;
+        const y = ground(x, z);
+        if (y > 1900 || y < 1090 || noise(x / 210, z / 285) < .40) continue;
+        const h = 7 + r * 10 + randomHash(ix, iz + 23) * 12;
+        for (let k = 0; k < 4; k++) {
+          const a = k * Math.PI * .5 + r;
+          const width = h * .20;
+          const p = [x + Math.sin(a) * width, y + h * .16, z + Math.cos(a) * width];
+          const q = [x + Math.sin(a + 1.57) * width, y + h * .18, z + Math.cos(a + 1.57) * width];
+          const shade = (Math.sin(a + .7) + 1) * .035;
+          const palette = [.105 + shade, .205 + shade, .225 + shade, 1];
+          triangle(trees, [x, y + h, z], p, q, palette);
+          triangle(trees, [x, y + h * .76, z], [mix(x, p[0], 1.2), y + h * .07, mix(z, p[2], 1.2)],
+                   [mix(x, q[0], 1.2), y + h * .08, mix(z, q[2], 1.2)], palette);
+        }
+      }
+    }
+    return makeInk(trees);
+  }
+  function makeMarkers() {
+    for (const [x,z] of [[18,55],[88,55],[35,108],[101,108]]) {
+      const y = ground(x,z), top = y + 2.75;
+      for (let k = 0; k < 4; k++) {
+        const t = k * TAU / 4, s = (k + 1) * TAU / 4;
+        const a = Math.cos(t) * .055, b = Math.sin(t) * .055;
+        const c = Math.cos(s) * .055, d = Math.sin(s) * .055;
+        const shade = [.23, .19, .15, 1];
+        triangle(markers, [x+a,y,z+b], [x+c,y,z+d], [x+c,top,z+d], shade);
+        triangle(markers, [x+a,y,z+b], [x+c,top,z+d], [x+a,top,z+b], shade);
+      }
+      triangle(markers, [x,top,z], [x,top-.87,z], [x+.87,top-.40,z+.18], [.99,.32,.10,1]);
+      triangle(markers, [x+.075,top-.12,z+.016], [x+.075,top-.72,z+.016], [x+.29,top-.57,z+.062], [1,.82,.40,1]);
+    }
+    return makeInk(markers);
+  }
+
+  // Dynamic geometry is kept in small GPU buffers so old tracks remain where they were carved.
+  function dynamicBuffer(floats) {
+    const vao = gl.createVertexArray(), buffer = gl.createBuffer();
+    gl.bindVertexArray(vao);
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    gl.bufferData(gl.ARRAY_BUFFER, floats * 4, gl.DYNAMIC_DRAW);
+    attribute(0, 3, 7, 0);
+    attribute(1, 4, 7, 3);
+    return { vao, buffer, data: new Float32Array(floats), length: 0, uploaded: 0 };
+  }
+  function upload(buf) {
+    if (buf.uploaded === buf.length) return;
+    gl.bindBuffer(gl.ARRAY_BUFFER, buf.buffer);
+    gl.bufferSubData(gl.ARRAY_BUFFER, buf.uploaded * 4, buf.data, buf.uploaded, buf.length - buf.uploaded);
+    buf.uploaded = buf.length;
+  }
+  const trackBlocks = [];
+  let previousTrack = null, trackSegments = 0, trackDistance = 0;
+  function addTrack(x, z, yaw, edge) {
+    const half = .22, breadth = .054 + Math.abs(edge) * .075;
+    const rx = Math.cos(yaw), rz = -Math.sin(yaw);
+    const next = [-half, half].map(offset => {
+      const ax = x + rx * (offset - breadth), az = z + rz * (offset - breadth);
+      const bx = x + rx * (offset + breadth), bz = z + rz * (offset + breadth);
+      return [ax,az,bx,bz];
+    });
+    if (previousTrack) {
+      let block = trackBlocks[trackBlocks.length - 1];
+      if (!block || block.length + 84 > block.data.length) {
+        block = dynamicBuffer(84 * 256);
+        trackBlocks.push(block);
+      }
+      const coords = [];
+      for (let i = 0; i < 2; i++) {
+        const [ax,az,bx,bz] = previousTrack[i], [cx,cz,dx,dz] = next[i];
+        const point = (px, pz) => [px, ground(px,pz) + .034, pz];
+        const shade = [.36, .50, .66, .57 + Math.abs(edge) * .20];
+        triangle(coords, point(ax,az), point(bx,bz), point(cx,cz), shade);
+        triangle(coords, point(bx,bz), point(dx,dz), point(cx,cz), shade);
+      }
+      block.data.set(coords, block.length);
+      block.length += coords.length;
+      trackSegments++;
+    }
+    previousTrack = next;
+  }
+
+  const player = {};
+  const keys = new Set();
+  let mode = "loading", locked = false, drag = false, jumpPressed = false, stompPressed = false;
+  const neutralPitch = -.283;
+  let time = 0, viewYaw = .11, viewPitch = neutralPitch, lean = 0, cameraY = 0;
+  let avalanche, spray = [], finishReason = "";
+  const startX = -7, startZ = -13;
+  function setMode(next) {
+    mode = next;
+    document.body.dataset.mode = mode;
+    byId("intro").hidden = mode !== "menu" && mode !== "loading";
+    byId("hud").hidden = mode !== "ski" && mode !== "pause" && mode !== "finish";
+    byId("pause").hidden = mode !== "pause" && mode !== "finish";
+    if (mode !== "ski") {
+      keys.clear();
+      jumpPressed = stompPressed = drag = false;
+    }
+  }
+  function resetRun() {
+    Object.assign(player, { x:startX, z:startZ, y:ground(startX,startZ), vx:0, vz:0, vy:0,
+      yaw:.07, speed:0, edge:0, tuck:0, air:false, hops:0, fall:0, snowLoad:0, descent:0, maxSpeed:0 });
+    avalanche = { active:false, released:false, time:0, front:0, x:56, z:77, strength:0, debris:[] };
+    spray = [];
+    viewYaw = .11;
+    viewPitch = neutralPitch;
+    cameraY = player.y + 1.62;
+    lean = 0;
+    trackDistance = 0;
+    previousTrack = null;
+    finishReason = "";
+    jumpPressed = stompPressed = false;
+  }
+  function slabCenter(z) { return 46 + .08 * z; }
+  function slabNear() {
+    return player.z > -20 && player.z < 148 && Math.abs(player.x - slabCenter(player.z)) < 79;
+  }
+  function slabHot() {
+    return player.z > 53 && player.z < 142 && Math.abs(player.x - slabCenter(player.z)) < 38;
+  }
+  function releaseSlab() {
+    avalanche.active = avalanche.released = true;
+    avalanche.time = 0;
+    avalanche.front = 64;
+    for (let i = 0; i < 145; i++) {
+      const z = 68 + randomHash(i, 6) * 76;
+      const x = slabCenter(z) + (randomHash(i, 7) * 2 - 1) * (20 + (z - 68) * .23);
+      avalanche.debris.push({
+        x, z, side:(randomHash(i,8)-.5)*8, v:2+randomHash(i,9)*7,
+        size:2.6+randomHash(i,10)*8.4, loft:randomHash(i,11), seed:randomHash(i,12)*50
+      });
+    }
+    if (audio) crack();
+  }
+  function evolveSlab(dt) {
+    if (!avalanche.active) return;
+    avalanche.time += dt;
+    let front = 0, sumX = 0, sumZ = 0;
+    for (const d of avalanche.debris) {
+      const grade = (ground(d.x,d.z-3)-ground(d.x,d.z+3)) / 6;
+      const resistance = 1.2 + .065*d.v + .003*d.v*d.v + smooth(9,18,avalanche.time)*4.5;
+      d.v = clamp(d.v + (Math.max(0,grade)*11.8 - resistance)*dt, 0, 43);
+      d.z += d.v * dt;
+      d.x += (d.side - (d.x - slabCenter(d.z))*.018) * smooth(0,3,avalanche.time) * dt;
+      front = Math.max(front,d.z);
+      sumX += d.x; sumZ += d.z;
+    }
+    avalanche.front = Math.max(avalanche.front,front);
+    avalanche.x = sumX / avalanche.debris.length;
+    avalanche.z = sumZ / avalanche.debris.length;
+    avalanche.strength = smooth(0,.7,avalanche.time) * (1-smooth(12,21,avalanche.time));
+    if (avalanche.time >= 21) avalanche.active = false;
+  }
+
+  function addSpray(amount) {
+    if (spray.length > 112) return;
+    for (let i = 0; i < amount; i++) {
+      const a = Math.random() - .5;
+      spray.push({ x:player.x + a*.6, z:player.z - .35, y:player.y + .12, life:0,
+        vx:player.vx*.42 + a*(5+player.speed*.16), vz:player.vz*.42 - 1.4,
+        vy:1+Math.random()*1.7, size:.36+Math.random()*.51, seed:Math.random()*55 });
+    }
+  }
+  function update(dt) {
+    if (mode !== "ski") return;
+    time += dt;
+    const p = player;
+    const left = keys.has("KeyA") || keys.has("ArrowLeft");
+    const right = keys.has("KeyD") || keys.has("ArrowRight");
+    const braking = keys.has("KeyS") || keys.has("ArrowDown");
+    const tucking = keys.has("KeyW") || keys.has("ArrowUp") || keys.has("ShiftLeft") || keys.has("ShiftRight");
+    const turn = Number(right) - Number(left);
+    p.tuck = mix(p.tuck, Number(tucking && !braking), 1 - Math.exp(-dt * 7));
+    p.edge = mix(p.edge, turn, 1 - Math.exp(-dt * (p.air ? 3 : 8)));
+    const oldYaw = p.yaw, oldX = p.x, oldZ = p.z;
+    const gx = (ground(p.x+2,p.z)-ground(p.x-2,p.z)) / 4;
+    const gz = (ground(p.x,p.z+2)-ground(p.x,p.z-2)) / 4;
+    const norm = 1 + gx*gx + gz*gz;
+    const speed = Math.hypot(p.vx,p.vz);
+    const gravity = 9.81;
+    const g = ground(p.x,p.z);
+    const jumped = jumpPressed && !p.air;
+    if (jumped) {
+      p.air = true;
+      p.hops++;
+      p.vy = gx*p.vx + gz*p.vz + 5.9;
+      previousTrack = null;
+      addSpray(9);
+    }
+    if (stompPressed && !p.air && !avalanche.released && slabNear()) releaseSlab();
+    jumpPressed = stompPressed = false;
+
+    if (p.air) {
+      p.y += p.vy * dt - gravity * dt * dt * .5;
+      p.vy -= gravity * dt;
+      p.yaw += p.edge * dt * .73;
+    } else {
+      const steer = (1-p.tuck*.37) * (braking ? 1.24 : 1) * (.95 + .34 * smooth(0,16,speed));
+      p.yaw += p.edge * steer * dt;
+      if (!turn) {
+        const heading = speed > 1.5 ? Math.atan2(p.vx,p.vz) : Math.atan2(-gx,-gz);
+        const difference = Math.atan2(Math.sin(heading-p.yaw),Math.cos(heading-p.yaw));
+        p.yaw += difference * dt * .61;
+      }
+      // Gravity acts along the snow surface. The loaded edges resist lateral slip.
+      p.vx -= gravity*gx/norm*dt;
+      p.vz -= gravity*gz/norm*dt;
+      const sx = Math.sin(p.yaw), sz = Math.cos(p.yaw);
+      const lateral = p.vx*sz - p.vz*sx;
+      const edgeGrip = 1 - Math.exp(-(4.6 + Math.abs(p.edge)*3.6)*dt);
+      p.vx -= sz * lateral * edgeGrip;
+      p.vz += sx * lateral * edgeGrip;
+      const friction = braking ? 5.5 + speed*.66 : .23 + Math.abs(p.edge)*.49 + speed*speed*mix(.0027,.00098,p.tuck);
+      const resistance = Math.max(0, 1 - friction*dt/Math.max(.01,Math.hypot(p.vx,p.vz)));
+      p.vx *= resistance;
+      p.vz *= resistance;
+    }
+    viewYaw += (p.yaw-oldYaw)*.92;
+    p.x += p.vx * dt;
+    p.z += p.vz * dt;
+    const newGround = ground(p.x,p.z);
+    if (p.air) {
+      if (p.y <= newGround && !jumped) {
+        p.y = newGround;
+        p.vy = 0;
+        p.air = false;
+        p.fall = .12;
+        p.vx *= .94;
+        p.vz *= .94;
+        addSpray(15);
+      }
+    } else if (g + (gx*p.vx+gz*p.vz)*dt - newGround > .085 && speed > 14) {
+      p.air = true;
+      p.vy = gx*p.vx + gz*p.vz;
+      p.y = Math.max(newGround, g + p.vy*dt);
+      previousTrack = null;
+    } else {
+      p.y = newGround;
+      p.vy = 0;
+    }
+    p.speed = Math.hypot(p.vx,p.vz);
+    p.maxSpeed = Math.max(p.maxSpeed,p.speed);
+    p.descent += Math.hypot(p.x-oldX,p.z-oldZ);
+    p.fall *= Math.exp(-dt*7);
+    if (!p.air && p.speed > 1.8) {
+      const moved = Math.hypot(p.x-oldX,p.z-oldZ);
+      const spacing = .72;
+      while (trackDistance + moved >= spacing) {
+        const f = (spacing-trackDistance)/moved;
+        addTrack(mix(oldX,p.x,f),mix(oldZ,p.z,f),mix(oldYaw,p.yaw,f),p.edge);
+        trackDistance -= spacing;
+      }
+      trackDistance += moved;
+      const stress = Math.abs(p.edge)*.84 + Number(braking)*.91;
+      if (spray.length < 100 && Math.random() < dt*p.speed*(.45 + stress*1.55)) addSpray(1);
+      if (!avalanche.released && slabHot()) {
+        p.snowLoad += dt * (p.speed*.018 + stress*p.speed*.062);
+        if (p.snowLoad > .87) releaseSlab();
+      } else {
+        p.snowLoad *= Math.exp(-dt);
+      }
+    }
+    for (const s of spray) {
+      s.life += dt;
+      s.x += s.vx*dt;
+      s.z += s.vz*dt;
+      s.y += s.vy*dt;
+      s.vy -= dt*2.6;
+    }
+    spray = spray.filter(s => s.life < .80);
+
+    evolveSlab(dt);
+    if (avalanche.active && avalanche.time > .85 && avalanche.strength > .1
+        && Math.abs(p.x-slabCenter(p.z)) < 24 + avalanche.time*.68
+        && p.z > avalanche.z - 32 && p.z < avalanche.front - 3
+        && p.y - newGround < 3) {
+      endRun("Caught in the slide", "Your skis entered the moving debris. Restart to drop in from the ridge.");
+    }
+    if (mode === "ski" && (p.z > 2180 || p.z < -350 || Math.abs(p.x) > 730)) {
+      endRun(p.z > 2180 ? "Valley reached" : "End of the ski area",
+        Math.round(p.descent) + " m skied · " + Math.round(p.maxSpeed*3.6) + " km/h top speed");
+    }
+    const elevation = p.y + 1.65 - p.tuck*.64 - p.fall;
+    cameraY = mix(cameraY,elevation,1-Math.exp(-dt*(p.air?16:22)));
+    lean = mix(lean, -p.edge * .135 * smooth(1,18,p.speed), 1 - Math.exp(-dt * 5));
+  }
+
+  let audio = null, muted = false;
+  function startAudio() {
+    if (!audio) {
+      const Audio = window.AudioContext || window.webkitAudioContext;
+      if (!Audio) return;
+      const ctx = new Audio();
+      const master = ctx.createGain();
+      master.gain.value = 0;
+      const limiter = ctx.createDynamicsCompressor();
+      master.connect(limiter).connect(ctx.destination);
+      const white = ctx.createBuffer(1, ctx.sampleRate * 3, ctx.sampleRate);
+      const brown = ctx.createBuffer(1, ctx.sampleRate * 3, ctx.sampleRate);
+      const dry = white.getChannelData(0), low = brown.getChannelData(0);
+      let memory = 0;
+      for (let i = 0; i < dry.length; i++) {
+        dry[i] = Math.random() * 2 - 1;
+        memory = (memory + dry[i]*.021)*.985;
+        low[i] = memory * 4.5;
+      }
+      function channel(buffer, type, hz, distance, q) {
+        const source = ctx.createBufferSource(), filter = ctx.createBiquadFilter(), gain = ctx.createGain();
+        const panner = ctx.createPanner();
+        panner.panningModel = "HRTF";
+        panner.distanceModel = "inverse";
+        panner.refDistance = distance;
+        panner.maxDistance = 2000;
+        panner.rolloffFactor = .79;
+        source.buffer = buffer;
+        source.loop = true;
+        filter.type = type;
+        filter.frequency.value = hz;
+        filter.Q.value = q;
+        gain.gain.value = 0;
+        source.connect(filter).connect(gain).connect(panner).connect(master);
+        source.start();
+        return { source, filter, gain, panner };
+      }
+      audio = {
+        ctx, master, white, brown, wind:channel(white,"lowpass",560,2,.55),
+        left:channel(white,"bandpass",1450,1,.5), right:channel(white,"bandpass",2150,1,.7),
+        slide:channel(brown,"lowpass",128,48,.7), hiss:channel(white,"lowpass",670,40,.45)
+      };
+    }
+    audio.ctx.resume().catch(() => {});
+  }
+  function position(panner, x, y, z) {
+    panner.positionX.value = x;
+    panner.positionY.value = y;
+    panner.positionZ.value = -z;
+  }
+  function crack() {
+    const { ctx, white, master } = audio;
+    const source = ctx.createBufferSource(), filter = ctx.createBiquadFilter();
+    const gain = ctx.createGain(), panner = ctx.createPanner();
+    panner.panningModel = "HRTF";
+    panner.distanceModel = "inverse";
+    panner.refDistance = 57;
+    position(panner, avalanche.x, ground(avalanche.x,avalanche.z)+5,avalanche.z);
+    source.buffer = white;
+    filter.type = "bandpass";
+    filter.frequency.setValueAtTime(2300,ctx.currentTime);
+    filter.frequency.exponentialRampToValueAtTime(135,ctx.currentTime+.22);
+    filter.Q.value = 1.4;
+    gain.gain.setValueAtTime(.71,ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+.28);
+    source.connect(filter).connect(gain).connect(panner).connect(master);
+    source.start();
+    source.stop(ctx.currentTime+.29);
+    source.onended = () => { source.disconnect(); filter.disconnect(); gain.disconnect(); panner.disconnect(); };
+  }
+  function mixAudio(orientation, up) {
+    if (!audio || audio.ctx.state !== "running") return;
+    const { ctx, master, wind, left, right, slide, hiss } = audio;
+    const p = player, a = avalanche;
+    const now = ctx.currentTime;
+    const target = (param, value, lag=.09) => param.setTargetAtTime(value,now,lag);
+    target(master.gain, !muted && mode === "ski" ? .76 : 0,.14);
+    const ear = ctx.listener;
+    ear.positionX.value = p.x;
+    ear.positionY.value = cameraY;
+    ear.positionZ.value = -p.z;
+    ear.forwardX.value = orientation[0];
+    ear.forwardY.value = orientation[1];
+    ear.forwardZ.value = -orientation[2];
+    ear.upX.value = up[0]; ear.upY.value = up[1]; ear.upZ.value = -up[2];
+    const speed = clamp(p.speed/34,0,1.5);
+    const crosswind = .7 + Math.sin(time*.61)*.23 + Math.sin(time*2.17)*.08;
+    position(wind.panner,p.x-2.9*crosswind,cameraY+.7,p.z+2.2);
+    target(wind.gain.gain,.10+speed*.49*crosswind);
+    target(wind.filter.frequency,430+speed*1050);
+    for (const [channel,side] of [[left,-1],[right,1]]) {
+      position(channel.panner,p.x+Math.cos(p.yaw)*.42*side,p.y+.1,p.z-Math.sin(p.yaw)*.42*side);
+      const contact = p.air ? 0 : Math.min(1,p.speed*.125);
+      const scrape = Math.abs(p.edge)*.37 + Number(keys.has("KeyS") || keys.has("ArrowDown"))*.34;
+      target(channel.gain.gain,contact*(.11+speed*.18+scrape)*(1+p.edge*side*.27),.045);
+      target(channel.filter.frequency,950+speed*750+scrape*1750);
+    }
+    const ay = a.active ? ground(a.x,a.z)+8 : p.y;
+    position(slide.panner,a.x,ay,a.z);
+    position(hiss.panner,a.x+8,ay+4,a.z+12);
+    target(slide.gain.gain,a.active ? a.strength*(1.48+.22*Math.sin(time*6.8)) : 0,.20);
+    target(hiss.gain.gain,a.active ? a.strength*.46 : 0,.20);
+  }
+
+  let forest, flags, powderBuffer, slabBuffer;
+  let headlessClock = false, previousFrame = 0, accumulator = 0, visualTime = 0;
+  const stepTime = 1 / 120;
+  const hud = { heading:byId("heading"), alt:byId("alt"), speed:byId("speed"), stance:byId("stance"), signal:byId("signal") };
+  const maxPoint = gl.getParameter(gl.ALIASED_POINT_SIZE_RANGE)[1];
+  function makeScene() {
+    makeShaders();
+    makeTerrain();
+    forest = makeForest();
+    flags = makeMarkers();
+    powderBuffer = dynamicBuffer(7*320);
+    slabBuffer = dynamicBuffer(7*6*145);
+    resetRun();
+    gl.clearColor(.2,.34,.51,1);
+    gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);
+  }
+
+  function camera() {
+    const p = player;
+    const isMenu = mode === "menu";
+    const pitch = isMenu ? -.158 : viewPitch + p.tuck*.036;
+    const yaw = viewYaw;
+    const s = Math.sin(yaw), c = Math.cos(yaw), sp = Math.sin(pitch), cp = Math.cos(pitch);
+    const r = [c,0,-s], u = [-s*sp,cp,-c*sp];
+    const sl = Math.sin(lean), cl = Math.cos(lean);
+    const axis = (a,b) => r.map((value,i) => value*a + u[i]*b);
+    const forward = [s*cp,sp,c*cp];
+    const aspect = canvas.width/canvas.height;
+    const fov = isMenu ? .965 : 1.065 + smooth(8,46,p.speed)*.07;
+    const fy = 1/Math.tan(fov*.5);
+    const fx = fy/aspect;
+    return { eye:[p.x,cameraY,p.z], right:axis(cl,sl), up:axis(-sl,cl), forward, fx, fy, aspect };
+  }
+  function uniformCam(name, cam) {
+    const shader = shaders[name], u = shader.uniforms;
+    gl.useProgram(shader.p);
+    for (const [key,value] of [["uEye",cam.eye],["uRight",cam.right],["uUp",cam.up],["uForward",cam.forward]]) {
+      if (u[key] != null) gl.uniform3fv(u[key],value);
+    }
+    if (u.uLens != null) gl.uniform2f(u.uLens,cam.fx,cam.fy);
+    return u;
+  }
+  function drawInk(mesh) {
+    gl.bindVertexArray(mesh.vao);
+    gl.drawArrays(gl.TRIANGLES,0,mesh.count ?? mesh.length / 7);
+  }
+  function drawSlab(t) {
+    if (!avalanche.active) return;
+    const debris = [];
+    const local = smooth(0,.65,t);
+    for (let i = 0; i < avalanche.debris.length; i++) {
+      const d = avalanche.debris[i];
+      const w = d.size*(.38 + d.loft*.72);
+      const l = d.size*(.40 + d.loft*.44);
+      const h = (.2 + d.loft*.62) * local * (1 - smooth(11,21,t)) + .055;
+      const pts = [[d.x-w,d.z-l],[d.x+w*.64,d.z-l*.58],[d.x-w*.66,d.z+l*.74],[d.x+w,d.z+l]];
+      const corners = pts.map(([x,z]) => [x,ground(x,z)+h,z]);
+      const lit = .68 + d.loft*.18;
+      triangle(debris,corners[0],corners[1],corners[2],[lit,lit+.08,lit+.13,.94]);
+      triangle(debris,corners[1],corners[3],corners[2],[lit+.09,lit+.14,lit+.16,.93]);
+    }
+    slabBuffer.data.set(debris);
+    slabBuffer.length = debris.length;
+    slabBuffer.uploaded = 0;
+    upload(slabBuffer);
+    gl.enable(gl.POLYGON_OFFSET_FILL);
+    gl.polygonOffset(-1,-1);
+    drawInk(slabBuffer);
+    gl.disable(gl.POLYGON_OFFSET_FILL);
+  }
+  function drawPowder(cam) {
+    const cloud = [];
+    function put(x,y,z,size,alpha,seed,light) {
+      const depth = (x-cam.eye[0])*cam.forward[0]+(y-cam.eye[1])*cam.forward[1]+(z-cam.eye[2])*cam.forward[2];
+      if (depth > .75) cloud.push({ depth, data:[x,y,z,size,alpha,seed,light] });
+    }
+    for (const p of spray) {
+      put(p.x,p.y,p.z,p.size*(1+p.life*2),(.67-p.life*.77),p.seed,.18);
+    }
+    if (avalanche.active) {
+      const a = avalanche, fade = a.strength;
+      for (let i = 0; i < a.debris.length; i++) {
+        const d = a.debris[i];
+        if (i%6 === 0) continue;
+        const y = ground(d.x,d.z);
+        const t = a.time;
+        const stretch = smooth(0,5,t);
+        const drift = Math.sin(t*.50+d.seed)*4.7*stretch;
+        const diameter = (4.3+d.size*1.5+d.v*.44)*(1+d.loft*.25)*(.35+smooth(0,3,t)*.65);
+        put(d.x+drift,y+diameter*(.15+d.loft*.27),d.z-d.loft*8,diameter,
+            fade*(.36+d.loft*.41),d.seed,.10+d.loft*.38);
+      }
+    }
+    if (!cloud.length) return;
+    cloud.sort((a,b) => b.depth-a.depth);
+    powderBuffer.length = 0;
+    for (const entry of cloud) {
+      powderBuffer.data.set(entry.data,powderBuffer.length);
+      powderBuffer.length += 7;
+    }
+    powderBuffer.uploaded = 0;
+    upload(powderBuffer);
+    const u = uniformCam("powder",cam);
+    gl.uniform1f(u.uPixels,cam.fy*canvas.height/2);
+    gl.uniform1f(u.uMaxPoint,maxPoint);
+    gl.depthMask(false);
+    gl.bindVertexArray(powderBuffer.vao);
+    gl.drawArrays(gl.POINTS,0,cloud.length);
+    gl.depthMask(true);
+  }
+  function draw() {
+    const pixelRatio = Math.min(1.55,window.devicePixelRatio || 1,1920 / Math.max(1,canvas.clientWidth));
+    const w = Math.max(1,Math.round(canvas.clientWidth*pixelRatio));
+    const h = Math.max(1,Math.round(canvas.clientHeight*pixelRatio));
+    if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+    gl.viewport(0,0,w,h);
+    const cam = camera(), p = player, a = avalanche;
+    gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+    gl.disable(gl.DEPTH_TEST);
+    gl.disable(gl.BLEND);
+    gl.bindVertexArray(null);
+    let u = uniformCam("sky",cam);
+    gl.uniform1f(u.uTime,visualTime);
+    gl.drawArrays(gl.TRIANGLES,0,3);
+    gl.enable(gl.DEPTH_TEST);
+    u = uniformCam("terrain",cam);
+    gl.uniform2f(u.uSlab,a.released ? smooth(0,.75,a.time) : 0,a.front);
+    for (const t of tiles) {
+      const dx = t.x-p.x, dz = t.z-p.z;
+      const depth = dx*cam.forward[0]+dz*cam.forward[2];
+      const across = Math.abs(dx*Math.cos(viewYaw)-dz*Math.sin(viewYaw));
+      if (depth < -t.radius-95 || across > (Math.max(0,depth)+t.radius+320)/cam.fx+t.radius+120) continue;
+      gl.bindVertexArray(t.vao);
+      gl.drawElements(gl.TRIANGLES,t.count,gl.UNSIGNED_SHORT,0);
+    }
+    uniformCam("ink",cam);
+    drawInk(forest);
+    drawInk(flags);
+    gl.enable(gl.BLEND);
+    if (trackBlocks.length) {
+      gl.enable(gl.POLYGON_OFFSET_FILL);
+      gl.polygonOffset(-1,-1);
+      gl.depthMask(false);
+      for (const block of trackBlocks) {
+        upload(block);
+        drawInk(block);
+      }
+      gl.depthMask(true);
+      gl.disable(gl.POLYGON_OFFSET_FILL);
+    }
+    drawSlab(a.time);
+    drawPowder(cam);
+    gl.disable(gl.DEPTH_TEST);
+    if (mode !== "menu" && mode !== "loading") {
+      u = uniformCam("skis",cam);
+      gl.uniform1f(u.uAspect,cam.aspect);
+      gl.uniform1f(u.uEdge,p.edge);
+      gl.uniform1f(u.uTuck,p.tuck);
+      gl.uniform1f(u.uHop,p.air ? smooth(0,1,p.y-ground(p.x,p.z)) : 0);
+      gl.uniform1f(u.uLook,Math.atan2(Math.sin(viewYaw-p.yaw),Math.cos(viewYaw-p.yaw)));
+      gl.uniform1f(u.uPitch,viewPitch-neutralPitch);
+      gl.uniform1f(u.uTime,time);
+      gl.bindVertexArray(null);
+      gl.drawArrays(gl.TRIANGLES,0,3);
+    }
+    gl.disable(gl.BLEND);
+    mixAudio(cam.forward,cam.up);
+    updateHud();
+  }
+
+  const directions = ["N","NE","E","SE","S","SW","W","NW"];
+  let lastSignal = "";
+  function updateHud() {
+    if (mode !== "ski" && mode !== "finish" && mode !== "pause") return;
+    const bearing = (Math.round(viewYaw*180/Math.PI+135)%360+360)%360;
+    hud.heading.textContent = String(bearing).padStart(3,"0")+"° "+directions[Math.round(bearing/45)%8];
+    hud.alt.textContent = String(Math.round(player.y));
+    hud.speed.textContent = String(Math.round(player.speed*3.6)).padStart(2,"0");
+    hud.stance.textContent = player.air ? "Airborne" : player.tuck>.65 ? "Tuck" : "Speed";
+    let copy = "", danger = false;
+    if (avalanche.active) { copy = "<b>SLAB RELEASED</b> · Carve across the slope to get clear"; danger = true; }
+    else if (avalanche.released && player.z < avalanche.front + 42) copy = "Slide stopped · Watch for debris";
+    else if (slabNear() && !avalanche.released) {
+      copy = "<b>UNSTABLE SLAB</b> · Orange flags · Press C to load the snow";
+      danger = true;
+    } else if (!locked && mode === "ski") copy = "Click to capture mouse · Drag to look without capture";
+    if (copy !== lastSignal) {
+      hud.signal.innerHTML = copy;
+      lastSignal = copy;
+    }
+    hud.signal.hidden = !copy;
+    hud.signal.classList.toggle("danger",danger);
+  }
+  function frame(now) {
+    if (!headlessClock) {
+      const elapsed = previousFrame ? Math.min(.072,(now-previousFrame)/1000) : 0;
+      previousFrame = now;
+      accumulator += elapsed;
+      visualTime += elapsed;
+      while (accumulator >= stepTime) { update(stepTime); accumulator -= stepTime; }
+      draw();
+    }
+    requestAnimationFrame(frame);
+  }
+
+  function askPointer() {
+    if (locked || !canvas.requestPointerLock) return;
+    try {
+      const request = canvas.requestPointerLock();
+      if (request && typeof request.catch === "function") request.catch(() => {});
+    } catch (_) {
+      // Drag-to-look remains available when the browser declines pointer lock.
+    }
+  }
+  function pauseRun() {
+    byId("pause-title").textContent = "Paused";
+    byId("pause-copy").textContent = "Resume to capture the mouse. Press Escape to pause and M to toggle audio.";
+    byId("resume-btn").hidden = false;
+    setMode("pause");
+    if (document.pointerLockElement === canvas) document.exitPointerLock();
+  }
+  function endRun(title,copy) {
+    finishReason = title;
+    byId("pause-title").textContent = title;
+    byId("pause-copy").textContent = copy;
+    byId("resume-btn").hidden = true;
+    setMode("finish");
+    if (document.pointerLockElement === canvas) document.exitPointerLock();
+  }
+  function run(audioGesture) {
+    if (audioGesture) {
+      try { startAudio(); } catch (_) {
+        byId("mute-btn").textContent = "SOUND UNAVAILABLE";
+        byId("mute-btn").disabled = true;
+      }
+    }
+    setMode("ski");
+    askPointer();
+  }
+  function toggleMute() {
+    muted = !muted;
+    if (!muted) {
+      try { startAudio(); } catch (_) { muted = true; }
+    }
+    byId("mute-btn").textContent = muted ? "SOUND OFF" : "SOUND ON";
+    byId("mute-btn").setAttribute("aria-pressed",String(muted));
+  }
+  const actions = new Set(["KeyA","KeyD","KeyW","KeyS","ArrowLeft","ArrowRight","ArrowUp","ArrowDown","ShiftLeft","ShiftRight","Space","KeyC"]);
+  byId("start-btn").addEventListener("click",() => { if (mode === "menu") run(true); });
+  byId("resume-btn").addEventListener("click",() => { if (mode === "pause") run(true); });
+  byId("restart-btn").addEventListener("click",() => { resetRun(); run(true); });
+  byId("pause-btn").addEventListener("click",() => { if (mode === "ski") pauseRun(); });
+  byId("mute-btn").addEventListener("click",toggleMute);
+  canvas.addEventListener("pointerdown",e => {
+    if (mode !== "ski" || e.button !== 0 || locked) return;
+    drag = true;
+    askPointer();
+  });
+  window.addEventListener("pointerup",() => { drag = false; });
+  document.addEventListener("pointerlockchange",() => {
+    const before = locked;
+    locked = document.pointerLockElement === canvas;
+    if (before && !locked && mode === "ski") pauseRun();
+  });
+  document.addEventListener("mousemove",e => {
+    if (mode !== "ski" || (!locked && !drag)) return;
+    viewYaw += clamp(e.movementX,-200,200)*.00245;
+    viewPitch = clamp(viewPitch-clamp(e.movementY,-200,200)*.00245,-1.32,1.17);
+  });
+  window.addEventListener("keydown",e => {
+    if (mode === "loading" || mode === "menu") return;
+    if (actions.has(e.code) && mode === "ski") {
+      e.preventDefault();
+      keys.add(e.code);
+      if (!e.repeat && e.code === "Space") jumpPressed = true;
+      if (!e.repeat && e.code === "KeyC") stompPressed = true;
+    }
+    if (e.repeat) return;
+    if (e.code === "KeyR") {
+      resetRun();
+      if (mode !== "ski") run(true);
+    }
+    if (e.code === "KeyM") toggleMute();
+    if (e.code === "Escape" && mode === "ski" && !locked) pauseRun();
+    if (e.code === "KeyF") {
+      const promise = document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen?.();
+      if (promise) promise.catch(() => {});
+    }
+  });
+  window.addEventListener("keyup",e => { keys.delete(e.code); });
+  window.addEventListener("blur",() => { keys.clear(); drag = false; });
+  canvas.addEventListener("webglcontextlost",e => {
+    e.preventDefault();
+    headlessClock = true;
+    setMode("menu");
+    fail("The WebGL context was lost. Reload the file to rebuild the terrain.");
+  });
+
+  window.render_game_to_text = () => {
+    const p = player, a = avalanche;
+    const number = n => Math.round(n*100)/100;
+    return JSON.stringify({
+      mode, coordinates:"Meters. +x across the slope to the right, +z down valley, +y upward.",
+      player:{ x:number(p.x), z:number(p.z), y:number(p.y), speedKmh:number(p.speed*3.6),
+        vx:number(p.vx), vz:number(p.vz), vy:number(p.vy), distance:number(p.descent), air:p.air,
+        hops:p.hops, tuck:number(p.tuck), edge:number(p.edge), yaw:number(p.yaw) },
+      view:{ yaw:number(viewYaw), pitch:number(viewPitch), pointerLocked:locked },
+      tracks:trackSegments,
+      avalanche:{ near:slabNear(), active:a.active, released:a.released, frontZ:number(a.front),
+        time:number(a.time), sourceX:number(a.x), sourceZ:number(a.z), load:number(p.snowLoad) },
+      audio:{ state:audio?.ctx.state ?? "off", muted },
+      finishReason
+    });
+  };
+  window.advanceTime = ms => {
+    headlessClock = true;
+    const frames = Math.max(0,Math.round(ms/1000/stepTime));
+    for (let i = 0; i < frames; i++) update(stepTime);
+    visualTime += ms/1000;
+    draw();
+  };
+  requestAnimationFrame(() => {
+    try {
+      makeScene();
+      setMode("menu");
+      byId("start-btn").disabled = false;
+      requestAnimationFrame(frame);
+    } catch (error) {
+      console.error(error);
+      fail("Unable to initialize the simulator. " + error.message);
+    }
+  });
+})();
+</script>
+</body>
+</html>
